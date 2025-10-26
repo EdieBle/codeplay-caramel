@@ -1,0 +1,32 @@
+.cp-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: linear-gradient(90deg,#2b2f3a,#1f2430);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.cp-navbar__brand {
+  font-weight: 700;
+}
+.cp-navbar__links {
+  list-style: none;
+  display: flex;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+}
+.cp-navbar__links a {
+  color: rgba(255,255,255,0.9);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+.cp-navbar__links a:hover {
+  text-decoration: underline;
+}
+
+/* Ensure page content doesn't sit under the navbar */
+body, #root {
+  min-height: 100vh;
+}

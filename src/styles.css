@@ -3,8 +3,8 @@
   padding: 0.6rem 1.2rem;
   border: none;
   border-radius: 6px;
-  background: #ffb84d;
-  color: #000;
+  background: #007acc; /* VS Code blue */
+  color: #fff;
   font-weight: bold;
   cursor: pointer;
   align-self: flex-start;
@@ -12,7 +12,7 @@
 }
 
 .tokenize-btn:hover {
-  background: #ffd27f;
+  background: #0e639c;
 }
 
 .textarea {
@@ -20,27 +20,27 @@
 }
 
 body {
-  background: #2B1D0E;
-  color: white;
+  background: #1e1e1e; /* VS Code dark background */
+  color: #d4d4d4;
   font-family: 'Fira Code', monospace;
   margin: 0;
   height: 100vh;
 }
 
 .editor {
-  background: #3E2A17;
+  background: #252526; /* panel background */
   width: 100%;
   padding: 1rem;
-  border-right: 1px solid #ffffff;
+  border-right: 1px solid #3c3c3c;
   display: flex;
   flex-direction: column;
 }
 
 .textarea {
   flex: 1;
-  background: #b17741;
-  color: #eee;
-  border: 1px solid white;
+  background: #1e1e1e;
+  color: #dcdcdc;
+  border: 1px solid #3c3c3c;
   outline: none;
   padding: 1rem;
   font-family: inherit;
@@ -61,18 +61,18 @@ table {
 }
 
 th, td {
-  padding: 4px 8px;
-  border-bottom: 1px solid #333;
+  padding: 6px 10px;
+  border-bottom: 1px solid #2a2a2a;
 }
 
 th {
   text-align: left;
-  color: #ccc;
+  color: #c6c6c6;
 }
 
 .error-box {
-  border-top: 1px solid #333;
+  border-top: 1px solid #2a2a2a;
   padding: 0.5rem;
-  color: #ff6b6b;
-  background: #1a1a1a;
+  color: #f14c4c;
+  background: #2a1f1f;
 }
