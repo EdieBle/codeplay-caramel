@@ -6,6 +6,11 @@
   background: #252526;
   border-bottom: 1px solid #3c3c3c;
   height: 3.5rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
 }
 
 .cp-navbar__brand {
