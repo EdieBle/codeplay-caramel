@@ -1,41 +1,48 @@
+// lexer.js — Caramel (PDF-aligned) reserved words + '_' rule in identifiers
 export function tokenize(code) {
-   const tokenSpecs = [
-    // Comments
-    ["COMMENT", /\/\/[^\n]*|\/\*[\s\S]*?\*\//],
+  const tokenSpecs = [
+    // === Comments (from comment spec) ===
+    // ~~ ... EOL   |   ~. ... .~   |   ~. ... (to EOF if no .~)
+    ["COMMENT", /~~[^\r\n]*|~\.[\s\S]*?(?:\.~|$)/],
 
-    // Keywords (control, function, etc.)
-    ["KEYWORD", /\b(ifbrew|elseiflatte|elsepress|pour|whilehot|tastetill|flavour|syrup|defaultbean|snap|glaze)\b/],
+    // === Multi-token keywords (e.g. "taste till") ===
+    ["KEYWORD", /(?:tastetill|taste[ \t]+till)/],
 
-    // Declarations and function-related
+    // Symbolic keywords (contain non-alphanumeric characters)
+    ["KEYWORD", /(refill\?|batter@)/],
+
+    // === Control-flow & other reserved words ===
+    ["KEYWORD", /\b(ifbrew|elifroth|elspress|flavour|syrup|pour|whilehot|snap|skip|cup|recipe|glaze|new|defoam|empty)\b/],
+
+    // === Booleans & null literal ===
+    ["BOOLEAN", /\b(hot|cold)\b/],
+    ["NULL", /\b(decaf)\b/],
+
+    // === Declarations ===
     ["DECLARATION", /\b(cupcake|local|brewed)\b/],
-    ["FUNCTION_KEYWORD", /\b(emptycup|recipe|refill)\b/],
 
-    // Class and struct
-    ["CLASS_KEYWORD", /\b(crema|mug)\b/],
+    // === Types ===
+    ["CLASS_KEYWORD", /\b(crema)\b/], // class
+    ["DATA_TYPE", /\b(bean|drip|blend|temp|churro|mug)\b/], // primitives + struct
 
-    // Data types
-    ["DATA_TYPE", /\b(bean|drip|blend|temp|mug|churro|decaf)\b/],
-
-    // Literals
-    ["INT_LIT", /\b\d+\b/],
+    // === Literals (float BEFORE int) ===
     ["FLOAT_LIT", /\b\d+\.\d+\b/],
+    ["INT_LIT", /\b\d+\b/],
     ["STRING_LIT", /"[^"\n]*"/],
     ["CHAR_LIT", /'[^'\n]'/],
 
-    // Identifiers
-    ["IDENTIFIER", /\b[a-z][a-z0-9]*\b/],
+    // === Identifiers (allow underscore but not as first char) ===
+    // ✅ starts with lowercase letter, followed by letters, digits, or underscores
+    ["IDENTIFIER", /\b[a-z][a-z0-9_]*\b/],
 
-    // Operators
+    // === Operators & delimiters ===
     ["OPERATOR", /(\+{1,2}|-{1,2}|==|!=|<=|>=|&&|\|\||[+\-*/%<>=!])/],
+    ["DELIMITER", /[{}\[\](),.;]/],
 
-    // Delimiters
-    ["DELIMITER", /[{}\[\](),]/],
-
-    // Whitespace and newlines
+    // === Whitespace & newlines ===
     ["WHITESPACE", /[ \t]+/],
-    ["NEWLINE", /\n/],
+    ["NEWLINE", /\r?\n/], // handle CRLF or LF
   ];
-
 
   const tokens = [];
   let line = 1, column = 1;
@@ -45,33 +52,43 @@ export function tokenize(code) {
     let matchFound = false;
 
     for (const [type, regex] of tokenSpecs) {
-      // Match from the start of the remaining code only
-      const substring = code.slice(pos);
-      const match = substring.match(regex);
+      const slice = code.slice(pos);
+      const match = slice.match(regex);
 
       if (match && match.index === 0) {
-        const lexeme = match[0];
+        const raw = match[0];
+
         if (type === "NEWLINE") {
-          line++;
+          tokens.push({ type, lexeme: "↵", line, column });
+          pos += raw.length;     // consumes \n or \r\n
+          line += 1;
           column = 1;
-        } else if (type !== "WHITESPACE") {
-          tokens.push({ type, lexeme, line, column });
-          column += lexeme.length;
-        } else {
-          column += lexeme.length;
+          matchFound = true;
+          break;
         }
 
-        pos += lexeme.length;
+        if (type === "WHITESPACE") {
+          const visible = raw.replace(/\t/g, "⇥").replace(/ /g, "␣");
+          tokens.push({ type, lexeme: visible, line, column });
+          pos += raw.length;
+          column += raw.length;
+          matchFound = true;
+          break;
+        }
+
+        // Normal tokens (including COMMENT, KEYWORD, BOOLEAN, NULL, etc.)
+        tokens.push({ type, lexeme: raw, line, column });
+        pos += raw.length;
+        column += raw.length;
         matchFound = true;
         break;
       }
     }
 
-    // No regex matched so treat as an error token and advance
     if (!matchFound) {
       tokens.push({ type: "ERROR", lexeme: code[pos], line, column });
-      pos++;
-      column++;
+      pos += 1;
+      column += 1;
     }
   }
 

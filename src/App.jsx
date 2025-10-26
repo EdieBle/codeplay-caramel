@@ -21,41 +21,59 @@ thread("hello world");`
   const [lineTokens, setLineTokens] = useState([]);
   const [showLineTokens, setShowLineTokens] = useState(false);
 
+  const [busy, setBusy] = useState(false); // ✅ new: prevents multiple clicks
   const textareaRef = useRef(null);
 
+  // ✅ Tokenize the entire code
   const handleTokenize = () => {
-    const result = tokenize(code);
-    const errors = result.filter(t => t.type === "ERROR");
-    const validTokens = result.filter(t => t.type !== "ERROR");
-    setTokens(validTokens);
-    setErrors(errors);
-    setHasRun(true);
+    setBusy(true);
+    try {
+      const result = tokenize(code);
+      const errors = result.filter(t => t.type === "ERROR");
+      const validTokens = result.filter(t => t.type !== "ERROR");
+
+      setTokens(validTokens);
+      setErrors(errors);
+      setHasRun(true);
+
+      // ✅ Show token panel immediately
+      setShowLineTokens(false);
+      setShowTokens(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ✅ Tokenize only current line where caret is
+  const handleTokenizeLine = () => {
+    setBusy(true);
+    try {
+      const ta = textareaRef.current;
+      if (!ta) return;
+      const pos = ta.selectionStart;
+      const before = code.slice(0, pos);
+      const lineIndex = before.split('\n').length - 1; // 0-based
+      const lines = code.split('\n');
+      const lineText = lines[lineIndex] ?? "";
+
+      const result = tokenize(lineText);
+      const normalized = result.map((t) => ({ ...t, line: lineIndex + 1 }));
+
+      const lineErrors = normalized.filter(t => t.type === "ERROR");
+      const validLineTokens = normalized.filter(t => t.type !== "ERROR");
+
+      setLineTokens(validLineTokens);
+      setErrors(lineErrors);
+      setShowLineTokens(true);
+      setShowTokens(true);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const toggleShowTokens = () => {
     setShowTokens((s) => !s);
-    if (!showTokens) {
-      setShowLineTokens(false);
-    }
-  };
-
-  // Tokenize only the current line where the caret is
-  const handleTokenizeLine = () => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-    const pos = ta.selectionStart;
-    const before = code.slice(0, pos);
-    const lineIndex = before.split('\n').length - 1; // 0-based
-    const lines = code.split('\n');
-    const lineText = lines[lineIndex] ?? "";
-    const result = tokenize(lineText);
-    const normalized = result.map((t) => ({ ...t, line: lineIndex + 1 }));
-    const lineErrors = normalized.filter(t => t.type === "ERROR");
-    const validLineTokens = normalized.filter(t => t.type !== "ERROR");
-    setLineTokens(validLineTokens);
-    setErrors(lineErrors);
-    setShowLineTokens(true);
-    setShowTokens(true);
+    if (!showTokens) setShowLineTokens(false);
   };
 
   return (
@@ -75,16 +93,27 @@ thread("hello world");`
             />
 
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-              <button className="tokenize-btn" onClick={handleTokenize}>
-                Tokenize (full)
+              <button
+                className="tokenize-btn"
+                onClick={handleTokenize}
+                disabled={busy}
+              >
+                {busy ? "Tokenizing..." : "Tokenize (full)"}
               </button>
-              <button className="tokenize-btn" onClick={handleTokenizeLine}>
+
+              <button
+                className="tokenize-btn"
+                onClick={handleTokenizeLine}
+                disabled={busy}
+              >
                 Tokenize line
               </button>
+
               <button
                 className="tokenize-btn"
                 onClick={toggleShowTokens}
                 aria-pressed={showTokens}
+                disabled={busy}
               >
                 {showTokens ? "Hide Tokens" : "Show Tokens"}
               </button>
@@ -97,7 +126,7 @@ thread("hello world");`
           </div>
         </div>
 
-        {/* Tokens panel (hidden unless requested) */}
+        {/* Tokens panel */}
         {showTokens && (
           <div className="tokens" style={{ width: "45%" }}>
             <h3>Tokens</h3>
