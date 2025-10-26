@@ -4,7 +4,7 @@ export default function NavBar() {
   return (
     <nav className="cp-navbar">
       <div className="cp-navbar__brand">
-        <img src="/images/logo.png" alt="CodePlay Caramel" style={{height:36}} />
+        <img src="/images/logo.svg" alt="CodePlay Caramel" style={{height:36}} />
       </div>
       <ul className="cp-navbar__links">
         <li><a href="#">Lexer</a></li>
