@@ -1,9 +1,9 @@
 import { useState, useRef } from "react";
-import { tokenize } from "./lexer";
+import axios from "axios";
 import "./styles.css";
 import NavBar from "./components/NavBar";
 import "./components/NavBar.css";
-import LexerError from './components/LexerError';
+import LexerError from "./components/LexerError";
 
 export default function App() {
   const [code, setCode] = useState(
@@ -21,51 +21,62 @@ thread("hello world");`
   const [lineTokens, setLineTokens] = useState([]);
   const [showLineTokens, setShowLineTokens] = useState(false);
 
-  const [busy, setBusy] = useState(false); // ✅ new: prevents multiple clicks
+  const [busy, setBusy] = useState(false);
   const textareaRef = useRef(null);
 
-  // ✅ Tokenize the entire code
-  const handleTokenize = () => {
+  // ✅ Tokenize the entire code (via Python backend)
+  const handleTokenize = async () => {
     setBusy(true);
     try {
-      const result = tokenize(code);
-      const errors = result.filter(t => t.type === "ERROR");
-      const validTokens = result.filter(t => t.type !== "ERROR");
+      // Send code to Flask (Python backend)
+      const res = await axios.post("http://127.0.0.1:5000/tokenize", { code });
+      const result = res.data;
+
+      // Handle results
+      const errors = result.filter((t) => t.type === "ERROR");
+      const validTokens = result.filter((t) => t.type !== "ERROR");
 
       setTokens(validTokens);
       setErrors(errors);
       setHasRun(true);
 
-      // ✅ Show token panel immediately
       setShowLineTokens(false);
       setShowTokens(true);
+    } catch (err) {
+      console.error("Error contacting backend:", err);
+      setErrors([{ type: "CONNECTION_ERROR", lexeme: "Backend not running" }]);
     } finally {
       setBusy(false);
     }
   };
 
-  // ✅ Tokenize only current line where caret is
-  const handleTokenizeLine = () => {
+  // ✅ Tokenize only the current line (via Python backend)
+  const handleTokenizeLine = async () => {
     setBusy(true);
     try {
       const ta = textareaRef.current;
       if (!ta) return;
       const pos = ta.selectionStart;
       const before = code.slice(0, pos);
-      const lineIndex = before.split('\n').length - 1; // 0-based
-      const lines = code.split('\n');
+      const lineIndex = before.split("\n").length - 1;
+      const lines = code.split("\n");
       const lineText = lines[lineIndex] ?? "";
 
-      const result = tokenize(lineText);
-      const normalized = result.map((t) => ({ ...t, line: lineIndex + 1 }));
+      // Send only this line to Flask
+      const res = await axios.post("http://127.0.0.1:5000/tokenize", { code: lineText });
+      const result = res.data;
 
-      const lineErrors = normalized.filter(t => t.type === "ERROR");
-      const validLineTokens = normalized.filter(t => t.type !== "ERROR");
+      const normalized = result.map((t) => ({ ...t, line: lineIndex + 1 }));
+      const lineErrors = normalized.filter((t) => t.type === "ERROR");
+      const validLineTokens = normalized.filter((t) => t.type !== "ERROR");
 
       setLineTokens(validLineTokens);
       setErrors(lineErrors);
       setShowLineTokens(true);
       setShowTokens(true);
+    } catch (err) {
+      console.error("Error contacting backend:", err);
+      setErrors([{ type: "CONNECTION_ERROR", lexeme: "Backend not running" }]);
     } finally {
       setBusy(false);
     }
@@ -81,7 +92,7 @@ thread("hello world");`
       <NavBar />
 
       <div style={{ display: "flex", gap: "1rem", padding: "1rem", flex: 1 }}>
-        {/* Main column: editor + error */}
+        {/* Editor */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
           <div className="editor">
             <h3>Code Editor</h3>
@@ -120,7 +131,7 @@ thread("hello world");`
             </div>
           </div>
 
-          {/* Error area always visible under editor */}
+          {/* Error area */}
           <div style={{ marginTop: "0.75rem" }}>
             <LexerError errors={errors} />
           </div>
@@ -131,47 +142,9 @@ thread("hello world");`
           <div className="tokens" style={{ width: "45%" }}>
             <h3>Tokens</h3>
             {showLineTokens ? (
-              <table>
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Lexeme</th>
-                    <th>Line</th>
-                    <th>Column</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {lineTokens.map((t, i) => (
-                    <tr key={i}>
-                      <td>{t.type}</td>
-                      <td>{t.lexeme}</td>
-                      <td>{t.line}</td>
-                      <td>{t.column}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <TokenTable tokens={lineTokens} />
             ) : hasRun ? (
-              <table>
-                <thead>
-                  <tr>
-                    <th>Type</th>
-                    <th>Lexeme</th>
-                    <th>Line</th>
-                    <th>Column</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tokens.map((t, i) => (
-                    <tr key={i}>
-                      <td>{t.type}</td>
-                      <td>{t.lexeme}</td>
-                      <td>{t.line}</td>
-                      <td>{t.column}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <TokenTable tokens={tokens} />
             ) : (
               <p>Press “Tokenize (full)” or “Tokenize line” to populate tokens.</p>
             )}
@@ -179,5 +152,31 @@ thread("hello world");`
         )}
       </div>
     </div>
+  );
+}
+
+// ✅ Small helper component to display tokens in a table
+function TokenTable({ tokens }) {
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Lexeme</th>
+          <th>Line</th>
+          <th>Column</th>
+        </tr>
+      </thead>
+      <tbody>
+        {tokens.map((t, i) => (
+          <tr key={i}>
+            <td>{t.type}</td>
+            <td>{t.lexeme}</td>
+            <td>{t.line}</td>
+            <td>{t.column}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
