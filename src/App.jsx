@@ -96,12 +96,28 @@ thread("hello world");`
         <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
           <div className="editor">
             <h3>Code Editor</h3>
-            <textarea
-              ref={textareaRef}
-              className="textarea"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-            />
+              <textarea
+                ref={textareaRef}
+                className="textarea"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Tab") {
+                    e.preventDefault();
+                    const ta = textareaRef.current;
+                    const start = ta.selectionStart;
+                    const end = ta.selectionEnd;
+
+                    const newValue = code.slice(0, start) + "\t" + code.slice(end);
+                    setCode(newValue);
+
+                    requestAnimationFrame(() => {
+                      ta.selectionStart = ta.selectionEnd = start + 1;
+                    });
+                  }
+                }}
+              />
+
 
             <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
               <button
