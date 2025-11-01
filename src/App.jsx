@@ -7,9 +7,51 @@ import LexerError from "./components/LexerError";
 
 export default function App() {
   const [code, setCode] = useState(
-`local var int x = 16;
-thread("Number: " + x);
-thread("hello world");`
+`~~this is supposed to be an unclosed multi-line comment, but thats the problem of the parser afaik
+bean x = -4
+~. 
+    should flag the 2 statements below
+    test multi  @$%^&*()[]~\`"{}|<>?/\\
+.~
+Drip draaaaaaaaaaaaaaaaaaaaaaa = 5.0 ~~more than 15 chars
+bean% bener = 3  
+
+mug [  ~~sample program lol bean x = 4 sample :D @$%^&*()[]~\`"{}|<>?/\ <-- tester ignore
+    bean x_bean = 40
+    drip y_bean = 20
+    blend b_blend = "Test string literal"
+    churro c_churro = 'a',k = '\\n'
+    temp t_temp = hot, t_ = cold
+]  
+
+recipe bean calc_test (bean x, bean y) [
+    bean sum = x + y
+    glaze(sum)
+    refill? sum
+]
+
+crema class_uno [
+    backroom bean not_pub = 7
+    bean not_pub_implic = 120
+    cafe bean pub = 5
+
+    cafe recipe drip cube_func (drip x) [
+      drip square = x * x * x
+      refill? square
+    ]
+    cafe recipe drip cube_func (drip x) [
+      drip square = x * x * x
+      refill? square
+    ]
+]
+
+bean cup() [
+    bean x = 5, y = 7
+    bean sum = glob_x + calc_test(order.x, y)
+    glaze("Function sum and glob_x = " + sum)
+    refill? 0
+]
+`
   );
 
   const [tokens, setTokens] = useState([]);
@@ -32,8 +74,9 @@ thread("hello world");`
       const res = await axios.post("http://127.0.0.1:5000/tokenize", { code });
       const result = res.data;
 
-      const errors = result.filter((t) => t.type === "ERROR");
-      const validTokens = result.filter((t) => t.type !== "ERROR");
+      // error handler for the entirety
+      const errors = result.filter((t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR");
+      const validTokens = result.filter((t) => t.type !== "ERROR" ||t.type !== "LEXICAL_ERROR");
 
       setTokens(validTokens);
       setErrors(errors);
@@ -64,8 +107,10 @@ thread("hello world");`
       const result = res.data;
 
       const normalized = result.map((t) => ({ ...t, line: lineIndex + 1 }));
-      const lineErrors = normalized.filter((t) => t.type === "ERROR");
-      const validLineTokens = normalized.filter((t) => t.type !== "ERROR");
+
+      // Error handler for the single line
+      const lineErrors = normalized.filter((t) => t.type === "ERROR" || t.type ===  "LEXICAL_ERROR");
+      const validLineTokens = normalized.filter((t) => t.type !== "ERROR" || t.type !== "LEXICAL_ERROR");
 
       setLineTokens(validLineTokens);
       setErrors(lineErrors);

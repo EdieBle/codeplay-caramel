@@ -1,34 +1,104 @@
-.lexer-error{
-  background: linear-gradient(180deg, rgba(241,76,76,0.05), rgba(0,0,0,0.02));
-  border: 1px solid rgba(241,76,76,0.2);
+.lexer-error {
+  background: linear-gradient(180deg, rgba(241, 76, 76, 0.05), rgba(0, 0, 0, 0.02));
+  border: 1px solid rgba(241, 76, 76, 0.25);
   color: #ffdcdc;
-  padding: 0.6rem;
+  padding: 0.75rem 1rem;
   border-radius: 8px;
   margin-top: 0.75rem;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+  font-family: "JetBrains Mono", monospace;
 }
-.lexer-error__header{
-  display:flex;
-  gap:0.75rem;
-  align-items:center;
-  justify-content:space-between;
+
+.lexer-error__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
 }
-.lexer-error__icon{font-size:1.1rem; margin-right:0.25rem}
-.lexer-error__title{font-weight:700; color:#ffb3b3}
-.lexer-error__summary{font-size:0.85rem; color:#ffdcdc}
-.lexer-error__copy{
-  background:transparent;border:1px solid rgba(255,255,255,0.04);
-  color:#ffdcdc;padding:0.25rem 0.5rem;border-radius:6px;cursor:pointer;
+
+.lexer-error__icon {
+  font-size: 1.2rem;
+  margin-right: 0.25rem;
 }
-.lexer-error__list{margin-top:0.6rem; display:flex;flex-direction:column; gap:0.4rem}
-.lexer-error__item{display:flex;justify-content:space-between;align-items:center;padding:0.35rem 0.5rem;border-radius:6px;background:rgba(0,0,0,0.03)}
-.lexer-error__lexeme{font-weight:700;color:#fff;margin-right:0.6rem}
-.lexer-error__loc{font-size:0.85rem;color:#d8d8d8}
-.lexer-error__message{font-size:0.9rem;color:#ffdcdc}
-.lexer-error__message strong{font-weight:700;color:#ffb3b3}
-.lexer-error__footer{margin-top:0.75rem; font-size:0.85rem; color:#d8d8d8; text-align:right;}
-.lexer-error__footer a{
-  color:#ff8080; text-decoration:none; font-weight:600;
-}.lexer-error__footer a:hover{
-  text-decoration:underline;
+
+.lexer-error__title {
+  font-weight: 700;
+  color: #ffb3b3;
+}
+
+.lexer-error__summary {
+  font-size: 0.85rem;
+  color: #ffdcdc;
+}
+
+.lexer-error__copy {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffdcdc;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.lexer-error__copy:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.lexer-error__list {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Each error block */
+.lexer-error__item {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: rgba(255, 50, 50, 0.05);
+  border: 1px solid rgba(255, 80, 80, 0.1);
+}
+
+/* Top line: LEXICAL ERROR: + optional message */
+.lexer-error__type-line {
+  font-weight: 700;
+  color: #ff9999;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.35rem;
+}
+
+/* Row below: "lexeme" + location */
+.lexer-error__details-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 5px;
+  padding: 0.25rem 0.6rem;
+}
+
+.lexer-error__lexeme {
+  color: #fff;
+  font-weight: 600;
+}
+
+.lexer-error__loc {
+  color: #ccc;
+  font-size: 0.85rem;
+}
+
+/* Optional footer, if you use one later */
+.lexer-error__footer {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: #d8d8d8;
+  text-align: right;
+}
+.lexer-error__footer a {
+  color: #ff8080;
+  text-decoration: none;
+  font-weight: 600;
+}
+.lexer-error__footer a:hover {
+  text-decoration: underline;
 }

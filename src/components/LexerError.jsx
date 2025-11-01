@@ -5,7 +5,7 @@ export default function LexerError({ errors }) {
   // errors: array of { type, lexeme, line, column } or empty
   if (!errors || errors.length === 0) return null;
 
-  const errs = errors.filter(e => e.type === 'ERROR');
+  const errs = errors.filter(e => e.type === "ERROR" || e.type === "LEXICAL_ERROR");
 
   return (
     <div className="lexer-error" role="alert" aria-live="polite">
@@ -23,14 +23,22 @@ export default function LexerError({ errors }) {
       <div className="lexer-error__list">
         {errs.map((e, i) => (
           <div key={i} className="lexer-error__item">
-            <div className="lexer-error__item-left">
-              <span className="lexer-error__lexeme">{e.lexeme}</span>
-              <span className="lexer-error__type">{e.type}</span>
+            <div className="lexer-error__type-line">
+              {e.type.replace("_", " ").toUpperCase()}
+              {e.message ? `: ${e.message}` : ":"}
             </div>
-            <div className="lexer-error__loc">line {e.line}, col {e.column}</div>
+
+            <div className="lexer-error__details-row">
+              <div className="lexer-error__lexeme">"{e.lexeme}"</div>
+              <div className="lexer-error__loc">
+                at line {e.line}, col {e.column}
+              </div>
+            </div>
           </div>
         ))}
       </div>
+
+
     </div>
   );
 }
