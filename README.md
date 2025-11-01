@@ -1,6 +1,15 @@
 # Codeplay-Caramel
 Repository for the purpose of holding the Lexer, Parser, Syntax/Semantic Analyzer, and its Interpreter.
 
+## Requirements
+To run this project, you must have react vite installed in your device. 
+
+To download react vite, go to the project directory and open the command prompt to run this command:
+```bash
+npm install react vite
+```
+Once you have installed the react vite, you may proceed to setup the project.
+
 ## Setup Guide
 1. Open the directory where you have downloaded the project C:\USERS\codeplay-caramel
 2. Open the command prompt
