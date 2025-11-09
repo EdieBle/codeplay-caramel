@@ -58,7 +58,7 @@ bean cup() [
   const [errors, setErrors] = useState([]);
   const [hasRun, setHasRun] = useState(false);
 
-  const [showTokens, setShowTokens] = useState(false);
+  const [showTokens, setShowTokens] = useState(true);
   const [lineTokens, setLineTokens] = useState([]);
   const [showLineTokens, setShowLineTokens] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -74,9 +74,8 @@ bean cup() [
       const res = await axios.post("http://127.0.0.1:5000/tokenize", { code });
       const result = res.data;
 
-      // error handler for the entirety
       const errors = result.filter((t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR");
-      const validTokens = result.filter((t) => t.type !== "ERROR" ||t.type !== "LEXICAL_ERROR");
+      const validTokens = result.filter((t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR");
 
       setTokens(validTokens);
       setErrors(errors);
@@ -110,7 +109,7 @@ bean cup() [
 
       // Error handler for the single line
       const lineErrors = normalized.filter((t) => t.type === "ERROR" || t.type ===  "LEXICAL_ERROR");
-      const validLineTokens = normalized.filter((t) => t.type !== "ERROR" || t.type !== "LEXICAL_ERROR");
+      const validLineTokens = normalized.filter((t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR");
 
       setLineTokens(validLineTokens);
       setErrors(lineErrors);
@@ -152,96 +151,102 @@ const handleScroll = () => {
   }, [code]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+    <div className="app-root">
       <NavBar />
 
-      <div style={{ display: "flex", gap: "1rem", padding: "1rem", flex: 1 }}>
-        {/* CODE EDITOR */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-          <div className="editor">
+      {/* Main Content Area: Stacks Top Row and Bottom Row vertically */}
+      <div className="main-content">
+
+        {/* === TOP ROW === */}
+        {/* This row contains the Editor and Tokenizer side-by-side */}
+        <div className="layout-row-top">
+
+          {/* Left Column: CODE EDITOR */}
+          {/* We apply both .editor and our new .layout-flex class */}
+          <div 
+            className="editor layout-flex" 
+          >
             <h3 className="play-bold">Code Editor</h3>
 
+            {/* .editor-container styles are now updated in styles.css */}
             <div className="editor-container">
-  {/* Line numbers */}
-  <div className="line-numbers" ref={lineNumbersRef}>
-    {code.split("\n").map((_, i) => (
-      <div
-        key={i}
-        className={`line-number ${i + 1 === currentLine ? "active" : ""}`}
-      >
-        {i + 1}
-      </div>
-    ))}
-  </div>
+              {/* Line numbers */}
+              <div className="line-numbers" ref={lineNumbersRef}>
+                {code.split("\n").map((_, i) => (
+                  <div
+                    key={i}
+                    className={`line-number ${i + 1 === currentLine ? "active" : ""}`}
+                  >
+                    {i + 1}
+                  </div>
+                ))}
+              </div>
 
-  {/* Text area */}
-  <textarea
-    ref={textareaRef}
-    className="textarea"
-    value={code}
-    onChange={(e) => setCode(e.target.value)}
-    onClick={updateCurrentLine}
-    onKeyUp={updateCurrentLine}
-    onScroll={handleScroll}
-    onKeyDown={(e) => {
-      if (e.key === "Tab") {
-        e.preventDefault();
-        const ta = textareaRef.current;
-        const start = ta.selectionStart;
-        const end = ta.selectionEnd;
-        const newValue = code.slice(0, start) + "\t" + code.slice(end);
-        setCode(newValue);
-        requestAnimationFrame(() => {
-          ta.selectionStart = ta.selectionEnd = start + 1;
-          updateCurrentLine();
-        });
-      }
-    }}
-    spellCheck={false}
-  />
-</div>
+              <textarea
+                ref={textareaRef}
+                className="textarea"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onClick={updateCurrentLine}
+                onKeyUp={updateCurrentLine}
+                onScroll={handleScroll}
+                onKeyDown={(e) => {
+                  if (e.key === "Tab") {
+                    e.preventDefault();
+                    const ta = textareaRef.current;
+                    const start = ta.selectionStart;
+                    const end = ta.selectionEnd;
+                    const newValue = code.slice(0, start) + "\t" + code.slice(end);
+                    setCode(newValue);
+                    requestAnimationFrame(() => {
+                      ta.selectionStart = ta.selectionEnd = start + 1;
+                      updateCurrentLine();
+                    });
+                  }
+                }}
+                spellCheck={false}
+              />
+            </div>
 
 
-<div className="tokenize-btn-container">
-  <button className="tokenize-btn" onClick={handleTokenize} disabled={busy}>
-    {busy ? "Tokenizing..." : "Tokenize (full)"}
-  </button>
+            <div className="tokenize-btn-container">
+              <button className="tokenize-btn" onClick={handleTokenize} disabled={busy}>
+                {busy ? "Tokenizing..." : "Tokenize (full)"}
+              </button>
 
-  <button className="tokenize-btn" onClick={handleTokenizeLine} disabled={busy}>
-    Tokenize line
-  </button>
-
-  <button
-    className="tokenize-btn"
-    onClick={toggleShowTokens}
-    aria-pressed={showTokens}
-    disabled={busy}
-  >
-    {showTokens ? "Hide Tokens" : "Show Tokens"}
-  </button>
-</div>
-
+              <button className="tokenize-btn" onClick={handleTokenizeLine} disabled={busy}>
+                Tokenize line
+              </button>
+            </div>
+          </div>
+          
+          {/* Right Column: TOKENS PANEL */}
+          <div
+            className="tokens layout-panel-right"
+          >
+            <h3 className="play-bold">Tokens</h3>
+            
+            {/* NEW: Add a scrollable container FOR THE TABLE ONLY */}
+            <div className="token-table-container">
+              {showLineTokens ? (
+                <TokenTable tokens={lineTokens} />
+              ) : hasRun ? (
+                <TokenTable tokens={tokens} />
+              ) : (
+                <p>Press “Tokenize (full)” or “Tokenize line” to see results.</p>
+              )}
+            </div>
+            
           </div>
 
-          {/* ERROR AREA */}
-          <div style={{ marginTop: "0.75rem" }}>
-            <LexerError errors={errors} />
-          </div>
+        </div>
+        
+        {/* === BOTTOM ROW === */}
+        {/* This row contains the Lexical Error panel */}
+        <div className="layout-panel-bottom">
+          <LexerError errors={errors} />
         </div>
 
-        {/* TOKENS PANEL */}
-        {showTokens && (
-          <div className="tokens">
-            <h3 className="play-bold">Tokens</h3>
-            {showLineTokens ? (
-              <TokenTable tokens={lineTokens} />
-            ) : hasRun ? (
-              <TokenTable tokens={tokens} />
-            ) : (
-              <p>Press “Tokenize (full)” or “Tokenize line” to see results.</p>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

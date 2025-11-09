@@ -1,15 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap');
 
 /* BUTTONS */
-
-/* CENTER BUTTONS */
 .tokenize-btn-container {
-  display: flex;                /* enable flexbox */
-  justify-content: center;      /* horizontally center */
-  align-items: center;          /* vertically align (if needed) */
-  gap: 0.75rem;                 /* space between buttons */
-  margin-top: 1rem;             /* spacing from editor */
-  flex-wrap: wrap;              /* keeps layout clean on smaller screens */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
 }
 
 .tokenize-btn {
@@ -22,10 +20,10 @@
   font-weight: bold;
   cursor: pointer;
   transition: background 0.2s, transform 0.2s;
-display: flex;
-justify-content: center;
-align-items: center;
-position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
 }
 
 .tokenize-btn:hover {
@@ -36,10 +34,12 @@ position: relative;
 
 .tokens {
   flex: 1;
-  padding: 1.5rem 2rem;      /* ✅ adds breathing space around table */
-  overflow: auto;
-  min-width: 200px;          /* ✅ slightly wider */
-  max-width: 350px;        /* ✅ limit max width for readability */
+  display: flex;
+  min-width: 200px;
+  max-width: 550px;
+  flex-direction: column;
+  max-height: 80vh;
+  color: #d4d4d4;
 }
 
 /* Center title and add spacing */
@@ -51,26 +51,30 @@ position: relative;
   color: #ffffff;
   font-size: 1.2rem;
   letter-spacing: 0.5px;
+  padding: 1.5rem 2rem 0; 
 }
+
+
 
 /* Table styling */
 .tokens table {
   width: 100%;
-  border-collapse: separate; /* ✅ allows spacing between cells */
-  border-spacing: 0 6px;     /* ✅ space between rows */
+  border-collapse: separate;
+  border-spacing: 0 6px;
   font-size: 0.95rem;
   color: #dcdcdc;
+  table-layout: fixed; /* <-- ADD THIS */
 }
 
 /* Headers and cells */
 .tokens th, .tokens td {
   text-align: left;
-  padding: 10px 14px;        /* ✅ more comfortable padding */
+  padding: 10px 14px;
 }
 
 .tokens th {
   color: #c6c6c6;
-  background: #1e1e1e;
+  background: #252526;
   border-bottom: 2px solid #3c3c3c;
   position: sticky;
   top: 0;
@@ -99,11 +103,12 @@ position: relative;
   font-weight: 700;
   font-style: normal;
   align-self: center;
+  color: #ffffff;
 }
 
 /* BODY & EDITOR */
 body {
-  background: #1e1e1e; /* VS Code dark background */
+  background: #1e1e1e;
   color: #d4d4d4;
   font-family: 'Fira Code', monospace;
   margin: 0;
@@ -112,10 +117,11 @@ body {
 }
 
 .editor {
-  background: #252526; /* panel background */
+  background: #252526;
   width: 100%;
-  max-width: 1200px; /* limit max width for readability */
-  margin: 2rem auto; /* center and add spacing from sides */
+  max-width: 1000px;
+  min-width: 500px;
+  margin: 2rem 0 2rem 2rem;
   padding: 1rem 1.5rem;
   border: 1px solid #3c3c3c;
   border-radius: 8px;
@@ -123,6 +129,7 @@ body {
   flex-direction: column;
   align-items: stretch;
   box-sizing: border-box;
+  height: 80vh;
 }
 
 /* Code editor container */
@@ -136,8 +143,9 @@ body {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
   width: 95%;
   max-width: 1200px;
-  height: 65vh;
+  height: 60vh;
   margin: 1.5rem auto;
+  flex: 1;
 }
 
 /* Line numbers on the left */
@@ -152,7 +160,7 @@ body {
   padding: 0.75rem 0.5rem;
   box-sizing: border-box;
   border-right: 1px solid #3c3c3c;
-  overflow: hidden; /* ✅ no scrollbar here */
+  overflow: hidden;
 }
 
 /* Each line number */
@@ -184,7 +192,7 @@ body {
   tab-size: 2;
   caret-color: #4fc3f7;
   line-height: 1.5rem;
-  overflow-y: auto; /* ✅ single scrollbar */
+  overflow-y: auto;
 }
 
 /* Responsive scaling */
@@ -203,4 +211,110 @@ body {
   .textarea {
     font-size: 0.9rem;
   }
+}
+
+/* Main application wrapper */
+.app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Container for all content below navbar */
+.main-content {
+  gap: 1rem;
+  padding: 1rem;
+}
+
+/* Top row container (editor + tokens) */
+.layout-row-top {
+  margin-top: 25px;
+  display: flex;
+  gap: 1rem;
+  height: 70vh;
+}
+
+
+.editor.layout-flex {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  height: auto; 
+  margin: 0;   
+}
+
+
+.tokens.layout-panel-right {
+  flex: 0 0 500px;
+  overflow-y: auto;
+  border: 1px solid #3c3c3c;
+  max-height: none;
+  max-width: 500px;
+  background: #252526;
+  display: flex;
+  flex-direction: column;
+}
+
+/* NEW: Define specific column widths */
+.tokens th:nth-child(1) { width: 25%; } /* Type */
+.tokens th:nth-child(2) { width: 45%; } /* Lexeme (now bigger) */
+.tokens th:nth-child(3) { width: 15%; } /* Line */
+.tokens th:nth-child(4) { width: 15%; } /* Column */
+
+.token-table-container {
+  flex: 1; 
+  overflow-y: auto;
+  min-height: 0;
+
+  /* ADD back the padding for the table content */
+  padding: 0 2rem 1.5rem; 
+}
+
+/* Bottom layout panel for errors */
+.layout-panel-bottom {
+  width: 100%;
+  margin-top: 1rem;
+  box-sizing: border-box;
+  border: 1px solid #3c3c3c;
+  padding: 0.5rem;
+  background: #252526;
+  color: #d4d4d4;
+}
+
+/* --- For Firefox --- */
+.token-table-container,
+.textarea {
+  scrollbar-width: thin;         
+  scrollbar-color: #555 #252526;
+}
+
+/* --- For Chrome, Safari, Edge, and Opera --- */
+.token-table-container::-webkit-scrollbar,
+.textarea::-webkit-scrollbar {
+  width: 10px;
+  height: 10px; 
+}
+
+.token-table-container::-webkit-scrollbar-track,
+.textarea::-webkit-scrollbar-track {
+  background: #252526;      
+  border-radius: 5px;
+}
+
+.token-table-container::-webkit-scrollbar-thumb,
+.textarea::-webkit-scrollbar-thumb {
+  background-color: #555;   
+  border-radius: 5px;
+  border: 2px solid #252526;
+}
+
+.token-table-container::-webkit-scrollbar-thumb:hover,
+.textarea::-webkit-scrollbar-thumb:hover {
+  background-color: #777;   
+}
+
+.token-table-container::-webkit-scrollbar-corner,
+.textarea::-webkit-scrollbar-corner {
+  background: transparent;
 }
