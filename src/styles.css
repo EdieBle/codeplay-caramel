@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Play:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Indie+Flower&display=swap');
 
 /* BUTTONS */
 .tokenize-btn-container {
@@ -13,13 +14,13 @@
 .tokenize-btn {
   margin-top: 0.5rem;
   padding: 0.6rem 1.2rem;
-  border: thin solid #bcbcbc;
+  border: thin solid #DDA96D; /* Primary */
   border-radius: 6px;
-  background: #1e1e1e;
-  color: #fff;
+  background: #DDA96D; /* Primary */
+  color: #FFFBFB; /* Light Background */
   font-weight: bold;
   cursor: pointer;
-  transition: background 0.2s, transform 0.2s;
+  transition: background 0.2s, transform 0.2s, color 0.2s;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -27,8 +28,8 @@
 }
 
 .tokenize-btn:hover {
-  background: #bcbcbc;
-  color: #252526;
+  background: #FFF5EB; /* Secondary Light */
+  color: #DDA96D; /* Primary */
   transform: translateY(-1px);
 }
 
@@ -39,7 +40,8 @@
   max-width: 550px;
   flex-direction: column;
   max-height: 80vh;
-  color: #d4d4d4;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(85, 77, 64, 0.15); /* Light Mode Shadow */
 }
 
 /* Center title and add spacing */
@@ -47,14 +49,12 @@
   margin-top: 0;
   margin-bottom: 1rem;
   text-align: center;
-  font-family: "Play", sans-serif;
-  color: #ffffff;
+  font-family: "Indie Flower", cursive;
+  color: #554d40; /* Light Mode Text */
   font-size: 1.2rem;
   letter-spacing: 0.5px;
   padding: 1.5rem 2rem 0; 
 }
-
-
 
 /* Table styling */
 .tokens table {
@@ -62,8 +62,8 @@
   border-collapse: separate;
   border-spacing: 0 6px;
   font-size: 0.95rem;
-  color: #dcdcdc;
-  table-layout: fixed; /* <-- ADD THIS */
+  color: #554d40; /* Light Mode Text */
+  table-layout: fixed;
 }
 
 /* Headers and cells */
@@ -73,9 +73,9 @@
 }
 
 .tokens th {
-  color: #c6c6c6;
-  background: #252526;
-  border-bottom: 2px solid #3c3c3c;
+  color: #554d40; /* Light Mode Text */
+  background: #FFF5EB; /* Secondary Light */
+  border-bottom: 2px solid #DDA96D; /* Primary */
   position: sticky;
   top: 0;
   z-index: 2;
@@ -83,12 +83,12 @@
 
 /* Each row separation */
 .tokens tr {
-  background: #2d2d2d;
+  background: #FFFBFB; /* Light Background */
   border-radius: 6px;
 }
 
 .tokens tr:hover {
-  background: #333333;
+  background: #FFF5EB; /* Secondary Light */
 }
 
 /* FONT STYLES */
@@ -99,17 +99,17 @@
 }
 
 .play-bold {
-  font-family: "Play", sans-serif;
-  font-weight: 700;
+  font-family: "Indie Flower", cursive;
+  font-weight: 1200;
   font-style: normal;
   align-self: center;
-  color: #ffffff;
+  color: #554d40 ; /* Correct for Light Mode */
 }
 
 /* BODY & EDITOR */
 body {
-  background: #1e1e1e;
-  color: #d4d4d4;
+  background: #FFF5EB; /* Secondary Light */
+  color: #554d40; /* Light Mode Text */
   font-family: 'Fira Code', monospace;
   margin: 0;
   padding-top: 3.5rem;
@@ -117,14 +117,14 @@ body {
 }
 
 .editor {
-  background: #252526;
+  background: #FFFBFB; /* Light Background */
   width: 100%;
   max-width: 1000px;
   min-width: 500px;
   margin: 2rem 0 2rem 2rem;
   padding: 1rem 1.5rem;
-  border: 1px solid #3c3c3c;
   border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(85, 77, 64, 0.15); /* Light Mode Shadow */
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -137,10 +137,11 @@ body {
   position: relative;
   display: flex;
   align-items: stretch;
-  background: #1e1e1e;
+  background: #FFFBFB; /* Light Background */
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+  border: 8px;
+  box-shadow: 0 4px 12px rgba(85, 77, 64, 0.15); /* Light Mode Shadow */
   width: 95%;
   max-width: 1200px;
   height: 60vh;
@@ -152,14 +153,14 @@ body {
 .line-numbers {
   flex-shrink: 0;
   width: 55px;
-  background: #2a2a2a;
-  color: #858585;
+  background: #FFFBFB; /* Light Background */
+  color: #806341; /* Muted Light Mode Text */
   font-family: 'Fira Code', monospace;
   font-size: 0.9rem;
   text-align: right;
   padding: 0.75rem 0.5rem;
   box-sizing: border-box;
-  border-right: 1px solid #3c3c3c;
+  border-right: 1px solid rgba(85, 77, 64, 0.2); /* Subtle Border */
   overflow: hidden;
 }
 
@@ -172,16 +173,16 @@ body {
 }
 
 .line-number.active {
-  background: rgba(255, 255, 255, 0.07);
-  color: #4fc3f7;
+  background: #FFF5EB; /* Secondary Light */
+  color: #DDA96D; /* Primary */
   border-radius: 4px;
 }
 
 /* Text editor area */
 .textarea {
   flex: 1;
-  background: #1e1e1e;
-  color: #dcdcdc;
+  background: #FFFBFB ; /* Light Background */
+  color: #554d40; /* Light Mode Text */
   border: none;
   outline: none;
   padding: 0.75rem 1rem;
@@ -190,7 +191,7 @@ body {
   resize: none;
   white-space: pre;
   tab-size: 2;
-  caret-color: #4fc3f7;
+  caret-color: #DDA96D; /* Primary */
   line-height: 1.5rem;
   overflow-y: auto;
 }
@@ -248,10 +249,10 @@ body {
 .tokens.layout-panel-right {
   flex: 0 0 500px;
   overflow-y: auto;
-  border: 1px solid #3c3c3c;
+  border: 1px solid rgba(85, 77, 64, 0.2); /* Subtle Border */
   max-height: none;
   max-width: 500px;
-  background: #252526;
+  background: #FFFBFB; /* Light Background */
   display: flex;
   flex-direction: column;
 }
@@ -266,8 +267,6 @@ body {
   flex: 1; 
   overflow-y: auto;
   min-height: 0;
-
-  /* ADD back the padding for the table content */
   padding: 0 2rem 1.5rem; 
 }
 
@@ -276,17 +275,17 @@ body {
   width: 100%;
   margin-top: 1rem;
   box-sizing: border-box;
-  border: 1px solid #3c3c3c;
+  border: 1px solid rgba(85, 77, 64, 0.2); /* Subtle Border */
   padding: 0.5rem;
-  background: #252526;
-  color: #d4d4d4;
+  background: #FFFBFB; /* Light Background */
+  color: #554d40; /* Light Mode Text */
 }
 
 /* --- For Firefox --- */
 .token-table-container,
 .textarea {
   scrollbar-width: thin;         
-  scrollbar-color: #555 #252526;
+  scrollbar-color: #DDA96D #FFF5EB; /* Primary thumb, Secondary Light track */
 }
 
 /* --- For Chrome, Safari, Edge, and Opera --- */
@@ -298,20 +297,20 @@ body {
 
 .token-table-container::-webkit-scrollbar-track,
 .textarea::-webkit-scrollbar-track {
-  background: #252526;      
+  background: #FFF5EB; /* Secondary Light */
   border-radius: 5px;
 }
 
 .token-table-container::-webkit-scrollbar-thumb,
 .textarea::-webkit-scrollbar-thumb {
-  background-color: #555;   
+  background-color: #DDA96D; /* Primary */
   border-radius: 5px;
-  border: 2px solid #252526;
+  border: 2px solid #FFF5EB; /* Secondary Light */
 }
 
 .token-table-container::-webkit-scrollbar-thumb:hover,
 .textarea::-webkit-scrollbar-thumb:hover {
-  background-color: #777;   
+  background-color: #c79457; /* Darker Primary */
 }
 
 .token-table-container::-webkit-scrollbar-corner,

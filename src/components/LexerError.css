@@ -1,11 +1,11 @@
 .lexer-error {
-  background: linear-gradient(180deg, rgba(241, 76, 76, 0.05), rgba(0, 0, 0, 0.02));
-  border: 1px solid rgba(241, 76, 76, 0.25);
-  color: #ffdcdc;
+  background: #FFF5F5; /* Light red/pink background */
+  border: 1px solid rgba(241, 76, 76, 0.3); /* Red border */
+  color: #B33A3A; /* Dark red text for contrast */
   padding: 0.75rem 1rem;
   border-radius: 8px;
   margin-top: 0.75rem;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 10px rgba(85, 77, 64, 0.1); /* Light mode shadow */
   font-family: "JetBrains Mono", monospace;
 }
 
@@ -23,25 +23,25 @@
 
 .lexer-error__title {
   font-weight: 700;
-  color: #ffb3b3;
+  color: #C53030; /* Strong, dark red title */
 }
 
 .lexer-error__summary {
   font-size: 0.85rem;
-  color: #ffdcdc;
+  color: #B33A3A; /* Dark red text */
 }
 
 .lexer-error__copy {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ffdcdc;
+  border: 1px solid rgba(197, 48, 48, 0.3); /* Dark red border */
+  color: #C53030; /* Dark red text */
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 .lexer-error__copy:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(241, 76, 76, 0.05); /* Faint red hover */
 }
 
 .lexer-error__list {
@@ -55,14 +55,14 @@
 .lexer-error__item {
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
-  background: rgba(255, 50, 50, 0.05);
-  border: 1px solid rgba(255, 80, 80, 0.1);
+  background: rgba(241, 76, 76, 0.05); /* Faint red background */
+  border: 1px solid rgba(241, 76, 76, 0.15); /* Faint red border */
 }
 
 /* Top line: LEXICAL ERROR: + optional message */
 .lexer-error__type-line {
   font-weight: 700;
-  color: #ff9999;
+  color: #C53030; /* Strong dark red */
   letter-spacing: 0.5px;
   margin-bottom: 0.35rem;
 }
@@ -72,18 +72,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.03);
+  background: #FFF5EB; /* Secondary Light bg from your palette */
   border-radius: 5px;
   padding: 0.25rem 0.6rem;
 }
 
 .lexer-error__lexeme {
-  color: #fff;
+  color: #554d40; /* Main light-mode text */
   font-weight: 600;
 }
 
 .lexer-error__loc {
-  color: #ccc;
+  color: #806341; /* Muted light-mode text */
   font-size: 0.85rem;
 }
 
@@ -91,11 +91,11 @@
 .lexer-error__footer {
   margin-top: 0.75rem;
   font-size: 0.85rem;
-  color: #d8d8d8;
+  color: #806341; /* Muted light-mode text */
   text-align: right;
 }
 .lexer-error__footer a {
-  color: #ff8080;
+  color: #C53030; /* Strong red link */
   text-decoration: none;
   font-weight: 600;
 }
