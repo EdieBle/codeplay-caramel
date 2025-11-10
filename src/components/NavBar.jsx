@@ -12,11 +12,30 @@ export default function NavBar() {
           <img src="/images/logo.svg" alt="CodePlay Caramel" style={{height:36}} />
         </div>
         <ul className="cp-navbar__links">
-          <li><a href="#">Analyser</a></li>
+          {/* HERE is the change:
+            - Icon is now inside the <a> tag
+            - 'class' is changed to 'className'
+          */}
+          <li>
+            <a href="#">
+              <i className="fa-solid fa-code"></i>
+              <span>Analyser</span>
+            </a>
+          </li>
+          
           <li><a href="#" onClick={(e) => {
             e.preventDefault();
             setShowAbout(true);
-          }}>About</a></li>
+          }}>
+            <i class="fa-solid fa-info"></i>
+            <span>About</span>
+            </a>
+          </li>
+          <li><a href="#">
+            <i class="fa-solid fa-moon"></i>
+            <span>Mode</span>
+            </a>
+          </li>
         </ul>
       </nav>
 

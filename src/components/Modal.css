@@ -4,7 +4,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.75);
+  /* Swapped black overlay for a semi-transparent light mode text color */
+  background-color: rgba(85, 77, 64, 0.4); 
   display: flex;
   justify-content: center;
   align-items: center;
@@ -12,13 +13,15 @@
 }
 
 .modal-content {
-  background: #252526;
+  background: #FFFBFB; /* Light Background */
   padding: 2rem;
   border-radius: 8px;
   max-width: 1000px;
   width: 90%;
   position: relative;
-  border: 1px solid #3c3c3c;
+  border: 1px solid #DDA96D; /* Primary color border */
+  /* Added a light shadow to match other components */
+  box-shadow: 0 4px 12px rgba(85, 77, 64, 0.15); 
 }
 
 .modal-close {
@@ -27,26 +30,26 @@
   right: 1rem;
   background: none;
   border: none;
-  color: #bcbcbc;
+  color: #806341; /* Muted Text */
   cursor: pointer;
   font-size: 1.5rem;
   padding: 0.5rem;
 }
 
 .modal-close:hover {
-  color: #ffffff;
+  color: #554d40; /* Main Text */
 }
 
 .modal-title {
   margin-top: 0;
   margin-bottom: 10px;
-  color: #d4d4d4;
+  color: #554d40; /* Main Text */
   font-size: 1.5rem;
   margin-bottom: 1rem;
 }
 
 .modal-body {
-  color: #bcbcbc;
+  color: #554d40; /* Main Text */
   line-height: 1.8;
   text-align: justify;
   padding: 0 1rem;

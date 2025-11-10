@@ -84,3 +84,11 @@
   width: calc(100% - 1.5rem);
   opacity: 1;
 }
+
+/* Add this to your NavBar.css */
+
+.cp-navbar__links a {
+  display: flex; /* Aligns icon and text */
+  align-items: center; /* Vertically centers them */
+  gap: 0.5rem; /* Adds space between icon and text */
+}
