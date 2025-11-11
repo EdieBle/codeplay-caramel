@@ -59,13 +59,11 @@
   transform: translateY(1px);
 }
 
-/* Optional: Add subtle indicator for current page */
 .cp-navbar__links a.active {
   color: #FFFBFB; /* Brightest light color */
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* Optional: Add subtle bottom border on hover */
 .cp-navbar__links a::after {
   content: '';
   position: absolute;
@@ -85,10 +83,15 @@
   opacity: 1;
 }
 
-/* Add this to your NavBar.css */
 
 .cp-navbar__links a {
   display: flex; /* Aligns icon and text */
   align-items: center; /* Vertically centers them */
   gap: 0.5rem; /* Adds space between icon and text */
+}
+
+/* --- DARK MODE --- */
+[data-theme="dark"] .cp-navbar {
+  background: #443e33; /* ADDED: Sets bg to match the dark panels */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }

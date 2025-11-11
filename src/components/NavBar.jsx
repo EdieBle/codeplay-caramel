@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import "./NavBar.css";
 import Modal from "./Modal";
 
-export default function NavBar() {
+// 1. Accept props: 'theme' and 'onToggleTheme'
+export default function NavBar({ theme, onToggleTheme }) {
   const [showAbout, setShowAbout] = useState(false);
 
   return (
@@ -12,10 +13,6 @@ export default function NavBar() {
           <img src="/images/logo.svg" alt="CodePlay Caramel" style={{height:36}} />
         </div>
         <ul className="cp-navbar__links">
-          {/* HERE is the change:
-            - Icon is now inside the <a> tag
-            - 'class' is changed to 'className'
-          */}
           <li>
             <a href="#">
               <i className="fa-solid fa-code"></i>
@@ -27,13 +24,21 @@ export default function NavBar() {
             e.preventDefault();
             setShowAbout(true);
           }}>
-            <i class="fa-solid fa-info"></i>
+            {/* Fixed: class -> className */}
+            <i className="fa-solid fa-info"></i>
             <span>About</span>
             </a>
           </li>
-          <li><a href="#">
-            <i class="fa-solid fa-moon"></i>
-            <span>Mode</span>
+
+          {/* 2. THIS IS THE UPDATED TOGGLE BUTTON */}
+          <li>
+            <a href="#" onClick={(e) => {
+              e.preventDefault();
+              onToggleTheme(); // Call the function from App.jsx
+            }}>
+              {/* 3. Icon changes based on the theme prop */}
+              <i className={theme === 'dark' ? "fa-solid fa-moon" : "fa-regular fa-moon"}></i>
+              <span>Mode</span>
             </a>
           </li>
         </ul>

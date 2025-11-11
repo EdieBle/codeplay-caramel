@@ -67,3 +67,28 @@
   text-indent: 2rem;
   margin-bottom: 1.5rem;
 }
+
+/* --- DARK MODE --- */
+[data-theme="dark"] .modal-overlay {
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+[data-theme="dark"] .modal-content {
+  background: #554d40;
+  color: #FFFBFB;
+  border: 1px solid #806341;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .modal-close {
+  color: #806341;
+}
+
+[data-theme="dark"] .modal-close:hover {
+  color: #FFFBFB;
+}
+
+[data-theme="dark"] .modal-title,
+[data-theme="dark"] .modal-body {
+  color: #FFFBFB;
+}

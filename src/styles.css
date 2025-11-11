@@ -108,7 +108,6 @@
 
 /* BODY & EDITOR */
 body {
-  background: #FFF5EB; /* Secondary Light */
   color: #554d40; /* Light Mode Text */
   font-family: 'Fira Code', monospace;
   margin: 0;
@@ -219,6 +218,7 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background: #FFF5EB; /* <-- ADD THIS LINE */
 }
 
 /* Container for all content below navbar */
@@ -259,7 +259,7 @@ body {
 
 /* NEW: Define specific column widths */
 .tokens th:nth-child(1) { width: 25%; } /* Type */
-.tokens th:nth-child(2) { width: 45%; } /* Lexeme (now bigger) */
+.tokens th:nth-child(2) { width: 45%; } /* Lexeme */
 .tokens th:nth-child(3) { width: 15%; } /* Line */
 .tokens th:nth-child(4) { width: 15%; } /* Column */
 
@@ -297,20 +297,20 @@ body {
 
 .token-table-container::-webkit-scrollbar-track,
 .textarea::-webkit-scrollbar-track {
-  background: #FFF5EB; /* Secondary Light */
+  background: #FFF5EB;
   border-radius: 5px;
 }
 
 .token-table-container::-webkit-scrollbar-thumb,
 .textarea::-webkit-scrollbar-thumb {
-  background-color: #DDA96D; /* Primary */
+  background-color: #DDA96D;
   border-radius: 5px;
-  border: 2px solid #FFF5EB; /* Secondary Light */
+  border: 2px solid #FFF5EB;
 }
 
 .token-table-container::-webkit-scrollbar-thumb:hover,
 .textarea::-webkit-scrollbar-thumb:hover {
-  background-color: #c79457; /* Darker Primary */
+  background-color: #c79457;
 }
 
 .token-table-container::-webkit-scrollbar-corner,
@@ -318,3 +318,92 @@ body {
   background: transparent;
 }
 
+/*
+======================================================================
+ DARK MODE OVERRIDES
+======================================================================
+*/
+
+[data-theme="dark"] .app-root {
+  background: #2d2923; /* The very dark background you wanted */
+}
+
+/* We still need to fix the default text color on the body */
+[data-theme="dark"] body {
+   color: #FFFBFB; 
+}
+[data-theme="dark"] .editor,
+[data-theme="dark"] .tokens.layout-panel-right,
+[data-theme="dark"] .layout-panel-bottom,
+[data-theme="dark"] .editor-container,
+[data-theme="dark"] .line-numbers,
+[data-theme="dark"] .textarea,
+[data-theme="dark"] .tokens tr {
+  background: #443e33; /* A slightly darker bg for panels */
+  color: #FFFBFB;
+  border-color: #806341;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .tokens h3,
+[data-theme="dark"] .play-bold,
+[data-theme="dark"] .tokens th,
+[data-theme="dark"] .tokens td,
+[data-theme="dark"] .textarea {
+  color: #FFFBFB;
+}
+
+[data-theme="dark"] .line-numbers {
+  color: #806341;
+  border-right: 1px solid #806341;
+}
+
+[data-theme="dark"] .body {
+  color: #806341;
+  border-right: 1px solid #806341;
+}
+
+[data-theme="dark"] .line-number.active {
+  background: #554d40; /* Dark body bg */
+  color: #DDA96D; /* Primary */
+}
+
+[data-theme="dark"] .tokens th {
+  background: #554d40; /* Dark body bg */
+  border-bottom: 2px solid #DDA96D;
+}
+
+[data-theme="dark"] .tokens tr:hover {
+  background: #554d40; /* Dark body bg */
+}
+
+[data-theme="dark"] .tokenize-btn:hover {
+  background: #806341;
+  color: #DDA96D;
+}
+
+[data-theme="dark"] .textarea {
+  caret-color: #DDA96D;
+}
+
+/* --- Scrollbars (Dark) --- */
+[data-theme="dark"] .token-table-container,
+[data-theme="dark"] .textarea {
+  scrollbar-color: #DDA96D #554d40;
+}
+
+[data-theme="dark"] .token-table-container::-webkit-scrollbar-track,
+[data-theme="dark"] .textarea::-webkit-scrollbar-track {
+  background: #554d40;
+}
+
+[data-theme="dark"] .token-table-container::-webkit-scrollbar-thumb,
+[data-theme="dark"] .textarea::-webkit-scrollbar-thumb {
+  background-color: #DDA96D;
+  border: 2px solid #554d40;
+}
+
+[data-theme="dark"] .token-table-container::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] .textarea::-webkit-scrollbar-thumb:hover {
+  background-color: #c79457;
+}

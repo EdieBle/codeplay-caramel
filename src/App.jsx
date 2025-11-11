@@ -5,6 +5,11 @@ import NavBar from "./components/NavBar";
 import "./components/NavBar.css";
 import LexerError from "./components/LexerError";
 
+// --- ADDED ---
+// Import the other component CSS files so they can be themed
+import "./components/Modal.css";
+import "./components/LexerError.css";
+
 export default function App() {
   const [code, setCode] = useState(
 `~~this is supposed to be an unclosed multi-line comment, but thats the problem of the parser afaik
@@ -66,6 +71,21 @@ bean cup() [
   const textareaRef = useRef(null);
   const lineNumbersRef = useRef(null);
   const [currentLine, setCurrentLine] = useState(1);
+  
+  // --- 1. ADD THEME STATE ---
+  const [theme, setTheme] = useState('light'); // 'light' is the default
+
+  // --- 2. ADD TOGGLE FUNCTION ---
+  const toggleTheme = () => {
+    setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
+
+  // --- 3. ADD EFFECT TO UPDATE BODY ---
+  // This hook runs when 'theme' changes and updates the <body> tag
+  useEffect(() => {
+    document.body.setAttribute('data-theme', theme);
+  }, [theme]);
+
 
   // Tokenize all lines
   const handleTokenize = async () => {
@@ -107,7 +127,6 @@ bean cup() [
 
       const normalized = result.map((t) => ({ ...t, line: lineIndex + 1 }));
 
-      // Error handler for the single line
       const lineErrors = normalized.filter((t) => t.type === "ERROR" || t.type ===  "LEXICAL_ERROR");
       const validLineTokens = normalized.filter((t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR");
 
@@ -142,7 +161,7 @@ const handleScroll = () => {
   const ta = textareaRef.current;
   const ln = lineNumbersRef.current;
   if (!ta || !ln) return;
-  ln.scrollTop = ta.scrollTop; // keeps numbers aligned while scrolling
+  ln.scrollTop = ta.scrollTop; 
 };
 
 
@@ -152,7 +171,8 @@ const handleScroll = () => {
 
   return (
     <div className="app-root">
-      <NavBar />
+      {/* --- 4. PASS PROPS TO NAVBAR --- */}
+      <NavBar theme={theme} onToggleTheme={toggleTheme} />
 
       {/* Main Content Area: Stacks Top Row and Bottom Row vertically */}
       <div className="main-content">
@@ -186,7 +206,7 @@ const handleScroll = () => {
                 ref={textareaRef}
                 className="textarea"
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
+                onChange={(e) => setCode(e.g.target.value)}
                 onClick={updateCurrentLine}
                 onKeyUp={updateCurrentLine}
                 onScroll={handleScroll}
@@ -226,7 +246,7 @@ const handleScroll = () => {
           >
             <h3 className="play-bold">Tokens</h3>
             
-            {/* NEW: Add a scrollable container FOR THE TABLE ONLY */}
+            {/* Add a scrollable container FOR THE TABLE ONLY */}
             <div className="token-table-container">
               {showLineTokens ? (
                 <TokenTable tokens={lineTokens} />

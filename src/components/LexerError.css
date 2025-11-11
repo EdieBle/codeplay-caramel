@@ -102,3 +102,55 @@
 .lexer-error__footer a:hover {
   text-decoration: underline;
 }
+
+/* --- DARK MODE --- */
+[data-theme="dark"] .lexer-error {
+  background: #4d2f2f;
+  border: 1px solid #C53030;
+  color: #ffb3b3;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .lexer-error__title {
+  color: #ff9999;
+}
+
+[data-theme="dark"] .lexer-error__summary {
+  color: #ffdcdc;
+}
+
+[data-theme="dark"] .lexer-error__copy {
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  color: #ffdcdc;
+}
+[data-theme="dark"] .lexer-error__copy:hover {
+  background: rgba(255, 100, 100, 0.1);
+}
+
+[data-theme="dark"] .lexer-error__item {
+  background: rgba(255, 50, 50, 0.05);
+  border: 1px solid rgba(255, 80, 80, 0.1);
+}
+
+[data-theme="dark"] .lexer-error__type-line {
+  color: #ff9999;
+}
+
+[data-theme="dark"] .lexer-error__details-row {
+  background: #554d40; /* Dark body bg */
+}
+
+[data-theme="dark"] .lexer-error__lexeme {
+  color: #FFFBFB; /* Dark text */
+}
+
+[data-theme="dark"] .lexer-error__loc {
+  color: #ffdcdc; /* Dark muted */
+}
+
+[data-theme="dark"] .lexer-error__footer {
+  color: #806341;
+}
+[data-theme="dark"] .lexer-error__footer a {
+  color: #ff8080;
+}
