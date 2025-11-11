@@ -163,6 +163,75 @@ bean cup() [
     if (!showTokens) setShowLineTokens(false);
   };
 
+  // Expand a highlight to whole lines and return the block + line info
+  const getSelectionLineBounds = (text, start, end) => {
+    const lineStart = text.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+    const nextNewlineAfterEnd = text.indexOf("\n", end);
+    const lineEnd = nextNewlineAfterEnd === -1 ? text.length : nextNewlineAfterEnd;
+
+    const startLineNumber = (text.slice(0, lineStart).match(/\n/g) || []).length + 1;
+    const endLineNumber = (text.slice(0, lineEnd).match(/\n/g) || []).length + 1;
+
+    return {
+      text: text.slice(lineStart, lineEnd),
+      lineStart,
+      lineEnd,
+      startLineNumber,
+      endLineNumber,
+    };
+  };
+
+  const handleTokenizeSelection = async () => {
+    if (!textareaRef.current) return;
+
+    const el = textareaRef.current;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+
+    // If nothing is highlighted, reuse your existing line-tokenize behavior
+    if (start === end) {
+      return handleTokenizeLine();
+    }
+
+    setBusy?.(true);
+    try {
+      const {
+        text: selectedBlock,
+        startLineNumber,
+        endLineNumber,
+      } = getSelectionLineBounds(code, start, end);
+
+      const res = await axios.post("http://127.0.0.1:5000/tokenize", { code: selectedBlock });
+      const result = res.data || [];
+
+      // Offset token line numbers so they match the original editor numbering
+      const normalized = result.map((t) => ({
+        ...t,
+        line:
+          (typeof t.line === "number" ? t.line : parseInt(t.line, 10) || 1) +
+          startLineNumber -
+          1,
+      }));
+
+      const lineErrors = normalized.filter((t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR");
+      const validLineTokens = normalized.filter((t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR");
+
+      setLineTokens(validLineTokens);
+      setErrors(lineErrors);
+      setCurrentLine(
+        startLineNumber === endLineNumber ? startLineNumber : `${startLineNumber}-${endLineNumber}`
+      );
+      setShowLineTokens(true);
+      setShowTokens?.(true);
+    } catch (err) {
+      console.error("Error contacting backend:", err);
+      setErrors([{ type: "CONNECTION_ERROR", lexeme: "Backend not running" }]);
+    } finally {
+      setBusy?.(false);
+    }
+  };
+
+
   // Detect active line
   const updateCurrentLine = () => {
     const ta = textareaRef.current;
@@ -249,7 +318,15 @@ const handleScroll = () => {
               <button className="tokenize-btn" onClick={handleTokenize} disabled={busy}>
                 {busy ? "Tokenizing..." : "Tokenize (full)"}
               </button>
-                              
+              
+              <button
+                className="tokenize-btn"
+                onClick={handleTokenizeSelection}
+                disabled={busy}>
+                Tokenize selected lines
+              </button>
+
+              
               <button className="tokenize-btn" onClick={handleTokenizeLine} disabled={busy}>
                 Tokenize line
               </button>
