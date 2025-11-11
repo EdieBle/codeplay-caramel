@@ -74,6 +74,22 @@ bean cup() [
   
   // --- 1. ADD THEME STATE ---
   const [theme, setTheme] = useState('light'); // 'light' is the default
+  
+  const handleClear = () => {
+  setCode("");
+  setTokens([]);
+  setLineTokens([]);
+  setErrors([]);
+  setHasRun(false);
+  setShowLineTokens(false);
+  setCurrentLine(1);
+
+  if (textareaRef.current) textareaRef.current.scrollTop = 0;
+  if (lineNumbersRef.current) lineNumbersRef.current.scrollTop = 0;
+
+  requestAnimationFrame(() => textareaRef.current?.focus());
+  };
+
 
   // --- 2. ADD TOGGLE FUNCTION ---
   const toggleTheme = () => {
@@ -206,7 +222,7 @@ const handleScroll = () => {
                 ref={textareaRef}
                 className="textarea"
                 value={code}
-                onChange={(e) => setCode(e.g.target.value)}
+                onChange={(e) => setCode(e.target.value)}
                 onClick={updateCurrentLine}
                 onKeyUp={updateCurrentLine}
                 onScroll={handleScroll}
@@ -233,10 +249,18 @@ const handleScroll = () => {
               <button className="tokenize-btn" onClick={handleTokenize} disabled={busy}>
                 {busy ? "Tokenizing..." : "Tokenize (full)"}
               </button>
-
+                              
               <button className="tokenize-btn" onClick={handleTokenizeLine} disabled={busy}>
                 Tokenize line
               </button>
+
+              <button
+                className="tokenize-btn tokenize-btn--clear"
+                onClick={handleClear}
+                disabled={busy}>
+                Clear
+              </button>
+
             </div>
           </div>
           

@@ -27,6 +27,18 @@
   position: relative;
 }
 
+.tokenize-btn--clear {
+  background: transparent;
+  color: #DDA96D;
+  border-style: dashed;
+}
+.tokenize-btn--clear:hover {
+  background: #FFF5EB;
+}
+[data-theme="dark"] .tokenize-btn--clear:hover {
+  background: #806341;
+}
+
 .tokenize-btn:hover {
   background: #FFF5EB; /* Secondary Light */
   color: #DDA96D; /* Primary */
