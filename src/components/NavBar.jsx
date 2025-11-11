@@ -37,7 +37,7 @@ export default function NavBar({ theme, onToggleTheme }) {
               onToggleTheme(); // Call the function from App.jsx
             }}>
               {/* 3. Icon changes based on the theme prop */}
-              <i className={theme === 'dark' ? "fa-solid fa-moon" : "fa-regular fa-moon"}></i>
+              <i className={theme === 'dark' ? "fa-solid fa-moon" : "fa-solid fa-sun"}></i>
               <span>Mode</span>
             </a>
           </li>
