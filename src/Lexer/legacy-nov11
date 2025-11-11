@@ -1,10 +1,12 @@
-import re
+# import re <--- legacy due to switching from regular expression base to strict transition diagram
 
 def tokenize(code):
     MAX_BEAN = 9_999_999_999
     MAX_DRIP_INT = "9999999999"
     MAX_DRIP_FRAC = "9999999999"
 
+
+    """ Unfortunately for changing!
     token_specs = [
         ("COMMENT", r"~~[^\r\n]*|~\.[\s\S]*?(?:\.~|$)"),
 
@@ -38,6 +40,7 @@ def tokenize(code):
 
         ("IDENTIFIER", r"\b[a-z][a-z0-9_]*\b")
     ]
+    """
 
     tokens = []
     pos = 0
@@ -221,3 +224,32 @@ def tokenize(code):
             column += 1
 
     return tokens
+
+
+
+# COMES FROM THE ATOMDELIM.PY
+
+"""
+  # Atoms
+    whole = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    alpha_cap = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+    alpha_small = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
+    sp_symbols = ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+', '[', ']', '{', '}', '/', '|', ':', ';', "'", '"', '<', '>', '.']
+    space_delim = [' ', '\t']
+    newline = ['\n']
+
+    # Text content and what is usually an acceptable value.
+    escapeseq_let = ['t', 'b', 'f', 'n', 'r', 'v', '"']
+    text_content = list(set(space_delim + whole + alpha_small + alpha_cap + sp_symbols))
+    safe_char = list(set(space_delim + whole + sp_symbols + ['a', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'o', 'p', 'q', 's', 'u', 'w', 'x', 'y', 'z', 'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'O', 'P', 'Q', 'S', 'U', 'W', 'X', 'Y', 'Z']))
+
+    # For testing: print("Printed list:", [replace name with list of choice])
+
+    # Operators
+    arithmetic_op = ['+', '-', '*', '/', '%']
+    #possibly merge-able??? meh
+    assignment_op = ['=']
+    logical_op = ['!', '&', '|']
+    relational_op = ['>', '<', '=', '!']
+    unary_op = ['+', '-']
+"""
