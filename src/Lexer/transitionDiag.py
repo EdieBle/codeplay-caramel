@@ -18,7 +18,7 @@ TRANSITIONS_DFA = {
     
     # crema, churro, cold, crema, cup, decaf, drip
     31: State('c', [32, 36, 42, 46, 51]),
-        32: State('a', 33), 33: State('f', 34), 34: State(DELIM_VAL['space_delim'], end = True),
+        32: State('a', 33), 33: State('f', 34), 34: State('e', 35), 35: State(DELIM_VAL['space_delim'], end = True),
         36: State('h', 37), 37: State('u', 38), 38: State('r', 39), 39: State('r', 40), 40: State('o', 41), 41: State(DELIM_VAL['space_delim'], end = True),
         42: State('o', 43), 43: State('l', 44), 44: State('d', 45), 45: State(DELIM_VAL['temp_delim'], end = True),
         46: State('r', 47), 47: State('e', 48), 48: State('m', 49), 49: State('a', 50), 50: State(DELIM_VAL['space_delim'], end = True),
@@ -48,24 +48,24 @@ TRANSITIONS_DFA = {
     123: State('o', 124), 124: State('r', 125), 125: State('d', 126), 126: State('e', 127), 127: State('r', 128), 128: State(DELIM_VAL['spaceparen_delim'], end = True)
     
     # pour
-    #129: State('p', 130), 130: State('o', 131), 131: State('u', 132), 132: State('r', 133), 133: State(DELIM_VAL['spaceparen_delim'], end = True),
+    # 129: State('p', 130), 130: State('o', 131), 131: State('u', 132), 132: State('r', 133), 133: State(DELIM_VAL['spaceparen_delim'], end = True),
     
     # recipe and refill?
-    #134: State('r', 135), 135: State('e', [136, 141]), 136: State('c', 137), 137: State('i', 138), 138: State('p', 139), 139: State('e', 140), 140: State(DELIM_VAL['space_delim'], end = True),
-    #141: State('f', 142), 142: State('i', 143), 143: State('l', 144), 144: State('l', 145), 145: State('?', 146), 146: State(DELIM_VAL['refill_delim'], end = True),
+    # 134: State('r', 135), 135: State('e', [136, 141]), 136: State('c', 137), 137: State('i', 138), 138: State('p', 139), 139: State('e', 140), 140: State(DELIM_VAL['space_delim'], end = True),
+    # 141: State('f', 142), 142: State('i', 143), 143: State('l', 144), 144: State('l', 145), 145: State('?', 146), 146: State(DELIM_VAL['refill_delim'], end = True),
     
     # skip, snap, syrup
-    #147: State('s', [148, 152, 156]), 148: State('k', 149), 149: State('i', 150), 150: State('p', 151), 151: State(DELIM_VAL['newline'], end = True),
+    # 147: State('s', [148, 152, 156]), 148: State('k', 149), 149: State('i', 150), 150: State('p', 151), 151: State(DELIM_VAL['newline'], end = True),
                     # 152: State('n', 153), 153: State('a', 154), 154: State('p', 155), 155: State(DELIM_VAL['newline'], end = True),
                     # 156: State('y', 157), 157: State('r', 158), 158: State('u', 159), 159: State('p', 160), 160: State(DELIM_VAL['spaceparen_delim'], end = True),
     
     # taste, till, temp
-    #161: State('t', [162, 167, 171]), 162: State('a', 163), 163: State('s', 164), 164: State('t', 165), 165: State('e', 166), 166: State(DELIM_VAL['spacebraces_delim'], end = True),
+    # 161: State('t', [162, 167, 171]), 162: State('a', 163), 163: State('s', 164), 164: State('t', 165), 165: State('e', 166), 166: State(DELIM_VAL['spacebraces_delim'], end = True),
                     # 167: State('i', 168), 168: State('l', 169), 169: State('l', 170), 170: State(DELIM_VAL['.'], end = True),
                     # 171: State ('e', 172), 172: State('m', 173), 173: State('p', 174), 174: State(DELIM_VAL['space_delim'], end = True),
     
     # whilehot
-    #175: State('w', 176), 176: State('h', 177), 177: State('i', 178), 178: State('l', 179), 179: State('e', 180), 180: State('h', 181), 181: State('o', 182), 182: State('t', 183), 183: State(DELIM_VAL['spaceparen_delim'], end = True),
+    # 175: State('w', 176), 176: State('h', 177), 177: State('i', 178), 178: State('l', 179), 179: State('e', 180), 180: State('h', 181), 181: State('o', 182), 182: State('t', 183), 183: State(DELIM_VAL['spaceparen_delim'], end = True),
 
     # Reserved Symbols
     # Equals (=)
@@ -84,66 +84,70 @@ TRANSITIONS_DFA = {
     
     # Asterisk (*)
     # 200: State('*', [201, 202, 205]), 201: State(DELIM_VAL['arithmetic_delim'], end = True)
-    # 202: State('*', 203), 203: State('*', 204), 204: State(DELIM_VAL['wait']
+    # 202: State('*', 203), 203: State('*', 204), 204: State(DELIM_VAL[']'], end = True)
+    # 205: State('=', 206), 206: State(DELIM_VAL['assignment_delim'], end = True)
     
     # Slash (/)
-    
+    # 207: State('/', 208), 208: State(DELIM_VAL['arithmetic_delim'], end = True),
+    # 209: State('=', 210), 210: State(DELIM_VAL['assignment_delim'], end = True),
     
     # Modulo (%)
-    
+    # 211: State('%', 212), 212: State(DELIM_VAL['arithmetic_delim'], end = True),
     
     # Greater than (>)
+    # 213: State('>', [214, 215]), 214: State(DELIM_VAL['relational_delim', end = True),
+    # 215: State('=', 216), 216: State(DELIM_VAL['relational_delim'], end = True),
     
+    # Lesser than (<)
+    # 217: State('<', [218, 219]), 218: State(DELIM_VAL['relational_delim', end = True),
+    # 219: State('=', 220), 220: State(DELIM_VAL['relational_delim'], end = True), 
     
     # NOT (!)
-    
+    # 221: State('!', [222, 223]), 222: State(DELIM_VAL['logical_delim', end = True),
+    # 223: State('=', 224), 224: State(DELIM_VAL['relational_delim'], end = True),
     
     # AND (&) 
-    
+    # 225: State('&', 226), 226: State('&', 227), 227: State(DELIM_VAL['logical_delim'], end = True),
     
     # OR (|)
-    
-    
+    # 228: State('|', 229), 229: State('|', 230), 230: State(DELIM_VAL['logical_delim'], end = True),
     
     # Open Paren (
-        
-    
+    # 231: State( '(', 232), 232: State(DELIM_VAL['opparen_delim'], end = True),
     
     # Close Paren )
-    
+    # 233: State( ')', 234), 234: State(DELIM_VAL['clparen_delim'], end = True),
     
     # Open Bracket [ 
-    
-    
+    # 235: State( '[', 236), 236: State(DELIM_VAL['opbraackets_delim'], end = True),
     
     # Close Bracket ]
+    # 237: State( ']', 238), 238: State(DELIM_VAL['clbrackets_delim'], end = True),
     
-    
-    
-    # Open Brace {
-    
-        
+    # Open Brace {    
+    # 239: State( '{', 240), 240: State(DELIM_VAL['braces_delim'], end = True),    
         
     # Close Brace }
-    
+    # 241: State( '}', 242), 242: State(DELIM_VAL['braces_delim'], end = True),
     
     # Dot Accessor (.)
-
-
+    # 243: State('.', 244), 244: State(DELIM_VAL['alpha_small'], end = True),
 
     # Comma (,)
-    
-    
+    # 245: State( ',' , 246), 246: State(DELIM_VAL['comma_delim'], end = True),
     
     # Colon (:)
-    
-    
+    # 247: State(':', 248), 248: State(DELIM_VAL['colon_delim'], end = True),
     
     # Semicolon (;)
-    
-    
+    # 249: State(';' , 250), 250: State(DELIM_VAL['semicolon_delim'], end = True),
     
     # Newline
+    # 251: State('\n', 251), 251: State(DELIM_VAL['newline'], end = True),
+    
+    # Literals
+    # Bean & Drip Literals
+    # 253: State('-',['whole'],[254]), 254: State(274, DELIM_VAL['numeric_delim'], end = True),
     
     
     
