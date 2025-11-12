@@ -1,21 +1,22 @@
-from atomDelim import ATOMIC_VAL, DELIM_VAL 
+from .atomDelim import ATOMIC_VAL, DELIM_VAL 
 
 class State:
-    def __init__(self, chars: list[str], branches: list[int] = [], end = False):
+    def init(self, chars: list[str], branches: list[int] = [], end = False, token_type=None):
         self.chars = [chars] if type(chars) is str else chars
         self.branches = [branches] if type(branches) is int else branches
         self.isEnd = end
+        self.token_type = token_type
 
 TRANSITIONS_DFA = {
-    0: State('initial', [1, 31, 54, 69, 90, 98, 104, 108, 115, 119, 123, 129, 134, 147, 161, 175]),
+    0: State('initial', [1, 31, 54, 69, 90, 98, 104, 108, 115, 119, 123]), #129, 134, 147, 161, 175
 
     # Backroom, batter@, bean, blend, brewed
-    1: State('b', [16, 20, 25]), 2: State('a', [3, 10]), 3: State('c', 4), 4: State('k', 5), 5: State('r', 6), 6: State('o', 7), 7: State('o', 8), 8: State('m', 9), 9: State(DELIM_VAL['space_delim'], end = True),
-                                    10: State('t', 11), 11: State('t', 12), 12: State('e', 13), 13: State('r', 14), 14: State('@', 15), 15: State(DELIM_VAL['batter@_delim'], end = True),
-        16: State('e', 17), 17: State('a', 18), 18: State('n', 19), 19: State(DELIM_VAL['space_delim'], end = True),
-        20: State('l', 21), 21: State('e', 22), 22: State('n', 23), 23: State('d', 24), 24: State(DELIM_VAL['space_delim'], end = True),
-        25: State('r', 26), 26: State('e', 27), 27: State('w', 28), 28: State('e', 29), 29: State('d', 30), 30: State(DELIM_VAL['space_delim'], end = True),
-    
+    1: State('b', [16, 20, 25]), 2: State('a', [3, 10]), 3: State('c', 4), 4: State('k', 5), 5: State('r', 6), 6: State('o', 7), 7: State('o', 8), 8: State('m', 9), 9: State(DELIM_VAL['space_delim'], end = True, token_type="BACKROOM"),
+                                    10: State('t', 11), 11: State('t', 12), 12: State('e', 13), 13: State('r', 14), 14: State('@', 15), 15: State(DELIM_VAL['batter@_delim'], end = True, token_type="BATTER@"),
+        16: State('e', 17), 17: State('a', 18), 18: State('n', 19), 19: State(DELIM_VAL['space_delim'], end = True, token_type="DATA_TYPE"),
+        20: State('l', 21), 21: State('e', 22), 22: State('n', 23), 23: State('d', 24), 24: State(DELIM_VAL['space_delim'], end = True, token_type="DATA_TYPE"),
+        25: State('r', 26), 26: State('e', 27), 27: State('w', 28), 28: State('e', 29), 29: State('d', 30), 30: State(DELIM_VAL['space_delim'], end = True, token_type="KEYWORD"),
+        
     # crema, churro, cold, crema, cup, decaf, drip
     31: State('c', [32, 36, 42, 46, 51]),
         32: State('a', 33), 33: State('f', 34), 34: State('e', 35), 35: State(DELIM_VAL['space_delim'], end = True),
