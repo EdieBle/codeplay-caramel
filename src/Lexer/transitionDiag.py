@@ -194,8 +194,15 @@ TRANSITIONS_DFA = {
     # 274: State('.' , 275),
 }
 
+      # Churro literal
+      #  295: State('\'', [296, 296_1, 299]), 296: State(ATOMIC_VAL['text_content'], 297), 297: State('\'', 298), 298: State(DELIM_VAL['space_delim'], end = True, token_type = "CHURROLIT"),
+       #     299: State('\\', 296_1), 296_1: State(ATOMIC_VAL['escapeseq_let'], 297),
 
 
+        # Blend literal
+        #300: State('"', [300_1, 303]), 300_1: State(ATOMIC_VAL['text_content'], [300_1, 301, 303]), 301: State('"', 302), 302: State(DELIM_VAL['string_delim'], end = True, token_type = "BLENDLIT"),
+         #           303: State('\\', 303_1), 
+          #              303_1: State([*ATOMIC_VAL['escapeseq_let'], *ATOMIC_VAL['safe_char']], 300_1),   
 
 """
 initial states: 
