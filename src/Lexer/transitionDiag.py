@@ -98,11 +98,11 @@ TRANSITIONS_DFA = {
     
     # Greater than (>)
     213: State('>', [214, 215]), 214: State(DELIM_VAL['relational_delim'], end = True, token_type="RELATIONAL_OP"),
-    215: State('=', 216), 216: State(DELIM_VAL['relational_delim'], end = True, token_type="RELATIONAL_OP"),
+        215: State('=', 216), 216: State(DELIM_VAL['relational_delim'], end = True, token_type="RELATIONAL_OP"),
     
     # Lesser than (<)
     217: State('<', [218, 219]), 218: State(DELIM_VAL['relational_delim'], end = True, token_type="RELATIONAL_OP"),
-    219: State('=', 220), 220: State(DELIM_VAL['relational_delim'], end = True, token_type="RELATIONAL_OP"), 
+        219: State('=', 220), 220: State(DELIM_VAL['relational_delim'], end = True, token_type="RELATIONAL_OP"), 
     
     # NOT (!)
     221: State('!', [222, 223]), 222: State(DELIM_VAL['logical_delim'], end = True, token_type="LOGICAL_OP"),
