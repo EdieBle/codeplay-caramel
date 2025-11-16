@@ -146,8 +146,12 @@ TRANSITIONS_DFA = {
     # Semicolon (;)
     249: State(';', 250), 250: State(DELIM_VAL['semicolon_delim'], end = True, token_type="SEMICOLON"),
     
-    # Newline
-    251: State('\n', 252), 252: State(ATOMIC_VAL['newline'], end = True, token_type="NEWLINE"),
+    # Newline (commented out cuz causing issues sa actual thingy)
+    # 251: State('\n',  end = True, token_type="NEWLINE"), #ISSUES: CAUSING RECURSION
+    
+    # OLD Newline
+    # 251: State('\n', 252), 252: State(ATOMIC_VAL['newline'], end = True, token_type="NEWLINE"),
+    
     
     # Literals
     # BEANLIT *positive number issues

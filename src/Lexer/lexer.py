@@ -61,6 +61,14 @@ def tokenize(code):
 
             # NO TRANSITION: stop DFA
             if next_state is None:
+                
+                """
+                if ch == '\n': # test this should be a different issue
+                   push("NEWLINE", "↵", column)
+                if ch == ' ': # test this should be a different issue
+                   push("SPACE", " ", column)
+                """
+                
                 print(f"[INNER] STOP: No transition found for char '{ch}' in state {curr_state}") #debug
                 break
 
@@ -76,11 +84,6 @@ def tokenize(code):
             if TRANSITIONS_DFA[curr_state].isEnd:
                 #buffer = buffer[:-1] # remove the character at the end as it is a delimiter 
                                      # a better fix would be to check if the given character leads to a state with end, then just push without it
-
-                if ch == '\n': # test this should be a different issue
-                   push("NEWLINE", "↵", column)
-                if ch == ' ': # test this should be a different issue
-                   push("SPACE", " ", column)
 
                 last_accept = (curr_state, pos, column, buffer)
                 print(f"[INNER] ACCEPTING STATE {curr_state} reached (buffer='{buffer}')") #debug
