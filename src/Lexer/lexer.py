@@ -7,7 +7,6 @@ def tokenize(code):
     line = 1
     column = 1
 
-    # PUSH (for the website) 
     def push(token_type, lexeme, start_col, message=None):
         token = {
             "type": token_type,
@@ -19,276 +18,96 @@ def tokenize(code):
             token["message"] = message
         tokens.append(token)
 
-    # DFA CRAWLER 
-    def crawl_dfa(start_pos, start_col):
-        buffer = ""
+    while pos < len(code):
+        ch = code[pos]
+
+        print(f"\n=== OUTER LOOP: scanning new token at pos={pos}, col={column}, char='{ch}' ===") #debug
+
+        # ----------------------------------------------------------
+        # DFA CRAWLING STARTS
+        # ----------------------------------------------------------
+        # must be included for column and line counter ---- start_pos = pos
+        start_col = column
         curr_state = 0
-        pos = start_pos
-        column = start_col
-        last_accept_state = None
-        last_accept_pos = None
-        last_accept_buffer = ""
+        buffer = ""
+        last_accept = None
 
         while pos < len(code):
+
             ch = code[pos]
+            print(f"[INNER] At pos={pos}, col={column}, char='{ch}', curr_state={curr_state}") #debug
+
             next_state = None
 
-            # find a transition that matches current char
-            for s in TRANSITIONS_DFA[curr_state].branches:
-                next_obj = TRANSITIONS_DFA.get(s)
-                if next_obj and ch in next_obj.chars:
-                    next_state = s
+            # get branches (list or single int)
+            branches = TRANSITIONS_DFA[curr_state].branches
+            if isinstance(branches, int):
+                branches = [branches]
+
+            print(f"[INNER] Possible branches from state {curr_state}: {branches}") #debug
+
+            # look for a matching transition
+            for nxt in branches:
+                node = TRANSITIONS_DFA[nxt]
+                if ch in node.chars:
+                    if node.isEnd:
+                        print(f"[INNER NXT IN BRANCHES #1] NEXT STATE {nxt} is accepting. Will not include '{ch}' in buffer")
+                        last_accept = (nxt, pos, column, buffer)
+                        next_state = None  # optional: stop DFA here if you want
+                    else:
+                        next_state = nxt
+                        print(f"[INNER NXT IN BRANCHES #2] MATCH: char '{ch}' fits state {nxt}")
                     break
 
-            if not next_state:
+            # NO TRANSITION: stop DFA
+            if next_state is None:
+                print(f"[INNER] STOP: No transition found for char '{ch}' in state {curr_state}") #debug
                 break
 
+            # process character
             curr_state = next_state
             buffer += ch
             pos += 1
             column += 1
 
+            print(f"[INNER] Transitioned → state {curr_state}, buffer='{buffer}'") #debug
+
+            # record accepting state
             if TRANSITIONS_DFA[curr_state].isEnd:
-                last_accept_state = curr_state
-                last_accept_pos = pos
-                last_accept_buffer = buffer
+                #buffer = buffer[:-1] # remove the character at the end as it is a delimiter 
+                                     # a better fix would be to check if the given character leads to a state with end, then just push without it
 
-        if last_accept_state is not None:
-            state = TRANSITIONS_DFA[last_accept_state]
-            return {
-                "accepted": True,
-                "token_type": state.token_type,
-                "buffer": last_accept_buffer,
-                "end_pos": last_accept_pos,
-                "end_col": column
-            }
+                if ch == '\n': # test this should be a different issue
+                   push("NEWLINE", "↵", column)
+                if ch == ' ': # test this should be a different issue
+                   push("SPACE", " ", column)
 
-        return {
-            "accepted": False,
-            "buffer": buffer,
-            "end_pos": pos,
-            "end_col": column
-        }
+                last_accept = (curr_state, pos, column, buffer)
+                print(f"[INNER] ACCEPTING STATE {curr_state} reached (buffer='{buffer}')") #debug
 
-    # NUMBER 
-    def read_number(start_pos, start_col):
-        buffer = ""
-        pos = start_pos
-        column = start_col
+        # ----------------------------------------------------------
+        # DFA FINISHED — PROCESS TOKEN
+        # ----------------------------------------------------------
+        print(f"=== INNER LOOP COMPLETE at pos={pos}, curr_state={curr_state} ===") #debug
 
-        if code[pos] in ['-', '+']:
-            buffer += code[pos]
-            pos += 1
-            column += 1
+    
 
-        while pos < len(code) and code[pos].isdigit():
-            buffer += code[pos]
-            pos += 1
-            column += 1
-
-        if pos < len(code) and code[pos] == '.':
-            buffer += '.'
-            pos += 1
-            column += 1
-            while pos < len(code) and code[pos].isdigit():
-                buffer += code[pos]
-                pos += 1
-                column += 1
-            return "DRIPLIT", buffer, pos, column
-        else:
-            return "BEANLIT", buffer, pos, column
-
-    # ---------------------- STRING ----------------------
-    def read_string(start_pos, start_col):
-        buffer = '"'
-        pos = start_pos + 1
-        column = start_col + 1
-        while pos < len(code):
-            ch = code[pos]
-            buffer += ch
-            pos += 1
-            column += 1
-
-            if ch == '\\' and pos < len(code):
-                buffer += code[pos]
-                pos += 1
-                column += 1
-            elif ch == '"':
-                return "BLENDLIT", buffer, pos, column
-
-        return "LEXICAL_ERROR", buffer, pos, column
-
-    # ---------------------- CHAR ----------------------
-    def read_char(start_pos, start_col):
-        buffer = "'"
-        pos = start_pos + 1
-        column = start_col + 1
-        state = 295  # start state
-        stage = 0    # 0 = after opening quote, 1 = after body char, 2 = after closing quote
-
-        if pos >= len(code):
-            return "LEXICAL_ERROR", buffer, pos, column
-
-        ch = code[pos]
-
-        # CASE 1: Escape sequence path (299 -> 300 -> 297)
-        if ch == '\\':
-            buffer += ch
-            pos += 1
-            column += 1
-
-            if pos < len(code):
-                esc = code[pos]
-                if esc in ATOMIC_VAL["escapeseq_let"]:
-                    buffer += esc
-                    pos += 1
-                    column += 1
-                else:
-                    return "LEXICAL_ERROR", buffer, pos, column, "Identifier too long"
-            else:
-                return "LEXICAL_ERROR", buffer, pos, column
-
-        # CASE 2: Normal safe char (296 -> 297)
-        elif ch in ATOMIC_VAL["safe_char"]:
-            buffer += ch
-            pos += 1
-            column += 1
-        else:
-            return "LEXICAL_ERROR", buffer, pos, column
-
-        # Expect closing quote (297 -> 298)
-        if pos < len(code) and code[pos] == "'":
-            buffer += "'"
-            pos += 1
-            column += 1
-            return "CHURROLIT", buffer, pos, column
-
-        return "LEXICAL_ERROR", buffer, pos, column
-
-
-    # ---------------------- MULTILINE COMMENT (~. ... .~) ----------------------
-    def read_multiline_comment(start_pos, start_col):
-        buffer = "~."
-        pos = start_pos + 2
-        column = start_col + 2
-        nonlocal line
-
-        while pos < len(code):
-            ch = code[pos]
-            nxt = code[pos + 1] if pos + 1 < len(code) else ''
-            buffer += ch
-            pos += 1
-
-            if ch == '\n':
-                line += 1
-                column = 1
-                continue
-            else:
-                column += 1
-
-            if ch == '.' and nxt == '~':
-                buffer += nxt
-                pos += 1
-                column += 1
-                return "ML_COMMENT", buffer, pos, column
-
-        return "LEXICAL_ERROR", buffer, pos, column
-
-    # ---------------------- MAIN LOOP ----------------------
-    while pos < len(code):
-        ch = code[pos]
-        token_start_column = column
-
-        # --- whitespace ---
-        if ch == " ":
-            push("SPACE", "␣", column)
+        if last_accept is None:
+            print(f"[ERROR] No accepting state reached — pushing ERROR token for '{ch}'") #debug
+            push("ERROR", ch, start_col, "Unrecognized token")
             pos += 1
             column += 1
             continue
-        elif ch == "\t":
-            push("TAB", "Tab", column)
-            pos += 1
-            column += 4
-            continue
-        elif ch == "\n":
-            push("NEWLINE", "↵", column)
-            pos += 1
-            line += 1
-            column = 1
-            continue
 
-        # --- single-line comment (~~ ...) ---
-        if ch == "~" and pos + 1 < len(code) and code[pos + 1] == "~":
-            buffer = "~~"
-            pos += 2
-            column += 2
-            while pos < len(code) and code[pos] != "\n":
-                buffer += code[pos]
-                pos += 1
-                column += 1
-            push("SL_COMMENT", buffer, token_start_column)
-            continue
+        state_id, end_pos, end_col, lexeme = last_accept
+        token_type = TRANSITIONS_DFA[state_id].token_type
+        print(f"[TOKEN] Accepted token type={token_type}, lexeme='{lexeme}'") #debug
 
-        # --- multi-line comment (~. ... .~) ---
-        if ch == "~" and pos + 1 < len(code) and code[pos + 1] == ".":
-            token_type, buffer, pos, column = read_multiline_comment(pos, column)
-            push(token_type, buffer, token_start_column)
-            continue
+        push(token_type, lexeme, start_col)
 
-        # --- string literal ("...") ---
-        if ch == '"':
-            token_type, buffer, pos, column = read_string(pos, column)
-            push(token_type, buffer, token_start_column)
-            continue
+        pos = end_pos
+        column = end_col
 
-        # --- char literal ('...') ---
-        if ch == "'":
-            token_type, buffer, pos, column = read_char(pos, column)
-            push(token_type, buffer, token_start_column)
-            continue
-
-        # --- number literal ---
-        if ch in ['-'] and pos + 1 < len(code) and code[pos + 1].isdigit():
-            token_type, buffer, pos, column = read_number(pos, column)
-            push(token_type, buffer, token_start_column)
-            continue
-        elif ch.isdigit():
-            token_type, buffer, pos, column = read_number(pos, column)
-            push(token_type, buffer, token_start_column)
-            continue
-
-        # --- DFA-based token ---
-        result = crawl_dfa(pos, column)
-        if result["accepted"]:
-            lexeme = result["buffer"]
-            ttype = result["token_type"]
-
-            # Identifier length check
-            if ttype == "IDENTIFIER" and len(lexeme) > 15:
-                push("LEXICAL_ERROR", lexeme, token_start_column, message="Identifier too long")
-            else:
-                push(ttype, lexeme, token_start_column)
-
-            pos = result["end_pos"]
-            column = result["end_col"]
-            continue
-
-        # --- fallback identifier (temporary) ---
-        if ch.isalpha() or ch == '_':
-            buffer = ""
-            start_col = column
-            while pos < len(code) and (code[pos].isalnum() or code[pos] == '_'):
-                buffer += code[pos]
-                pos += 1
-                column += 1
-            ttype = "IDENTIFIER" if len(buffer) <= 15 else "LEXICAL_ERROR"
-            msg = "Identifier too long" if len(buffer) > 15 else None
-            push(ttype, buffer, start_col, msg)
-            continue
-
-        # --- unmatched character ---
-        push("LEXICAL_ERROR", ch, column, message="Unmatched Character")
-        pos += 1
-        column += 1
+    print("\n=== OUTER LOOP COMPLETE — DFA scan finished successfully ===\n") #debug
 
     return tokens

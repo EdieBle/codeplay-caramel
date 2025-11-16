@@ -8,12 +8,13 @@ ATOMIC_VAL = {
     "alpha_small": ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
                     'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'],
     "sp_symbols": ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+',
-                   '[', ']', '{', '}', '/', '|', ':', ';', "'", '"', '<', '>', '.'],
+                   '[', ']', '{', '}', '/', '|', ':', ';', "'", '<', '>', '~'], #'.' and '"' was here 
+                                                                                # added '~' but becomes ambiguous, probably best to add a function that 
     "newline": ['\n'],
     "space_delim": [' ', '\t'],
 
     # escape sequence letters
-    "escapeseq_let": ['t', 'b', 'f', 'n', 'r', 'v', '"', '\''],
+    "escapeseq_let": ['t', 'b', 'f', 'n', 'r', 'v', '"', '\'', '\\'],
 
     # Operators
     "arithmetic_op": ['+', '-', '*', '/', '%'],
@@ -26,7 +27,7 @@ ATOMIC_VAL = {
 
 # Values usually acceptable for text content and a safe char that limits
 ATOMIC_VAL["text_content"] = list(set(
-    ATOMIC_VAL["space_delim"] +
+    ATOMIC_VAL["space_delim"] + 
     ATOMIC_VAL["whole"] +
     ATOMIC_VAL["alpha_small"] +
     ATOMIC_VAL["alpha_cap"] +

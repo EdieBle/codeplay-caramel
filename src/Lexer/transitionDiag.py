@@ -7,10 +7,12 @@ class State:
         self.isEnd = end
         self.token_type = token_type
 
+
+
 TRANSITIONS_DFA = {
     0: State('initial', [1, 31, 54, 69, 90, 98, 104, 108, 115, 119, 123, 129, 134, 147, 161, 175, 184, 188, 
                         194, 200, 207, 211, 213, 217, 221, 225, 228, 231, 233, 235, 237, 239, 241, 243, 
-                        245, 247, 249, 251, 253, 295, 301, 308, 333]), # 304, 333 
+                        245, 247, 249, 251, 253, 295, 301, 308, 338]), # 304, 333 
 
     # Backroom, batter@, bean, blend, brewed
     1: State('b', [2, 16, 20, 25]), 2: State('a', [3, 10]), 3: State('c', 4), 4: State('k', 5), 5: State('r', 6), 6: State('o', 7), 7: State('o', 8), 8: State('m', 9), 9: State(DELIM_VAL['space_delim'], end = True, token_type="ACCESS_MOD"),
@@ -149,6 +151,7 @@ TRANSITIONS_DFA = {
     
     # Literals
     # BEANLIT *positive number issues
+    # status: messy in particular to state 253
     253: State(['-', *ATOMIC_VAL['whole']], [254, 255]), 
         254: State(ATOMIC_VAL['whole'], [255, 256, 274]), 255: State(DELIM_VAL['numeric_delim'], end = True, token_type = "BEANLIT"),
         256: State(ATOMIC_VAL['whole'], [257, 258, 274]), 257: State(DELIM_VAL['numeric_delim'], end = True, token_type = "BEANLIT"),
@@ -175,22 +178,26 @@ TRANSITIONS_DFA = {
             291: State(ATOMIC_VAL['whole'], [292, 293]), 292: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"),
             293: State(ATOMIC_VAL['whole'], 294), 294: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"),
 
-
-        # CHAR LITERAL (CHURROLIT) 
+        # enter: ' 0 -> 295
+        # enter: '' 295 -> 296/297
+        # valid enter: 'n 295-> 296
+        # enter: '\\ 295-> 296/299 -> 299? error
+        #                          -> 296? accepted
+        # enter: '
+        # CHAR LITERAL (CHURROLIT)  AMBIGUOUS
+        
         # Examples:  'a'  '\n'  '\t'
-        295: State("'", [296, 299]),
+        295: State('\'', [296, 297, 299]),
+            # Normal char (non-escape)
+            296: State([*ATOMIC_VAL["text_content"], *ATOMIC_VAL["escapeseq_let"]], 297),
+            297: State('\'', 298), 
+            298: State(DELIM_VAL["space_delim"], end=True, token_type="CHURROLIT"),
 
-        # Normal char (non-escape)
-        296: State(ATOMIC_VAL["safe_char"], 297),
-        297: State("'", 298),
-        298: State(DELIM_VAL["space_delim"], end=True, token_type="CHURROLIT"),
+            # Escape sequence
+            299: State('\\', 296),
 
-        # Escape sequence
-        299: State("\\", 300),
-        300: State(ATOMIC_VAL["escapeseq_let"], 297),
-
-
-        # STRING LITERAL (BLENDLIT) 
+        
+        # STRING LITERAL (BLENDLIT) AMBIGUITY
         # Examples:  "hello"  "he\nllo"  "mix\"ed"
         301: State('"', [302, 305]),
             # Regular characters inside string
@@ -206,6 +213,8 @@ TRANSITIONS_DFA = {
 
             # After escape, can continue reading characters
             307: State(ATOMIC_VAL["text_content"], [302, 305, 303]),
+
+
 
         # IDENTIFIERS (gotta limit to 15 characters lang with a starting small letter, and everything after can only be underscore or number)
         # Start with lowercase letter, can include digits or underscores
@@ -244,19 +253,20 @@ TRANSITIONS_DFA = {
 
         # SINGLE LINE COMMENT
         # Pattern: ~~ comment until newline
-        333: State('~', [334, 337]),
-            334: State('~', 335),
-            335: State(ATOMIC_VAL['text_content'], [335, 336]),
-            336: State('\n', end=True, token_type="SL_COMMENT"),
+        # status: okay
+        338: State('~', [339, 342]),
+            339: State('~', 340),
+            340: State(ATOMIC_VAL['text_content'], [340, 341]),
+            341: State('\n', end=True, token_type="SL_COMMENT"),
 
         # MULTI LINE COMMENT
         # Pattern: ~. comment content .~
-            337: State('.', 338),
-            338: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL['newline']], [338, 339]),
-                339: State('~', [338, 340]),
-                340: State('.', 341),
-                341: State(DELIM_VAL['space_delim'], end=True, token_type="ML_COMMENT"),
-  
+        # status: ambiguity due to atomDelim
+            342: State('.', 343),
+            343: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL['newline']], [343, 344]),
+                344: State('.', [343, 345]),
+                345: State('~', 346),
+                346: State(DELIM_VAL['space_delim'], end=True, token_type="ML_COMMENT")
 
 }
 
