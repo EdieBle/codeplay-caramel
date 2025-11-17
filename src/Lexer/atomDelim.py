@@ -8,20 +8,24 @@ ATOMIC_VAL = {
     "alpha_small": ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
                     'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'],
     "sp_symbols": ['!', '@', '#', '$', '%', '^', '&', '*', '(', ')', '-', '_', '=', '+',
-                   '[', ']', '{', '}', '/', '|', ':', ';', "'", '<', '>', '~'], #'.' and '"' was here 
-                                                                                # added '~' but becomes ambiguous, probably best to add a function that 
+                   '[', ']', '{', '}', '/', '|', ':', ';', '<', '>', '~', '?', ',', 
+                   '.', '—', '`'], 
+                                                                    
     "newline": ['\n'],
     "space_delim": [' ', '\t'],
 
     # escape sequence letters
-    "escapeseq_let": ['t', 'b', 'f', 'n', 'r', 'v', '"', '\'', '\\'],
+    "escapeseq_let": ['t', 'b', 'f', 'n', 'r', 'v', '\'', '\\', '"'], #'"' was here.
 
     # Operators
     "arithmetic_op": ['+', '-', '*', '/', '%'],
     "assignment_op": ['='],
     "logical_op": ['!', '&', '|'],
     "relational_op": ['>', '<', '=', '!'],
-    "unary_op": ['+', '-']
+    "unary_op": ['+', '-'],
+
+    #temp
+    'ascii': {chr(i) for i in range(255)}
 }
 
 
@@ -60,8 +64,8 @@ unary_op = ATOMIC_VAL["unary_op"]
 # delimiters
 DELIM_VAL = {
     "space_delim": [' ', '\t'],
-    "arithmetic_delim": list(set(space_delim + alpha_small + ['(', '-'])),
-    "plus_delim": list(set(space_delim + alpha_small + ['(', '"', "'", '-'])), # holy shit bakit walang numbers dito
+    "arithmetic_delim": list(set(space_delim + alpha_small + whole + ['('])), # '-' shouldnt have minus
+    "plus_delim": list(set(space_delim + alpha_small + whole + ['(', '"', "'", '-'])), # holy shit bakit walang numbers dito (Added na po boss)
     "assignment_delim": list(set(space_delim + alpha_small + whole + ["'", '"', '!', '(', '['])),
     "batter@_delim": list(set(alpha_small + space_delim)),
     "braces_delim": list(set(space_delim + newline)),
@@ -69,7 +73,7 @@ DELIM_VAL = {
     "clparen_delim": list(set(space_delim + newline + ['(', ')', '{', '&', '|'] + arithmetic_op)),
     "colon_delim": list(set(space_delim + newline + ['('])),
     "comma_delim": list(set(space_delim + alpha_small + whole + ['"', "'", '('])),
-    "id_delim": list(set(space_delim + assignment_op + logical_op + arithmetic_op + relational_op + [';', ',', '"', "'", '{', '['])),
+    "id_delim": list(set(space_delim + assignment_op + logical_op + arithmetic_op + relational_op + [';', ',', '"', "'", '{', '[', '\n'])),
     "logical_delim": list(set(space_delim + alpha_small + whole + ['-', '('])),
     "numeric_delim": list(set(space_delim + newline + [',', ')', ']'] + arithmetic_op + relational_op)),
     "opbrackets_delim": list(set(space_delim + newline + whole + alpha_small + ['"', '\'', '*', '[', ']'])),
