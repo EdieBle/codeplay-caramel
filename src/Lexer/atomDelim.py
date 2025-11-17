@@ -73,7 +73,7 @@ DELIM_VAL = {
     "clparen_delim": list(set(space_delim + newline + ['(', ')', '{', '&', '|'] + arithmetic_op)),
     "colon_delim": list(set(space_delim + newline + ['('])),
     "comma_delim": list(set(space_delim + alpha_small + whole + ['"', "'", '('])),
-    "id_delim": list(set(space_delim + assignment_op + logical_op + arithmetic_op + relational_op + [';', ',', '"', "'", '{', '[', '\n'])),
+    "id_delim": list(set(space_delim + assignment_op + logical_op + arithmetic_op + relational_op + [';', ',', '"', "'", '{', '[', ']', '(', ')', '\n', '='])),
     "logical_delim": list(set(space_delim + alpha_small + whole + ['-', '('])),
     "numeric_delim": list(set(space_delim + newline + [',', ')', ']'] + arithmetic_op + relational_op)),
     "opbrackets_delim": list(set(space_delim + newline + whole + alpha_small + ['"', '\'', '*', '[', ']'])),

@@ -49,7 +49,7 @@ TRANSITIONS_DFA = {
     108: State('i', 109), 109: State('f', 110), 110: State('b', 111), 111: State('r', 112), 112: State('e', 113), 113: State('w', 114), 114: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="KEYWORD"),
     115: State('m', 116), 116: State('u', 117), 117: State('g', 118), 118: State(DELIM_VAL['space_delim'], end = True, token_type="DATA_TYPE"),
     119: State('n', 120), 120: State('e', 121), 121: State('w', 122), 122: State(DELIM_VAL['space_delim'], end = True, token_type="KEYWORD"),
-    123: State('o', 124), 124: State('r', 125), 125: State('d', 126), 126: State('e', 127), 127: State('r', 128), 128: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="KEYWORD"),
+    123: State('o', 124), 124: State('r', 125), 125: State('d', 126), 126: State('e', 127), 127: State('r', 128), 128: State([*DELIM_VAL['spaceparen_delim'], '.'], end = True, token_type="KEYWORD"),
     
     # pour
     129: State('p', 130), 130: State('o', 131), 131: State('u', 132), 132: State('r', 133), 133: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="KEYWORD"),
@@ -123,10 +123,10 @@ TRANSITIONS_DFA = {
     233: State( ')', 234), 234: State(DELIM_VAL['clparen_delim'], end = True, token_type="CLOSE_PAREN"),
     
     # Open Bracket [ 
-    235: State( '[', 236), 236: State(DELIM_VAL['opbrackets_delim'], end = True, token_type="OPEN_BRACKET"),
+    235: State( '[', 236), 236: State(DELIM_VAL['opbrackets_delim'], end = True, token_type="O_BRACKET"),
     
     # Close Bracket ]
-    237: State( ']', 238), 238: State(DELIM_VAL['clbrackets_delim'], end = True, token_type="CLOSE_BRACKET"),
+    237: State( ']', 238), 238: State(DELIM_VAL['clbrackets_delim'], end = True, token_type="C_BRACKET"),
     
     # Open Brace {    
     239: State( '{', 240), 240: State(DELIM_VAL['braces_delim'], end = True, token_type="OPEN_BRACE"),    
@@ -180,37 +180,27 @@ TRANSITIONS_DFA = {
             290: State(ATOMIC_VAL['whole'], [291, 292]), 291: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"),
             292: State(ATOMIC_VAL['whole'], 293), 293: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"),
 
-        # enter: ' 0 -> 295
-        # enter: '' 295 -> 296/297
-        # valid enter: 'n 295-> 296
-        # enter: '\\ 295-> 296/299 -> 299? error
-        #                          -> 296? accepted
-        # enter: '
-        # CHAR LITERAL (CHURROLIT)  AMBIGUOUS
-        
+        # CHAR LITERAL (CHURROLIT)
         # Examples:  'a'  '\n'  '\t'
-        294: State('\'', [295, 296, 298]),
+        294: State('\'', [298, 296, 295]),
             # Normal char (non-escape)
-            295: State([*ATOMIC_VAL["text_content"], *ATOMIC_VAL["escapeseq_let"]], 296),
+            295: State([*ATOMIC_VAL["text_content"]], 296),
             
             # closing single quote
             296: State('\'', 297), 
 
             # delimiter
-            297: State(DELIM_VAL["space_delim"], end=True, token_type="CHURROLIT"),
+            297: State([*DELIM_VAL["space_delim"], ',', '\n'], end=True, token_type="CHURROLIT"),
 
             # Escape sequence
-            298: State('\\', 295),
+            298: State('\\', 2999), 2999: State(ATOMIC_VAL["escapeseq_let"], [296]),
 
-        # 295: State('\'', [296, 297, 299]),
-            # Normal char (non-escape)
-            # 296: State([*ATOMIC_VAL["text_content"], *ATOMIC_VAL["escapeseq_let"]], 297),
-            # 297: State('\'', 298), 
-            # 298: State(DELIM_VAL["space_delim"], end=True, token_type="CHURROLIT"),
+            # Given '\j'
+            # ' -> 0 to 294
+            # '\ -> 294 to 298
+            # '\' -> 298 to 299_1 end? error
+            # '\'' -> 299_1 to 296
 
-            # Escape sequence
-            # 299: State('\\', 296),
-        
         
         # STRING LITERAL (BLENDLIT) AMBIGUITY
         # Examples:  "hello"  "he\nllo"  "mix\"ed"
@@ -230,23 +220,6 @@ TRANSITIONS_DFA = {
 
             # Escape sequence
             303: State("\\", 300),
-
-
-        
-        # 301: State('"', [302, 305]),
-            # Regular characters inside string
-            # 302: State(ATOMIC_VAL["text_content"], [302, 303, 307]),
-
-            # Closing quote
-            # 303: State('"', 304),
-            # 304: State(DELIM_VAL["string_delim"], end=True, token_type="BLENDLIT"),
-
-            # Escape sequence
-            # 305: State("\\", 306),
-            # 306: State([*ATOMIC_VAL["escapeseq_let"], *ATOMIC_VAL["safe_char"]], 302),
-
-            # After escape, can continue reading characters
-            # 307: State(ATOMIC_VAL["text_content"], [302, 305, 303]),
 
 
 
@@ -290,29 +263,19 @@ TRANSITIONS_DFA = {
         # status: okay
         338: State('~', [339, 342]),
             339: State('~', 340),
-            340: State(ATOMIC_VAL['text_content'], [340, 341]),
+            340: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL["escapeseq_let"]], [340, 341]),
             341: State('\n', end=True, token_type="SL_COMMENT"),
 
         # MULTI LINE COMMENT
         # Pattern: ~. comment content .~
         # status: ambiguity due to atomDelim
             342: State('.', 343),
-            343: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL['newline']], [343, 344]),
-                344: State('.', [343, 345]),
+            343: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL['sp_symbols'], *ATOMIC_VAL['escapeseq_let'], '\n'], [344, 343]),
+                344: State('.', [345, 343]),
                 345: State('~', 346),
-                346: State(DELIM_VAL['space_delim'], end=True, token_type="ML_COMMENT")
+                346: State([*DELIM_VAL['space_delim'], '\n'], end=True, token_type="ML_COMMENT")
 
 }
-
-      # Churro literal
-      #  295: State('\'', [296, 296_1, 299]), 296: State(ATOMIC_VAL['text_content'], 297), 297: State('\'', 298), 298: State(DELIM_VAL['space_delim'], end = True, token_type = "CHURROLIT"),
-       #     299: State('\\', 296_1), 296_1: State(ATOMIC_VAL['escapeseq_let'], 297),
-
-
-        # Blend literal
-        #300: State('"', [300_1, 303]), 300_1: State(ATOMIC_VAL['text_content'], [300_1, 301, 303]), 301: State('"', 302), 302: State(DELIM_VAL['string_delim'], end = True, token_type = "BLENDLIT"),
-         #           303: State('\\', 303_1), 
-          #              303_1: State([*ATOMIC_VAL['escapeseq_let'], *ATOMIC_VAL['safe_char']], 300_1),   
 
 """
 initial states: 
@@ -358,15 +321,12 @@ initial states:
 249 - ;
 251 - linebreak
 
-# Literals
+# Literals (paki change)
 253 <-- (-) or whole
 274 <-- literals but for drip decimals doesnt go from state 0 though
 295 <-- char
 300 <-- string
 304 <-- identifiers
 333 <-- Comment
-
-
-
 
 """
