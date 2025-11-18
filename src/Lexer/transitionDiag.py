@@ -12,7 +12,7 @@ class State:
 TRANSITIONS_DFA = {
     0: State('initial', [1, 31, 54, 69, 90, 98, 104, 108, 115, 119, 123, 129, 134, 147, 161, 175, 184, 188, 
                         194, 200, 207, 211, 213, 217, 221, 225, 228, 231, 233, 235, 237, 239, 241, 243, 
-                        245, 247, 249, 253, 294, 299, 308, 338]), # 304, 333 
+                        245, 247, 249, 253, 294, 300, 305, 335]), 
 
     # Backroom, batter@, bean, blend, brewed
     1: State('b', [2, 16, 20, 25]), 2: State('a', [3, 10]), 3: State('c', 4), 4: State('k', 5), 5: State('r', 6), 6: State('o', 7), 7: State('o', 8), 8: State('m', 9), 9: State(DELIM_VAL['space_delim'], end = True, token_type="ACCESS_MOD"),
@@ -21,7 +21,7 @@ TRANSITIONS_DFA = {
         20: State('l', 21), 21: State('e', 22), 22: State('n', 23), 23: State('d', 24), 24: State(DELIM_VAL['space_delim'], end = True, token_type="DATA_TYPE"),
         25: State('r', 26), 26: State('e', 27), 27: State('w', 28), 28: State('e', 29), 29: State('d', 30), 30: State(DELIM_VAL['space_delim'], end = True, token_type="KEYWORD"),
     
-    # cafe, crema, churro, cold, crema, cup, decaf, drip
+    # cafe, crema, churro, cold, crema, cup
     31: State('c', [32, 36, 42, 46, 51]), 32: State('a', 33), 33: State('f', 34), 34: State('e', 35), 35: State(DELIM_VAL['space_delim'], end = True, token_type="ACCESS_MOD"),
         36: State('h', 37), 37: State('u', 38), 38: State('r', 39), 39: State('r', 40), 40: State('o', 41), 41: State(DELIM_VAL['space_delim'], end = True, token_type="DATA_TYPE"),
         42: State('o', 43), 43: State('l', 44), 44: State('d', 45), 45: State(DELIM_VAL['temp_delim'], end = True, token_type="KEYWORD"),
@@ -43,7 +43,7 @@ TRANSITIONS_DFA = {
     # flavour
     90: State('f', 91), 91: State('l', 92), 92: State('a', 93), 93: State('v', 94), 94: State('o', 95), 95: State('u', 96), 96: State('r', 97), 97: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="KEYWORD"),
 
-    # glaze, hot, ifbrew, mug, new, pour, refill?, snap, syrup, taste, whilehot
+    # glaze, hot, ifbrew, mug, new, order
     98: State('g', 99), 99: State('l', 100), 100: State('a', 101), 101: State('z', 102), 102: State('e', 103), 103: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="KEYWORD"),
     104: State('h', 105), 105: State('o', 106), 106: State('t', 107), 107: State(DELIM_VAL['temp_delim'], end = True, token_type="KEYWORD"),
     108: State('i', 109), 109: State('f', 110), 110: State('b', 111), 111: State('r', 112), 112: State('e', 113), 113: State('w', 114), 114: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="KEYWORD"),
@@ -193,7 +193,7 @@ TRANSITIONS_DFA = {
             297: State([*DELIM_VAL["space_delim"], ',', '\n'], end=True, token_type="CHURROLIT"),
 
             # Escape sequence
-            298: State('\\', 2999), 2999: State(ATOMIC_VAL["escapeseq_let"], [296]),
+            298: State('\\', 299), 299: State(ATOMIC_VAL["escapeseq_let"], [296]),
 
             # Given '\j'
             # ' -> 0 to 294
@@ -204,129 +204,75 @@ TRANSITIONS_DFA = {
         
         # STRING LITERAL (BLENDLIT) AMBIGUITY
         # Examples:  "hello"  "he\nllo"  "mix\"ed"
-        299: State('"', [300, 301, 303]),
+        300: State('"', [301, 302, 304]),
             
             # Regular characters inside string                                                                                  
-            300: State([*ATOMIC_VAL["text_content"], 
+            301: State([*ATOMIC_VAL["text_content"], 
                         *ATOMIC_VAL["escapeseq_let"], 
                         *ATOMIC_VAL["safe_char"]], 
-                        [303, 301, 300]), 
+                        [304, 302, 301]), 
             
             # Closing quote
-            301: State('"', 302),
+            302: State('"', 303),
 
                 # Delimiter
-                302: State(DELIM_VAL["string_delim"], end=True, token_type="BLENDLIT"),
+                303: State(DELIM_VAL["string_delim"], end=True, token_type="BLENDLIT"),
 
             # Escape sequence
-            303: State("\\", 300),
+            304: State("\\", 301),
 
 
 
         # IDENTIFIERS (gotta limit to 15 characters lang with a starting small letter, and everything after can only be underscore or number)
         # Start with lowercase letter, can include digits or underscores
-        308: State(ATOMIC_VAL["alpha_small"], [309, 310]), 
-                309: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            310: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [311, 312]), 
-                311: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            312: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [313, 314]), 
-                313: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            314: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [315, 316]), 
-                315: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            316: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [317, 318]), 
-                317: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            318: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [319, 320]), # was 329 earlier, broke the id
-                319: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            320: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [321, 322]), 
-                321: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            322: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [323, 324]), 
-                323: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            324: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [325, 326]), 
-                325: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            326: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [327, 328]), 
-                327: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            328: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [329, 330]), 
-                329: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            330: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [331, 332]), 
-                331: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            332: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [333, 334]), 
-                333: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            334: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [335, 336]), 
-                335: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
-            336: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], 337), 
-                337: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+        305: State(ATOMIC_VAL["alpha_small"], [306, 307]), 
+                306: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            307: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [308, 309]), 
+                308: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            309: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [310, 311]), 
+                310: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            311: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [312, 313]), 
+                312: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            313: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [314, 315]), 
+                314: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            315: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [316, 317]), # was 329 earlier, broke the id
+                316: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            317: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [318, 319]), 
+                318: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            319: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [320, 321]), 
+                320: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            321: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [322, 323]), 
+                322: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            323: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [324, 325]), 
+                324: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            325: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [326, 327]), 
+                326: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            327: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [328, 329]), 
+                328: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            329: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [330, 331]), 
+                330: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            331: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [332, 333]), 
+                332: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
+            333: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], 334), 
+                334: State(DELIM_VAL['id_delim'], end=True, token_type="IDENTIFIER"),
         
 
 
         # SINGLE LINE COMMENT
         # Pattern: ~~ comment until newline
         # status: okay
-        338: State('~', [339, 342]),
-            339: State('~', 340),
-            340: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL["escapeseq_let"]], [340, 341]),
-            341: State('\n', end=True, token_type="SL_COMMENT"),
+        335: State('~', [336, 339]),
+            336: State('~', 337),
+            337: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL["escapeseq_let"]], [337, 338]),
+            338: State('\n', end=True, token_type="SL_COMMENT"),
 
         # MULTI LINE COMMENT
         # Pattern: ~. comment content .~
         # status: ambiguity due to atomDelim
-            342: State('.', 343),
-            343: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL['sp_symbols'], *ATOMIC_VAL['escapeseq_let'], '\n'], [344, 343]),
-                344: State('.', [345, 343]),
-                345: State('~', 346),
-                346: State([*DELIM_VAL['space_delim'], '\n'], end=True, token_type="ML_COMMENT")
+            339: State('.', 340),
+            340: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL['sp_symbols'], *ATOMIC_VAL['escapeseq_let'], '\n'], [341, 340]),
+                341: State('.', [342, 340]),
+                342: State('~', 343),
+                343: State([*DELIM_VAL['space_delim'], '\n'], end=True, token_type="ML_COMMENT")
 
 }
-
-"""
-initial states: 
-0 
-1  - b
-31 - c
-54 - d
-69 - e
-90 - f
-98 - g
-104 - h
-108 - i
-115 - m
-119 - n
-123 - o
-129 - p
-134 - r
-147 - s
-161 - t
-175 - w
-
-# reserved symbols
-184 - =
-188 - +
-194 -  -
-200 - *
-207 -  /
-211 - %
-213 - >
-217 - <
-221 - !
-225 - & 
-228 - |
-231 - (
-233 - )
-235 - [
-237 - ]
-239 - {
-241 - }
-243 - .
-245 - ,
-247 - :
-249 - ;
-251 - linebreak
-
-# Literals (paki change)
-253 <-- (-) or whole
-274 <-- literals but for drip decimals doesnt go from state 0 though
-295 <-- char
-300 <-- string
-304 <-- identifiers
-333 <-- Comment
-
-"""
