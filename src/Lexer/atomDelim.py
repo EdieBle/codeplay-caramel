@@ -15,7 +15,7 @@ ATOMIC_VAL = {
     "space_delim": [' ', '\t'],
 
     # escape sequence letters
-    "escapeseq_let": ['t', 'b', 'f', 'n', 'r', 'v', '\'', '\\', '"'], #'"' was here.
+    "escapeseq_let": ['t', 'b', 'n', 'r', 'v', '\'', '\\', '"'], #'"' was here.
 
     # Operators
     "arithmetic_op": ['+', '-', '*', '/', '%'],
@@ -43,7 +43,7 @@ ATOMIC_VAL["safe_char"] = list(set(
     ATOMIC_VAL["space_delim"] +
     ATOMIC_VAL["whole"] +
     ATOMIC_VAL["sp_symbols"] +
-    ['a', 'c', 'd', 'e', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'o', 'p', 'q', 's', 'u', 'w', 'x', 'y', 'z'] +
+    ['a', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'o', 'p', 'q', 's', 'u', 'w', 'x', 'y', 'z'] +
     ATOMIC_VAL["alpha_cap"]
 ))
 
