@@ -73,9 +73,7 @@ def tokenize(code):
 
             for nxt in branches:
                 node = TRANSITIONS_DFA[nxt]
-
                 if ch in node.chars:
-
                     if node.isEnd:
                         print(f"[INNER NXT #1] NEXT STATE {nxt} is accepting — NOT consuming '{ch}'") # debug
                         last_accept = (nxt, pos, column, buffer)
@@ -104,7 +102,7 @@ def tokenize(code):
         print(f"=== INNER LOOP COMPLETE at pos={pos}, curr_state={curr_state} ===\n") # debug
 
         #=================================================================
-        # DFA FAIL - fallbacks start here
+        # DFA FAIL - fallbacks start here and error handlers over here
         #=================================================================
         if last_accept is None:
             print("\033[91m[1] DFA FAIL - \033[0m main DFA failed, starting fallbacks.") # debug
@@ -158,21 +156,20 @@ def tokenize(code):
                             
                             # just p
                             if node.isEnd: 
-                                print(f"[ID FALLBACK] NEXT STATE {nxt} is accepting — NOT consuming '{candidate}'") # debug 
+                                print(f"[ID FALLBACK] NEXT STATE {nxt} is accepting, NOT CONSUMING '{candidate}'") # debug 
                                 # last_accept = (nxt, pos, column, buffer) # placeholder 
                                 return lex, i, "OK"
                             
                             break
 
                     if nxt is None:
-                        print(f"\033[91m[FALLBACK STOP]\033[0m '{ch}' invalid → stop BEFORE consuming")
+                        print(f"\033[91m[FALLBACK STOP]\033[0m '{ch}' invalid so stop BEFORE consuming")
                         break
 
                     lex += ch
                     temp_state = nxt
                     i += 1
-
-                    # Special check: at state 336, next char must be a delimiter (this is for identifier hahu)
+                        
                     if temp_state == 336:
                         # if i >= len(code):
                         #     print("\033[91m[ID FALLBACK] ERROR — identifier ended without valid delimiter\033[0m") # debug
@@ -198,9 +195,21 @@ def tokenize(code):
             # LEXEME is character, FINAL_POS, err_type 
             # if err_type is "OK" and lexeme or returned lex is NOT none, edi accepted siya
 
-            lexeme, final_pos, err_type = run_identifier_fallback(fallback_pos)
+            # probably a smarter way of handling identifiers so it saves some performance by not checking numbers.
+            lexeme = None
+            final_pos = None
+            err_type = None
+            if code[fallback_pos].isalpha() == True:
+                print(f"\033[92m[IS A ALPHA CHARACTER]")
+                lexeme, final_pos, err_type = run_identifier_fallback(fallback_pos)
 
-            if lexeme is not None and "OK":
+             # can be used to handle errors related to bean and drip literals!
+            if code[fallback_pos].isnumeric() == True:
+                print(f"\033[92m[IS A NUMERIC CHARACTER]")
+                lexeme, final_pos, err_type = run_identifier_fallback(fallback_pos) # <--- change me to another function 
+
+
+            if lexeme is not None and err_type == "OK":
                 print(f"\033[92m[FALLBACK SUCCESS]\033[0m IDENTIFIER accepted '{lexeme}'")
 
                 push("IDENTIFIER", lexeme, fallback_col)
@@ -215,8 +224,7 @@ def tokenize(code):
                 n = len(code) # just to get the current length of the code so it doesnt just keep looping LOL (end of file)
                 # advance until a space, tab, or newline. The code[error_pos] ensures that it stops at EOF
                 while error_pos < n and code[error_pos] not in (" ", "\t", "\n"):
-                    error_pos += 1
-                    
+                    error_pos += 1 
                 error_lex = code[start_pos:error_pos]
 
                 # place errors here (tentative)
@@ -231,7 +239,7 @@ def tokenize(code):
                 continue
             
             if lexeme is None and "BAD":
-                print("\033[91m[ERROR]\033[0m Identifier fallback failed — consuming until whitespace")
+                print("\033[91m[ERROR]\033[0m fallback failed — consuming until whitespace")
 
                 # Consume the entire invalid run starting from the original token start (start_pos)
                 error_pos = start_pos
@@ -243,7 +251,7 @@ def tokenize(code):
 
                 # whole invalid lexeme (from start_pos up to but not including the whitespace)
                 error_lex = code[start_pos:error_pos] # range function that start from the start_position then records until the token can be made
-                print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
+                # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
 
                 # place errors here (tentative)
                 push("ERROR", error_lex, start_col, "Invalid identifier")
