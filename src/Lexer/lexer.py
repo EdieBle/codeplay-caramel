@@ -81,7 +81,6 @@ def tokenize(code):
         start_pos = pos  # <-- needed for ALL fallback
 
         while pos < len(code):
-
             ch = code[pos]
             print(f"[INNER] At pos={pos}, col={column}, char='{ch}', curr_state={curr_state}") # debug
 
@@ -91,13 +90,45 @@ def tokenize(code):
             if isinstance(branches, int):
                 branches = [branches]
 
+
+            # Check if '0' can move us to state 253, this is for the bean and drip literal leading zero stuff
+            can_go_to_253 = any(
+                nxt for nxt in branches
+                if 0 in TRANSITIONS_DFA and '0' in TRANSITIONS_DFA[nxt].chars and nxt == 253
+            )
+
+            if ch == '0' and can_go_to_253:
+                lookahead = pos + 1
+                # first_non_zero_found = False
+
+                while lookahead < len(code):
+                    next_char = code[lookahead]
+                    if next_char == '0':
+                        # skip this zero
+                        lookahead += 1
+                        pos += 1
+                        column += 1
+                        print(f"[LEADING ZERO] Skipping extra '0', buffer='{buffer}'")
+                    elif next_char in '123456789':
+                        pos += 1
+                        # first non-zero digit found
+                        break
+                    elif next_char == '.':
+                        # decimal point found — stop skipping
+                        break
+                    else:
+                        # invalid or number end
+                        break
+                ch = code[pos]  # update current char for DFA processing
+
+
             print(f"[INNER] Possible branches from state {curr_state}: {branches}") # debug
 
             for nxt in branches:
                 node = TRANSITIONS_DFA[nxt]
                 if ch in node.chars:
                     if node.isEnd:
-                        print(f"[INNER NXT #1] NEXT STATE {nxt} is accepting — NOT consuming '{ch}'") # debug
+                        print(f"[INNER NXT #1] NEXT STATE {nxt} is accepting | NOT consuming '{ch}'") # debug
                         last_accept = (nxt, pos, column, buffer)
                         next_state = None
                         break
@@ -204,7 +235,7 @@ def tokenize(code):
                         
                     if temp_state == 333:
                         # if i >= len(code):
-                        #     print("\033[91m[ID FALLBACK] ERROR — identifier ended without valid delimiter\033[0m") # debug
+                        #     print("\033[91m[ID FALLBACK] ERROR | identifier ended without valid delimiter\033[0m") # debug
 
                         #     return None, start_i, "EXCEED_LENGTH"
 
@@ -213,7 +244,7 @@ def tokenize(code):
                         if next_char in valid_delims: # might need to put a end state here
                             return lex, i, "OK"  # valid identifier
                         else:
-                            print("\033[91m[ID FALLBACK] ERROR — identifier too long or invalid termination\033[0m")
+                            print("\033[91m[ID FALLBACK] ERROR | identifier too long or invalid termination\033[0m")
                             return None, start_i, "EXCEED_LENGTH_ERR" # not getting called right now
 
                 # Accept if ended on any other accepting state
@@ -233,7 +264,7 @@ def tokenize(code):
                 # ERROR: literal starts with a decimal point
                 # =============================================
                 if first_char == '.':
-                    print("\033[91m[NUM ERROR]\033[0m Cannot start number with '.' — incomplete float literal")
+                    print("\033[91m[NUM ERROR]\033[0m Cannot start number with '.' | incomplete float literal")
                     return None, start_i, "INC_DRIP_ERR"
 
                 # # must start at state 253 (whole number start)
@@ -303,6 +334,7 @@ def tokenize(code):
 
                 # print(f"\033[91m[NUM REJECT]\033[0m Ended on NON-END state {temp_state}")
                 # return None, start_i, "BAD"
+                # The above return statement causes a unpack non-iterable error if it  doesnt get uncommented.
 
             def run_chur_handler(start_i):
                 print("\033[95m[FALLBACK] Starting churro scan\033[0m")
@@ -405,7 +437,7 @@ def tokenize(code):
                 continue
 
             if lexeme is None and err_type == "INC_DRIP_ERR" : 
-                print("\033[91m[ERROR]\033[0m error detected — consuming until whitespace")
+                print("\033[91m[ERROR]\033[0m error detected | consuming until whitespace")
 
                 # Consume the entire invalid run starting from the original token start (start_pos)
                 error_pos = start_pos
@@ -470,7 +502,7 @@ def tokenize(code):
                 continue
 
             if lexeme is None and "GEN_ERR":
-                print("\033[91m[ERROR]\033[0m fallback failed — consuming until whitespace")
+                print("\033[91m[ERROR]\033[0m fallback failed | consuming until whitespace")
 
                 # Consume the entire invalid run starting from the original token start (start_pos)
                 error_pos = start_pos
@@ -509,5 +541,5 @@ def tokenize(code):
         pos = end_pos
         column = end_col
 
-    print("\n=== OUTER LOOP COMPLETE — DFA scan finished successfully ===\n")
+    print("\n=== OUTER LOOP COMPLETE | DFA scan finished successfully ===\n")
     return tokens
