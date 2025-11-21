@@ -116,27 +116,27 @@ def tokenize(code):
             def run_identifier_fallback(start_i):
                 print("\033[95m[FALLBACK] Starting identifier scan\033[0m")  # debug
 
-                # Must be able to go 0 to 308
+                # Must be able to go 0 to 305
                 start_branches = TRANSITIONS_DFA[0].branches
                 if isinstance(start_branches, int):
                     start_branches = [start_branches]
 
-                if 308 not in start_branches:
-                    print("\033[91m[FALLBACK] ERROR: 0 to 308 path missing in DFA!\033[0m")
+                if 305 not in start_branches:
+                    print("\033[91m[FALLBACK] ERROR: 0 to 305 path missing in DFA!\033[0m")
                     return None, start_i, "BAD"
 
                 first_char = code[start_i]
-                id_start_chars = TRANSITIONS_DFA[308].chars
+                id_start_chars = TRANSITIONS_DFA[305].chars
                 print(f"[ID FALLBACK] First char = '{first_char}', ID start chars = {repr(id_start_chars)}")
 
                 if first_char not in id_start_chars:
                     print("\033[91m[ID FALLBACK] First char is NOT a valid identifier start\033[0m")
                     return None, start_i, "BAD"
 
-                print(f"\033[92m[ID FALLBACK] '{first_char}' is valid at start to state 308\033[0m")
+                print(f"\033[92m[ID FALLBACK] '{first_char}' is valid at start to state 305\033[0m")
 
                 lex = first_char
-                temp_state = 308
+                temp_state = 305
                 i = start_i + 1
 
                 while i < len(code):
