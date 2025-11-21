@@ -97,6 +97,22 @@ def tokenize(code):
                 if 0 in TRANSITIONS_DFA and '0' in TRANSITIONS_DFA[nxt].chars and nxt == 253
             )
 
+            # Check if any current DFA branch can move us to state 273 (the '.' state), WIP
+            can_go_to_273 = any(
+                nxt == 273 and '.' in TRANSITIONS_DFA[nxt].chars
+                for nxt in branches
+            )
+
+            if can_go_to_273:
+                look = pos
+                while look < len(code):
+                    c = code[look]
+                    if c in '123456789':
+                        # pos = look  # track last meaningful digit after decimal
+                        print(c)
+
+                    look += 1
+
             if ch == '0' and can_go_to_253:
                 lookahead = pos + 1
                 # first_non_zero_found = False
@@ -108,7 +124,7 @@ def tokenize(code):
                         lookahead += 1
                         pos += 1
                         column += 1
-                        print(f"[LEADING ZERO] Skipping extra '0', buffer='{buffer}'")
+                        print(f"[BEAN PREPROCESS] Skipping extra '0', buffer='{buffer}'")
                     elif next_char in '123456789':
                         pos += 1
                         # first non-zero digit found
