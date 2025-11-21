@@ -65,25 +65,25 @@ unary_op = ATOMIC_VAL["unary_op"]
 DELIM_VAL = {
     "space_delim": [' ', '\t'],
     "arithmetic_delim": list(set(space_delim + alpha_small + whole + ['('])), # '-' shouldnt have minus
-    "plus_delim": list(set(space_delim + alpha_small + whole + ['(', '"', "'", '-'])), # holy shit bakit walang numbers dito (Added na po boss)
+    "plus_delim": list(set(space_delim + alpha_small + whole + ['(', '"', "'", '-'])), 
     "assignment_delim": list(set(space_delim + alpha_small + whole + ["'", '"', '!', '(', '['])),
     "batter@_delim": list(set(alpha_small + space_delim)),
     "braces_delim": list(set(space_delim + newline)),
     "clbrackets_delim": list(set(space_delim + newline + ['[', ']', ','])),
-    "clparen_delim": list(set(space_delim + newline + ['(', ')', '{', '&', '|'] + arithmetic_op)),
+    "clparen_delim": list(set(space_delim + newline + ['[','(', ')', '{', '&', '|'] + arithmetic_op)), # added opening square bracket. '['
     "colon_delim": list(set(space_delim + newline + ['('])),
     "comma_delim": list(set(space_delim + alpha_small + whole + ['"', "'", '('])),
-    "id_delim": list(set(space_delim + assignment_op + logical_op + arithmetic_op + relational_op + [';', ',', '"', "'", '{', '[', ']', '(', ')', '\n', '='])),
+    "id_delim": list(set(space_delim + assignment_op + logical_op + arithmetic_op + relational_op + [';', ',', '"', "'", '{', '[', ']', '(', ')', '\n', '=', '.'])),
     "logical_delim": list(set(space_delim + alpha_small + whole + ['-', '('])),
-    "numeric_delim": list(set(space_delim + newline + [',', ')', ']'] + arithmetic_op + relational_op)),
+    "numeric_delim": list(set(space_delim + newline + [',', ')', ']', ':', ';'] + arithmetic_op + relational_op)), # added colon. ':'
     "opbrackets_delim": list(set(space_delim + newline + whole + alpha_small + ['"', '\'', '*', '[', ']'])),
-    "opparen_delim": list(set(space_delim + whole + alpha_small + ['"', '\'', ')', '+', '-'])),
+    "opparen_delim": list(set(space_delim + whole + alpha_small + ['"', '\'', ')', '+', '-', '('])), # added opening parenthesis. '('
     "refill_delim": list(set(space_delim + ['(', '0'])),
     "relational_delim": list(set(space_delim + whole + alpha_small + ['-', '\'', '"', '('])), 
     "semicolon_delim": list(set(space_delim + alpha_small + whole + ['('])),
     "spacebraces_delim": list(set(space_delim + ['{'])),
     "spaceparen_delim": list(set(space_delim + ['('])),
-    "string_delim": list(set(space_delim + [')'] + newline + relational_op + ['+', ','])),
+    "string_delim": list(set(space_delim + [')', ']'] + newline + relational_op + ['+', ','])),
     "temp_delim": list(set(space_delim + newline + relational_op + logical_op + [','])),
-    "unary_delim": list(set(space_delim + newline + alpha_small)) # + ['1','2','3','4','5','6','7','8','9'] (removed these for now cuz a unary being delimited by a num makes no sense 4:17am)
+    "unary_delim": list(set(space_delim + newline + alpha_small + [')'])) # + ['1','2','3','4','5','6','7','8','9'] (removed these for now cuz a unary being delimited by a num makes no sense 4:17am)
 }

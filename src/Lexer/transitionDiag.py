@@ -65,7 +65,7 @@ TRANSITIONS_DFA = {
     
     # taste, till, temp
     161: State('t', [162, 167, 171]), 162: State('a', 163), 163: State('s', 164), 164: State('t', 165), 165: State('e', 166), 166: State(DELIM_VAL['spacebraces_delim'], end = True, token_type="KEYWORD"),
-                    167: State('i', 168), 168: State('l', 169), 169: State('l', 170), 170: State('.', end = True, token_type="KEYWORD"),
+                    167: State('i', 168), 168: State('l', 169), 169: State('l', 170), 170: State(':', end = True, token_type="KEYWORD"),
                     171: State ('e', 172), 172: State('m', 173), 173: State('p', 174), 174: State(DELIM_VAL['space_delim'], end = True, token_type="DATA_TYPE"),
     
     # whilehot
@@ -204,7 +204,7 @@ TRANSITIONS_DFA = {
         
         # STRING LITERAL (BLENDLIT) AMBIGUITY
         # Examples:  "hello"  "he\nllo"  "mix\"ed"
-        300: State('"', [301, 302, 304]),
+        300: State('"', [304, 302, 301]),
             
             # Regular characters inside string                                                                                  
             301: State([*ATOMIC_VAL["text_content"], 
