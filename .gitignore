@@ -27,3 +27,6 @@ src/Lexer/tempCodeRunnerFile.py
 src/Lexer/__pycache__/atomDelim.cpython-312.pyc
 src/Lexer/__pycache__/lexer.cpython-312.pyc
 src/Lexer/__pycache__/transitionDiag.cpython-312.pyc
+src/Lexer/__pycache__/atomDelim.cpython-312.pyc
+src/Lexer/__pycache__/lexer.cpython-312.pyc
+src/Lexer/__pycache__/transitionDiag.cpython-312.pyc

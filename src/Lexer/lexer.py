@@ -2,14 +2,28 @@ from .atomDelim import ATOMIC_VAL, DELIM_VAL
 from .transitionDiag import TRANSITIONS_DFA
 
 def tokenize(code):
-    code += '$'
+    code += '$' # for appending an eof haha
     tokens = []
     pos = 0
     line = 1
     column = 1
 
+    # Unique identifier tracking
+    identifier_map = {} # tried to use a list instead of map but it kept blowing up at 
+                        # >100 identifiers (had noticeable slowness) so dictionaries it is!
+    identifier_counter = 1
+
     # helps build a token object and add it to the tokens list.
     def push(token_type, lexeme, start_col, message=None):
+        nonlocal identifier_counter  # update counter if identifier not in the map.
+
+        if token_type == "IDENTIFIER":
+            if lexeme not in identifier_map:
+                identifier_map[lexeme] = f"IDENTIFIER{identifier_counter}"
+                identifier_counter += 1
+
+            token_type = identifier_map[lexeme]
+
         token = {
             "type": token_type,
             "lexeme": lexeme,
@@ -455,7 +469,6 @@ def tokenize(code):
                 column += consumed
                 continue
 
-
             if lexeme is None and "GEN_ERR":
                 print("\033[91m[ERROR]\033[0m fallback failed — consuming until whitespace")
 
@@ -472,7 +485,7 @@ def tokenize(code):
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
 
                 # place errors here (tentative)
-                push("ERROR", error_lex, start_col, "Invalid token. Invalid symbol detected while tokenizing.")
+                push("ERROR", error_lex, start_col, "Invalid token. Invalid symbol or unclosed Blend or Multi-line comment detected while tokenizing.")
 
                 # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos
