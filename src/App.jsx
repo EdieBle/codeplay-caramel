@@ -257,8 +257,8 @@ function TokenTable({ tokens }) {
     <table>
       <thead>
         <tr>
-          <th>Type</th>
           <th>Lexeme</th>
+          <th>Type</th>
           <th>Line</th>
           <th>Column</th>
         </tr>
@@ -266,8 +266,8 @@ function TokenTable({ tokens }) {
       <tbody>
         {tokens.map((t, i) => (
           <tr key={i}>
-            <td>{t.type}</td>
             <td>{t.lexeme}</td>
+            <td>{t.type}</td>
             <td>{t.line}</td>
             <td>{t.column}</td>
           </tr>
