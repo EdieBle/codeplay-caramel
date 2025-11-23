@@ -56,12 +56,12 @@ def tokenize(code):
             column += 4
             continue
 
-        if ch == ("\n"): #would be best if any line counting logic is here
-            print(f"\n=== [NEWLINE] detected at pos={pos}, col={column}, char='newline', tokenizing... ===") #debug
-            push("NEWLINE", '␊', column)
-            pos += 1
-            column += 1
-            continue
+        # if ch == ("\n"): #would be best if any line counting logic is here
+        #     print(f"\n=== [NEWLINE] detected at pos={pos}, col={column}, char='newline', tokenizing... ===") #debug
+        #     push("NEWLINE", '␊', column)
+        #     pos += 1
+        #     column += 1
+        #     continue
 
         if ch == '$' and pos==(len(code) - 1):
             print(f"\n=== [EOF] detected at pos={pos}, col={column}, char='End of File sign', tokenizing... ===") #debug
@@ -116,7 +116,6 @@ def tokenize(code):
             if ch == '0' and can_go_to_253:
                 lookahead = pos + 1
                 # first_non_zero_found = False
-
                 while lookahead < len(code):
                     next_char = code[lookahead]
                     if next_char == '0':
@@ -140,15 +139,30 @@ def tokenize(code):
 
             print(f"[INNER] Possible branches from state {curr_state}: {branches}") # debug
 
+            handled = None
             for nxt in branches:
                 node = TRANSITIONS_DFA[nxt]
+                if curr_state == 0 and nxt == 251 and ch == "\n": # check might be unnecessary for ch but might as well just to make sure amirite
+                    print("\033[92m[SPECIAL NEWLINE ACCEPT]\033[0m Consuming newline")
+
+                    push(node.token_type, "␊", column)
+
+                    pos += 1      # consume newline
+                    line += 1
+                    column = 1
+
+                    handled = True 
+                    next_state = None
+                    # IMPORTANT: break out of inner loop to restart outer loop
+                    break
+
                 if ch in node.chars:
                     if node.isEnd:
                         print(f"[INNER NXT #1] NEXT STATE {nxt} is accepting | NOT consuming '{ch}'") # debug
                         last_accept = (nxt, pos, column, buffer)
                         next_state = None
                         break
-
+                
                     next_state = nxt
                     print(f"[INNER NXT #2] MATCH: '{ch}' -> state {nxt} \n") # debug
                     break
@@ -169,6 +183,8 @@ def tokenize(code):
                 print(f"[INNER] ACCEPTING STATE {curr_state} (buffer='{buffer}')") # debug
 
         print(f"=== INNER LOOP COMPLETE at pos={pos}, curr_state={curr_state} ===\n") # debug
+        if handled:
+            continue
 
         #=================================================================
         # DFA FAIL - fallbacks start here and error handlers over here
@@ -349,7 +365,7 @@ def tokenize(code):
                 #     return lex, i, "OK"
 
                 # print(f"\033[91m[NUM REJECT]\033[0m Ended on NON-END state {temp_state}")
-                # return None, start_i, "BAD"
+                return None, start_i, "INC_DRIP_ERR"
                 # The above return statement causes a unpack non-iterable error if it  doesnt get uncommented.
 
             def run_chur_handler(start_i):
@@ -467,7 +483,7 @@ def tokenize(code):
                 error_lex = code[start_pos:error_pos] # range function that start from the start_position then records until the token can be made
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
 
-                push("ERROR", error_lex, start_col, "Incomplete or improper Drip literal.")
+                push("ERROR", error_lex, start_col, "Incomplete or out-of-range Numeric literal.")
 
                  # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos

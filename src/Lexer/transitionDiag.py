@@ -12,7 +12,7 @@ class State:
 TRANSITIONS_DFA = {
     0: State('initial', [1, 31, 54, 69, 90, 98, 104, 108, 115, 119, 123, 129, 134, 147, 161, 175, 184, 188, 
                         194, 200, 207, 211, 213, 217, 221, 225, 228, 231, 233, 235, 237, 239, 241, 243, 
-                        245, 247, 249, 253, 294, 300, 305, 335]), 
+                        245, 247, 249, 251, 253, 294, 300, 305, 335]), 
 
     # Backroom, batter@, bean, blend, brewed
     1: State('b', [2, 16, 20, 25]), 2: State('a', [3, 10]), 3: State('c', 4), 4: State('k', 5), 5: State('r', 6), 6: State('o', 7), 7: State('o', 8), 8: State('m', 9), 9: State(DELIM_VAL['space_delim'], end = True, token_type="ACCESS_MOD"),
@@ -150,7 +150,7 @@ TRANSITIONS_DFA = {
     # 251: State('\n',  end = True, token_type="NEWLINE"), #ISSUES: CAUSING RECURSION
     
     # OLD Newline
-    # 251: State('\n', 252), 252: State(ATOMIC_VAL['newline'], end = True, token_type="NEWLINE"),
+    251: State('\n', end = True, token_type="NEWLINE"),
     
     
     # Literals
