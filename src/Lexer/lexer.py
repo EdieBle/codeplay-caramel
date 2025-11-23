@@ -419,10 +419,10 @@ def tokenize(code):
                 
                 error_lex = code[start_pos:error_pos] 
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
-                first_char = code[error_pos]
+                first_char = code[start_pos]
                 print("The first char")
                 print(first_char)
-                if first_char == first_char.upper() and not first_char.isnumeric():
+                if first_char == first_char.upper() and first_char.isalpha() and not first_char.isnumeric():
                     print("\033[91m[ID ERROR]\033[0m Cannot have identifier with a capital letter.")
                     error_lex = code[start_pos:error_pos+1] 
                     push("ERROR", error_lex, start_col, "Cannot have identifier with a capital letter.")
@@ -431,7 +431,7 @@ def tokenize(code):
                     column += consumed
                     continue
                 
-                push("ERROR", error_lex, start_col, "Improper Identifier.")
+                push("ERROR", error_lex, start_col, "Improperly delimited Identifier.")
 
                 # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos
@@ -476,7 +476,7 @@ def tokenize(code):
                 
                 error_lex = code[start_pos:error_pos] 
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
-                push("ERROR", error_lex, start_col, "Invalid token/identifier.")
+                push("ERROR", error_lex, start_col, "Invalid character.")
 
                 # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos
