@@ -247,20 +247,20 @@ body {
 
 
 .tokens.layout-panel-right {
-  flex: 0 0 950px;
+  flex: 0 0 700px;
   overflow-y: auto;
   border: 1px solid rgba(85, 77, 64, 0.2); /* Subtle Border */
   max-height: none;
-  max-width: 950px;
+  max-width: 700px;
   background: #FFFBFB; /* Light Background */
   display: flex;
   flex-direction: column;
 }
 
 /* NEW: Define specific column widths */
-.tokens th:nth-child(1) { width: 45%; } /* Type */
-.tokens th:nth-child(2) { width: 25%; } /* Lexeme (now bigger) */
-.tokens th:nth-child(3) { width: 15%; } /* Line */
+.tokens th:nth-child(1) { width: 35%; } /* Type */
+.tokens th:nth-child(2) { width: 40%; } /* Lexeme (now bigger) */
+.tokens th:nth-child(3) { width: 25%; } /* Line */
 .tokens th:nth-child(4) { width: 15%; } /* Column */
 
 .token-table-container {

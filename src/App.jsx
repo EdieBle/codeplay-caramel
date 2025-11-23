@@ -258,7 +258,7 @@ function TokenTable({ tokens }) {
       <thead>
         <tr>
           <th>Lexeme</th>
-          <th>Type</th>
+          <th>Tokens</th>
           <th>Line</th>
           <th>Column</th>
         </tr>
