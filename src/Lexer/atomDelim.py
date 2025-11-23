@@ -73,7 +73,7 @@ DELIM_VAL = {
     "clparen_delim": list(set(space_delim + newline + ['[','(', ')', '{', '&', '|'] + arithmetic_op)), # added opening square bracket. '['
     "colon_delim": list(set(space_delim + newline + ['('])),
     "comma_delim": list(set(space_delim + alpha_small + whole + ['"', "'", '('])),
-    "id_delim": list(set(space_delim + assignment_op + logical_op + arithmetic_op + relational_op + [';', ',', '"', "'", '{', '[', ']', '(', ')', '\n', '=', '.'])),
+    "id_delim": list(set(space_delim + assignment_op + logical_op + arithmetic_op + relational_op + [';', ',', '{', '[', ']', '(', ')', '\n', '=', '.'])), # had ", ' initially
     "logical_delim": list(set(space_delim + alpha_small + whole + ['-', '('])),
     "numeric_delim": list(set(space_delim + newline + [',', ')', ']', ':', ';'] + arithmetic_op + relational_op)), # added colon. ':'
     "opbrackets_delim": list(set(space_delim + newline + whole + alpha_small + ['"', '\'', '*', '[', ']'])),
@@ -86,4 +86,9 @@ DELIM_VAL = {
     "string_delim": list(set(space_delim + [')', ']'] + newline + relational_op + ['+', ','])),
     "temp_delim": list(set(space_delim + newline + relational_op + logical_op + [','])),
     "unary_delim": list(set(space_delim + newline + alpha_small + [')'])) # + ['1','2','3','4','5','6','7','8','9'] (removed these for now cuz a unary being delimited by a num makes no sense 4:17am)
+}
+KEYWORDS_TABLE = {
+    "KEYWORDS": [
+        "bean","drip","temp","blend","churro","mug","ifbrew","elifroth","elspress","pour","whilehot","taste","till","snap","skip","flavour","syrup","brewed","decaf","defoam","cup","hot","cold","recipe","empty","crema","new","batter@","glaze","refill?","cafe","backroom","order"
+    ]
 }
