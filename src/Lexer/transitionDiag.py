@@ -82,7 +82,7 @@ TRANSITIONS_DFA = {
         192: State('=', 193), 193: State(DELIM_VAL['assignment_delim'], end = True, token_type="ASSIGN_OP"),
     
     # Minus (-)
-    194: State('-', [195, 196, 198]), 195: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="ARITHM_OP"),
+    194: State('-', [253, 195, 196, 198]), 195: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="ARITHM_OP"),
     196: State('-', 197), 197: State(DELIM_VAL['unary_delim'], end = True, token_type="UNARY_OP"),
     198: State('=', 199), 199: State(DELIM_VAL['assignment_delim'], end = True, token_type="ASSIGN_OP"),
     
