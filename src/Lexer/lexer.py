@@ -208,7 +208,7 @@ def tokenize(code):
                 ch_bl_err_range = start_i
                 first_char = code[start_i]
                 if first_char == first_char.upper():
-                    print("\033[91m[ID ERROR]\033[0m Cannot have a identifier with a capital letter.")
+                    print("\033[91m[ID ERROR]\033[0m Cannot have a identifier or keyword with a capital letter.")
                     return None, start_i, "ID_ERR"
 
                 print("\033[95m[FALLBACK] Starting identifier scan\033[0m")  # debug
@@ -379,8 +379,9 @@ def tokenize(code):
                 error_lex = code[start_pos:error_pos] # range function that start from the start_position then records until the token can be made
                 # print("\033[91m[DEBUG]\033[0m ")
                 # print(error_pos)
-                # place errors here (tentative)
-                push("ERROR", error_lex, start_col, "Identifier is more than 15 characters")
+                
+                #push("ERROR", error_lex, start_col, "Identifier is more than 15 characters")
+                push("ERROR", error_lex, start_col, "Invalid Delimiter")
 
                 # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos
@@ -401,7 +402,8 @@ def tokenize(code):
                 error_lex = code[start_pos:error_pos]
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
 
-                push("ERROR", error_lex, start_col, "Incomplete or out-of-range Numeric literal.")
+                # push("ERROR", error_lex, start_col, "Incomplete or out-of-range Numeric literal.")
+                push("ERROR", error_lex, start_col, "Incomplete Token.")
 
                  # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos
@@ -425,13 +427,15 @@ def tokenize(code):
                 if first_char == first_char.upper() and first_char.isalpha() and not first_char.isnumeric():
                     print("\033[91m[ID ERROR]\033[0m Cannot have identifier with a capital letter.")
                     error_lex = code[start_pos:error_pos+1] 
-                    push("ERROR", error_lex, start_col, "Cannot have identifier with a capital letter.")
+                    #push("ERROR", error_lex, start_col, "Cannot have identifier with a capital letter.")
+                    push("ERROR", error_lex, start_col, "Cannot begin token with capital letter.")
                     consumed = error_pos - start_pos
                     pos = error_pos+1
                     column += consumed
                     continue
                 
-                push("ERROR", error_lex, start_col, "Improperly delimited Identifier.")
+                push("ERROR", error_lex, start_col, "Invalid Delimiter.")
+                #push("ERROR", error_lex, start_col, "Improperly delimited Identifier.")
 
                 # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos
@@ -451,13 +455,16 @@ def tokenize(code):
 
                 if code[ch_bl_err_range] == '\'':
                     print("\033[91m[CHUR ERROR]\033[0m Invalid churro literal format")
-                    push("ERROR", error_lex, start_col, "Unclosed or Invalid Churro")
+                    #push("ERROR", error_lex, start_col, "Unclosed or Invalid Churro")
+                    push("ERROR", error_lex, start_col, "Unclosed or Invalid Token.")
                 if code[ch_bl_err_range] == '"':
                     print("\033[91m[BLND ERROR]\033[0m Invalid blend literal format")
-                    push("ERROR", error_lex, start_col, "Unclosed or Undelimited Blend Literal")
+                    #push("ERROR", error_lex, start_col, "Unclosed or Undelimited Blend Literal")
+                    push("ERROR", error_lex, start_col, "Unclosed or Invalid Token.")
                 if code[ch_bl_err_range:ch_bl_err_range+2] == '~.':
                     print("\033[91m[MCLN ERROR]\033[0m Unclosed Multi-line comment.")
-                    push("ERROR", error_lex, start_col, "Unclosed Multi-line comment.")
+                    #push("ERROR", error_lex, start_col, "Unclosed Multi-line comment.")
+                    push("ERROR", error_lex, start_col, "Unclosed or Invalid Token.")
 
                 # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos
@@ -469,12 +476,16 @@ def tokenize(code):
                 print("\033[91m[ERROR]\033[0m fallback failed")
 
                 # Consume the entire invalid run starting from the original token start (start_pos)
-                error_pos = max(pos + 1, start_pos + 1) # place this here, same issue as ID_ERR with the loop stuff
+                error_pos = start_pos+1 #max(pos + 1, start_pos + 1) # place this here, same issue as ID_ERR with the loop stuff
 
+                print(start_pos)
+                print(error_pos)
                 while error_pos < pos:
                     error_pos += 1
                 
                 error_lex = code[start_pos:error_pos] 
+                print(error_lex) #debug
+
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
                 push("ERROR", error_lex, start_col, "Invalid character.")
 
