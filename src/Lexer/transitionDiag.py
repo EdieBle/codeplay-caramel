@@ -83,13 +83,13 @@ TRANSITIONS_DFA = {
     
     # Minus (-)
     194: State('-', [195, 196, 198]), 195: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="ARITHM_OP"),
-        196: State('-', 197), 197: State(DELIM_VAL['unary_delim'], end = True, token_type="UNARY_OP"),
-        198: State('=', 199), 199: State(DELIM_VAL['assignment_delim'], end = True, token_type="ASSIGN_OP"),
+    196: State('-', 197), 197: State(DELIM_VAL['unary_delim'], end = True, token_type="UNARY_OP"),
+    198: State('=', 199), 199: State(DELIM_VAL['assignment_delim'], end = True, token_type="ASSIGN_OP"),
     
     # Asterisk (*)
     200: State('*', [201, 202, 205]), 201: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="ARITHM_OP"),
-        202: State('*', 203), 203: State('*', 204), 204: State(']', end = True, token_type="FLEXIBLE_ARRAY"),
-        205: State('=', 206), 206: State(DELIM_VAL['assignment_delim'], end = True, token_type="ASSIGN_OP"),
+    202: State('*', 203), 203: State('*', 204), 204: State(']', end = True, token_type="FLEXIBLE_ARRAY"),
+    205: State('=', 206), 206: State(DELIM_VAL['assignment_delim'], end = True, token_type="ASSIGN_OP"),
     
     # Slash (/)
     207: State('/', 208), 208: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="ARITHM_OP"),
@@ -138,13 +138,13 @@ TRANSITIONS_DFA = {
     243: State('.', 244), 244: State(ATOMIC_VAL['alpha_small'], end = True, token_type="DOT_ACC"),
 
     # Comma (,)
-    245: State(',' , 246), 246: State(DELIM_VAL['comma_delim'], end = True, token_type="COMMA"),
+    245: State( ',' , 246), 246: State(DELIM_VAL['comma_delim'], end = True, token_type="COMMA"),
     
     # Colon (:)
     247: State(':', 248), 248: State(DELIM_VAL['colon_delim'], end = True, token_type="COLON"),
     
     # Semicolon (;)
-    249: State(';', 250), 250: State(DELIM_VAL['semicolon_delim'], end = True, token_type="SEMICOLON"),
+    249: State(';' , 250), 250: State(DELIM_VAL['semicolon_delim'], end = True, token_type="SEMICOLON"),
     
     # Newline (commented out cuz causing issues sa actual thingy)
     # 251: State('\n',  end = True, token_type="NEWLINE"), #ISSUES: CAUSING RECURSION
