@@ -123,6 +123,18 @@ bean cup() [
     }
   };
 
+  // Clear button functions
+  const handleClearEditor = () => {
+    setCode("");
+    setTokens([]);
+    setErrors([]);
+    setLineTokens([]);
+    setHasRun(false);
+    setShowLineTokens(false);
+    setShowTokens(true);
+    setCurrentLine(1);
+  };
+
   const toggleShowTokens = () => {
     setShowTokens((s) => !s);
     if (!showTokens) setShowLineTokens(false);
@@ -217,6 +229,11 @@ const handleScroll = () => {
               <button className="tokenize-btn" onClick={handleTokenizeLine} disabled={busy}>
                 Tokenize line
               </button>
+
+              <button className="tokenize-btn" onClick={handleClearEditor} disabled={busy}>
+                Clear
+              </button>
+   
             </div>
           </div>
           

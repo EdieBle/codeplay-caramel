@@ -429,10 +429,10 @@ def tokenize(code):
                 print("The first char")
                 print(first_char)
                 if first_char == first_char.upper() and first_char.isalpha() and not first_char.isnumeric():
-                    print("\033[91m[ID ERROR]\033[0m Cannot have identifier with a capital letter.")
+                    print("\033[91m[ID ERROR]\033[0m Invalid Token.")
                     error_lex = code[start_pos:error_pos+1] 
                     #push("ERROR", error_lex, start_col, "Cannot have identifier with a capital letter.")
-                    push("ERROR", error_lex, start_col, "Cannot begin token with capital letter")
+                    push("ERROR", error_lex, start_col, "Invalid Token")
                     consumed = error_pos - start_pos
                     pos = error_pos+1
                     column += consumed
