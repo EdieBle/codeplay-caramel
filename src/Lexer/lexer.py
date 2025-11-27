@@ -95,12 +95,12 @@ def tokenize(code):
             # Check if '0' can move us to state 253, this is for the bean and drip literal leading zero stuff
             can_go_to_253 = any(
                 nxt for nxt in branches
-                if 0 in TRANSITIONS_DFA and '0' in TRANSITIONS_DFA[nxt].chars and nxt == 253
+                if 0 in TRANSITIONS_DFA and '0' in TRANSITIONS_DFA[nxt].chars and nxt == 252
             )
 
             # Check if any current DFA branch can move us to state 273 (the '.' state), WIP 
             can_go_to_273 = any(
-                nxt == 273 and '.' in TRANSITIONS_DFA[nxt].chars
+                nxt == 272 and '.' in TRANSITIONS_DFA[nxt].chars
                 for nxt in branches
             )
 
@@ -214,7 +214,7 @@ def tokenize(code):
                 print("\033[95m[FALLBACK] Starting identifier scan\033[0m")  # debug
 
                 lex = first_char
-                temp_state = 305
+                temp_state = 304
                 i = start_i + 1
 
                 while i < len(code):
@@ -250,9 +250,9 @@ def tokenize(code):
                     temp_state = nxt
                     i += 1
                         
-                    if temp_state == 333:
+                    if temp_state == 332:
                         next_char = code[i]
-                        valid_delims = TRANSITIONS_DFA[334].chars
+                        valid_delims = TRANSITIONS_DFA[333].chars
                         if next_char in valid_delims: # might need to put a end state here
                             return lex, i, "OK"  # valid identifier
                         else:
@@ -282,7 +282,7 @@ def tokenize(code):
                     return None, start_i, "INC_DRIP_ERR"
 
                 lex = first_char
-                temp_state = 253
+                temp_state = 252
                 i = start_i + 1
 
                 while i < len(code):
@@ -360,7 +360,11 @@ def tokenize(code):
                 if lexeme in KEYWORDS_TABLE["KEYWORDS"]:
                     print("LEXEME IN KEYWORDS TABLE! IS A KEYWORD!")
                     print(lexeme)
-                    push("KEYWORD", lexeme, fallback_col)
+                    
+                    # just a small while loop to recheck the lexeme and see if its a keyword a properly delimited
+                    
+                    
+                    #push("KEYWORD", lexeme, fallback_col)
                 else:
                     print("LEXEME NOT IN KEYWORDS TABLE!")
                     push("IDENTIFIER", lexeme, fallback_col)
@@ -381,7 +385,7 @@ def tokenize(code):
                 # print(error_pos)
                 
                 #push("ERROR", error_lex, start_col, "Identifier is more than 15 characters")
-                push("ERROR", error_lex, start_col, "Invalid Delimiter")
+                push("ERROR", error_lex, start_col, "Invalid Delimiter for possible token")
 
                 # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos
@@ -403,7 +407,7 @@ def tokenize(code):
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
 
                 # push("ERROR", error_lex, start_col, "Incomplete or out-of-range Numeric literal.")
-                push("ERROR", error_lex, start_col, "Incomplete Token.")
+                push("ERROR", error_lex, start_col, "Incomplete Token")
 
                  # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos
@@ -428,13 +432,13 @@ def tokenize(code):
                     print("\033[91m[ID ERROR]\033[0m Cannot have identifier with a capital letter.")
                     error_lex = code[start_pos:error_pos+1] 
                     #push("ERROR", error_lex, start_col, "Cannot have identifier with a capital letter.")
-                    push("ERROR", error_lex, start_col, "Cannot begin token with capital letter.")
+                    push("ERROR", error_lex, start_col, "Cannot begin token with capital letter")
                     consumed = error_pos - start_pos
                     pos = error_pos+1
                     column += consumed
                     continue
                 
-                push("ERROR", error_lex, start_col, "Invalid Delimiter.")
+                push("ERROR", error_lex, start_col, "Invalid Delimiter for Possible Token")
                 #push("ERROR", error_lex, start_col, "Improperly delimited Identifier.")
 
                 # advance pos/column to after the consumed invalid chunk
@@ -456,15 +460,15 @@ def tokenize(code):
                 if code[ch_bl_err_range] == '\'':
                     print("\033[91m[CHUR ERROR]\033[0m Invalid churro literal format")
                     #push("ERROR", error_lex, start_col, "Unclosed or Invalid Churro")
-                    push("ERROR", error_lex, start_col, "Unclosed or Invalid Token.")
+                    push("ERROR", error_lex, start_col, "Unclosed Token")
                 if code[ch_bl_err_range] == '"':
                     print("\033[91m[BLND ERROR]\033[0m Invalid blend literal format")
                     #push("ERROR", error_lex, start_col, "Unclosed or Undelimited Blend Literal")
-                    push("ERROR", error_lex, start_col, "Unclosed or Invalid Token.")
+                    push("ERROR", error_lex, start_col, "Unclosed Token")
                 if code[ch_bl_err_range:ch_bl_err_range+2] == '~.':
                     print("\033[91m[MCLN ERROR]\033[0m Unclosed Multi-line comment.")
                     #push("ERROR", error_lex, start_col, "Unclosed Multi-line comment.")
-                    push("ERROR", error_lex, start_col, "Unclosed or Invalid Token.")
+                    push("ERROR", error_lex, start_col, "Unclosed Token")
 
                 # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos
@@ -487,7 +491,7 @@ def tokenize(code):
                 print(error_lex) #debug
 
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
-                push("ERROR", error_lex, start_col, "Invalid character.")
+                push("ERROR", error_lex, start_col, "Invalid Character")
 
                 # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos

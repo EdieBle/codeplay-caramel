@@ -71,7 +71,7 @@ export default function LexerError({ errors }) {
             </div>
 
             <div className="lexer-error__details-row">
-              <div className="lexer-error__lexeme">"{e.lexeme}"</div>
+              <div className="lexer-error__lexeme">{e.lexeme}</div>
               <div className="lexer-error__loc">
                 at line {e.line}, col {e.column}
               </div>
