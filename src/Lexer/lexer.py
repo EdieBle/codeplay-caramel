@@ -353,26 +353,58 @@ def tokenize(code):
                 lexeme, final_pos, err_type = run_incomp_handler(fallback_pos)
 
             # error type handlers.
-            if lexeme is not None and err_type == "OK":
-                print(f"\033[92m[FALLBACK SUCCESS]\033[0m IDENTIFIER accepted! Will now check if'{lexeme}' is a keyword...")
-                print("OKAY STATUS REACHED")
-                # just a final a check just in case a stray keyword gets lodged into the identifier section, which i mean it can be a proper flow.
-                if lexeme in KEYWORDS_TABLE["KEYWORDS"]:
-                    print("LEXEME IN KEYWORDS TABLE! IS A KEYWORD!")
-                    print(lexeme)
-                    
-                    # just a small while loop to recheck the lexeme and see if its a keyword a properly delimited
-                    
-                    
-                    #push("KEYWORD", lexeme, fallback_col)
+            if lexeme in KEYWORDS_TABLE["KEYWORDS"]:
+                print("LEXEME IN KEYWORDS TABLE! IS A KEYWORD!")
+                print(lexeme)
+
+                # ---------------------------------------------
+                # RE-RUN DFA WALKER TO CONFIRM VALID DELIMITATION
+                # ---------------------------------------------
+                test_pos = fallback_pos
+                test_state = 0
+                test_buffer = ""
+
+                valid_keyword = False
+
+                while test_pos < len(code):
+                    test_ch = code[test_pos]
+                    branches = TRANSITIONS_DFA[test_state].branches
+                    if isinstance(branches, int):
+                        branches = [branches]
+
+                    next_test_state = None
+                    for nxt in branches:
+                        node = TRANSITIONS_DFA[nxt]
+                        if test_ch in node.chars:
+                            if node.isEnd:
+                                # Accepting, but do NOT consume char
+                                next_test_state = None
+                                valid_keyword = len(test_buffer) == len(lexeme)
+                            else:
+                                next_test_state = nxt
+                            break
+
+                    if next_test_state is None:
+                        break
+
+                    test_state = next_test_state
+                    test_buffer += test_ch
+                    test_pos += 1
+
+                # Now verify the DFA properly matched the exact keyword
+                if valid_keyword:
+                    print("[KEYWORD VALIDATED] DFA accepted keyword with proper delimiter")
+                    push("KEYWORD", lexeme, fallback_col)
+                    pos = final_pos
+                    column += (final_pos - fallback_pos)
+                    continue
                 else:
-                    print("LEXEME NOT IN KEYWORDS TABLE!")
-                    push("IDENTIFIER", lexeme, fallback_col)
-                
-                consumed = final_pos - fallback_pos
-                pos = final_pos
-                column += consumed
-                continue
+                    print("[KEYWORD INVALID] DFA rejected keyword due to bad delimiter")
+                    push("ERROR", lexeme, fallback_col, "Invalid keyword delimiter")
+                    pos = final_pos
+                    column += (final_pos - fallback_pos)
+                    continue
+
             
             if lexeme is None and err_type == "EXCEED_LENGTH_ERR" : 
                 # Consume the entire invalid run starting from the original token start (start_pos)
