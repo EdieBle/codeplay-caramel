@@ -491,7 +491,7 @@ def tokenize(code):
                 print(error_lex) #debug
 
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
-                push("ERROR", error_lex, start_col, "Invalid Character")
+                push("ERROR", error_lex, start_col, "Invalid Token")
 
                 # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos
