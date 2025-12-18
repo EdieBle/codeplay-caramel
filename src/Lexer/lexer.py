@@ -363,7 +363,6 @@ def tokenize(code):
                 push("ERROR", code[fallback_pos], column, "Invalid or unexpected symbol")
                 # treat as single-character token or lexical error
                 pos = fallback_pos+1
-                column += 1
                 
                 continue
 
