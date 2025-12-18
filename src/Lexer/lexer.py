@@ -357,6 +357,16 @@ def tokenize(code):
             if code[fallback_pos] == '\'' or code[fallback_pos] == '"' or code[fallback_pos:fallback_pos+2] == "~.":
                 print(f"\033[92m[IS A CHURRO/BLEND LITERAL or AN UNCLOSED MULTILINE COMMENT]")
                 lexeme, final_pos, err_type = run_incomp_handler(fallback_pos)
+            
+            if not (code[fallback_pos].isalnum() or code[fallback_pos:fallback_pos+2] == "~."):
+                print("\033[96m[IS A SYMBOL CHARACTER]\033[0m")
+
+                # treat as single-character token or lexical error
+                pos = fallback_pos+1
+                column += 1
+                push("ERROR", code[fallback_pos], column, "Invalid or unexpected symbol")
+                
+                continue
 
             # error type handlers.
             if lexeme in KEYWORDS_TABLE["KEYWORDS"]:
@@ -539,12 +549,12 @@ def tokenize(code):
                 # loop will continue from the whitespace (or EOF)
                 continue
            
-            # purpose of this is to catch unhandled error types like symbols and stuff
-            if lexeme is None and err_type is None:
-                push("ERROR", code[start_pos], start_col, "Invalid Token.")
-                pos = start_pos + 1
-                column += 1
-                continue
+            # # purpose of this is to catch unhandled error types like symbols and stuff
+            # if lexeme is None:
+            #     push("ERROR", code[start_pos], start_col, "Invalid Token.")
+            #     pos = start_pos + 1
+            #     column += 1
+            #     continue
 
         #=================================================================
         # VALID TOKEN FROM MAIN DFA (only happens if everything goes well.)
