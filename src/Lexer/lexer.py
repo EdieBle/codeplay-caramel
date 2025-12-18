@@ -358,13 +358,12 @@ def tokenize(code):
                 print(f"\033[92m[IS A CHURRO/BLEND LITERAL or AN UNCLOSED MULTILINE COMMENT]")
                 lexeme, final_pos, err_type = run_incomp_handler(fallback_pos)
             
-            if not (code[fallback_pos].isalnum() or code[fallback_pos:fallback_pos+2] == "~."):
+            if not code[fallback_pos].isalnum() and not code[fallback_pos:fallback_pos+2] == "~." and code[fallback_pos] not in {"'", '"'}:
                 print("\033[96m[IS A SYMBOL CHARACTER]\033[0m")
-
+                push("ERROR", code[fallback_pos], column, "Invalid or unexpected symbol")
                 # treat as single-character token or lexical error
                 pos = fallback_pos+1
                 column += 1
-                push("ERROR", code[fallback_pos], column, "Invalid or unexpected symbol")
                 
                 continue
 
@@ -504,9 +503,11 @@ def tokenize(code):
                 error_lex = code[start_pos:error_pos]
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
 
+                print(error_lex)
                 if code[ch_bl_err_range] == '\'':
                     print("\033[91m[CHUR ERROR]\033[0m Invalid churro literal format")
                     #push("ERROR", error_lex, start_col, "Unclosed or Invalid Churro")
+                    
                     push("ERROR", error_lex, start_col, "Unclosed Token")
                 if code[ch_bl_err_range] == '"':
                     print("\033[91m[BLND ERROR]\033[0m Invalid blend literal format")
@@ -549,12 +550,12 @@ def tokenize(code):
                 # loop will continue from the whitespace (or EOF)
                 continue
            
-            # # purpose of this is to catch unhandled error types like symbols and stuff
-            # if lexeme is None:
-            #     push("ERROR", code[start_pos], start_col, "Invalid Token.")
-            #     pos = start_pos + 1
-            #     column += 1
-            #     continue
+            # purpose of this is to catch unhandled error types like symbols and stuff
+            if lexeme is None and err_type == "GEN_ERR":
+                push("ERROR", code[start_pos], start_col, "Invalid Token.")
+                pos = start_pos + 1
+                column += 1
+                continue
 
         #=================================================================
         # VALID TOKEN FROM MAIN DFA (only happens if everything goes well.)
