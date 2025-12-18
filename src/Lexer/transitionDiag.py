@@ -92,7 +92,7 @@ TRANSITIONS_DFA = {
     205: State('=', 206), 206: State(DELIM_VAL['assignment_delim'], end = True, token_type="*="),
     
     # Slash (/)
-    207: State('/', 208), 208: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="/"),
+    207: State('/', [209, 208]), 208: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="/"),
     209: State('=', 210), 210: State(DELIM_VAL['assignment_delim'], end = True, token_type="/="),
     
     # Modulo (%)
