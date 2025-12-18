@@ -513,10 +513,11 @@ def tokenize(code):
                 column += consumed
                 continue
 
-            if lexeme is None and "GEN_ERR":
+            if lexeme is None and err_type == "GEN_ERR":
                 print("\033[91m[ERROR]\033[0m fallback failed")
 
                 # Consume the entire invalid run starting from the original token start (start_pos)
+                
                 error_pos = final_pos+1  # place this here, same issue as ID_ERR with the loop stuff
 
                 print(start_pos)
@@ -536,6 +537,13 @@ def tokenize(code):
                 column += consumed
 
                 # loop will continue from the whitespace (or EOF)
+                continue
+           
+            # purpose of this is to catch unhandled error types like symbols and stuff
+            if lexeme is None and err_type is None:
+                push("ERROR", code[start_pos], start_col, "Invalid Token.")
+                pos = start_pos + 1
+                column += 1
                 continue
 
         #=================================================================
