@@ -255,7 +255,7 @@ def tokenize(code):
                     temp_state = nxt
                     i += 1
                         
-                    if temp_state == 332:
+                    if temp_state == 333:
                         next_char = code[i]
                         valid_delims = TRANSITIONS_DFA[333].chars
                         if next_char in valid_delims: # might need to put a end state here
