@@ -193,7 +193,7 @@ TRANSITIONS_DFA = {
             296: State([*DELIM_VAL["space_delim"], ',', '\n'], end=True, token_type="CHURROLIT"),
 
             # Escape sequence
-            297: State('\\', 298), 298: State(ATOMIC_VAL["escapeseq_let"], [296]),
+            297: State('\\', 298), 298: State(ATOMIC_VAL["escapeseq_let"], [295]),
 
             # Given '\j'
             # ' -> 0 to 294

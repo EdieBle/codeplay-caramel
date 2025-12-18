@@ -234,7 +234,12 @@ def tokenize(code):
                             
                             if node.isEnd: 
                                 print(f"[ID FALLBACK] NEXT STATE {nxt} is accepting, NOT CONSUMING '{candidate}'") # debug 
-                                # last_accept = (nxt, pos, column, buffer) # placeholder 
+                                nonlocal last_accept
+                                # print(nxt)
+                                # print(pos)
+                                # print(i)
+                                pos = i
+                                last_accept = (nxt, pos, column, lex) # placeholder 
                                 print(lex)
                                 return lex, i, "OK"
                             break
@@ -265,7 +270,8 @@ def tokenize(code):
                     return lex, i, "OK"
 
                 print(f"\033[91m[ID FALLBACK REJECT]\033[0m Ended on NON-END state {temp_state}")
-                return None, start_i, "GEN_ERR" # might
+                
+                return None, i, "GEN_ERR" 
 
             def run_num_handler(start_i):
                 nonlocal ch_bl_err_range 
@@ -400,12 +406,11 @@ def tokenize(code):
                     continue
                 else:
                     print("[KEYWORD INVALID] DFA rejected keyword due to bad delimiter")
-                    push("ERROR", lexeme, fallback_col, "Invalid keyword delimiter")
+                    push("ERROR", lexeme, fallback_col, "Invalid Delimiter for possible token.")
                     pos = final_pos
                     column += (final_pos - fallback_pos)
                     continue
-
-            
+ 
             if lexeme is None and err_type == "EXCEED_LENGTH_ERR" : 
                 # Consume the entire invalid run starting from the original token start (start_pos)
                 error_pos = start_pos+15 # why +15? because its the start position +15 character and this only triggers if it exceeds length
@@ -417,7 +422,7 @@ def tokenize(code):
                 # print(error_pos)
                 
                 #push("ERROR", error_lex, start_col, "Identifier is more than 15 characters")
-                push("ERROR", error_lex, start_col, "Invalid Delimiter for possible token")
+                push("ERROR", error_lex, start_col, "Invalid Delimiter for possible token.")
 
                 # advance pos/column to after the consumed invalid chunk
                 consumed = error_pos - start_pos
@@ -512,14 +517,14 @@ def tokenize(code):
                 print("\033[91m[ERROR]\033[0m fallback failed")
 
                 # Consume the entire invalid run starting from the original token start (start_pos)
-                error_pos = start_pos+1 #max(pos + 1, start_pos + 1) # place this here, same issue as ID_ERR with the loop stuff
+                error_pos = final_pos+1  # place this here, same issue as ID_ERR with the loop stuff
 
                 print(start_pos)
                 print(error_pos)
                 while error_pos < pos:
                     error_pos += 1
                 
-                error_lex = code[start_pos:error_pos] 
+                error_lex = code[start_pos:final_pos] 
                 print(error_lex) #debug
 
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
@@ -536,6 +541,7 @@ def tokenize(code):
         #=================================================================
         # VALID TOKEN FROM MAIN DFA (only happens if everything goes well.)
         #=================================================================
+        
         state_id, end_pos, end_col, lexeme = last_accept
         token_type = TRANSITIONS_DFA[state_id].token_type
 
