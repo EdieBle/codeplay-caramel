@@ -549,12 +549,6 @@ def tokenize(code):
                 # loop will continue from the whitespace (or EOF)
                 continue
            
-            # purpose of this is to catch unhandled error types like symbols and stuff
-            if lexeme is None and err_type == "GEN_ERR":
-                push("ERROR", code[start_pos], start_col, "Invalid Token.")
-                pos = start_pos + 1
-                column += 1
-                continue
 
         #=================================================================
         # VALID TOKEN FROM MAIN DFA (only happens if everything goes well.)

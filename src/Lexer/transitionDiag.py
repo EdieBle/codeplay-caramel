@@ -88,7 +88,7 @@ TRANSITIONS_DFA = {
     
     # Asterisk (*)
     200: State('*', [201, 202, 205]), 201: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="*"),
-    202: State('*', 203), 203: State('*', 204), 204: State(']', end = True, token_type="***"),
+    202: State('*', 203), 203: State('*', 204), 204: State([']', *DELIM_VAL['space_delim']], end = True, token_type="***"),
     205: State('=', 206), 206: State(DELIM_VAL['assignment_delim'], end = True, token_type="*="),
     
     # Slash (/)
@@ -190,7 +190,7 @@ TRANSITIONS_DFA = {
             295: State('\'', 296), 
 
             # delimiter
-            296: State([*DELIM_VAL["space_delim"], ',', '\n'], end=True, token_type="CHURROLIT"),
+            296: State([*DELIM_VAL["space_delim"], ',', '\n', ']'], end=True, token_type="CHURROLIT"),
 
             # Escape sequence
             297: State('\\', 298), 298: State(ATOMIC_VAL["escapeseq_let"], [295]),
