@@ -1,0 +1,197 @@
+// Caramel CFG
+// Tokens - Reserved Words
+%import common.WS
+%ignore WS
+%ignore /~\.(.|\n)*?\.~/
+
+BACKROOM: "backroom"
+BATTER: "batter@"
+BEAN: "bean"
+BLEND: "blend"
+BREWED: "brewed"
+CAFE: "cafe"
+CREMA: "crema"
+CHURRO: "churro"
+COLD: "cold"
+CUP: "cup"
+DECAF: "decaf"
+DEFOAM: "defoam"
+DRIP: "drip"
+ELIFROTH: "elifroth"
+ELSPRESS: "elspress"
+EMPTY: "empty"
+FLAVOUR: "flavour"
+GLAZE: "glaze"
+HOT: "hot"
+IFBREW: "ifbrew"
+MUG: "mug"
+NEW: "new"
+ORDER: "order"
+POUR: "pour"
+RECIPE: "recipe"
+REFILL: "refill?"
+SKIP: "skip"
+SNAP: "snap"
+SYRUP: "syrup"
+TASTE: "taste"
+TILL: "till"
+TEMP: "temp"
+WHILEHOT: "whilehot"
+
+// Tokens - Reserved Symbols
+EQUALS: "="
+PLUS: "+"
+INCREMENT: "++"
+EQUAL_PLUS: "+="
+MINUS: "-"
+DECREMENT: "--"
+EQUAL_MINUS: "-="
+MULTIPLY: "*"
+FLEX_ASTERISK: "***"
+EQUAL_ASTERISK: "*="
+DIVIDE: "/"
+EQUAL_DIVIDE: "/="
+MODULO: "%"
+GREATER_THAN: ">"
+GREATER_EQUAL: ">="
+LESSER_THAN: "<"
+LESSER_EQUAL: "<="
+NOT: "!"
+NOT_EQUAL: "!="
+EQ_EQUALS: "=="
+AND: "&&"
+OR: "||"
+OP_PAREN: "("
+CL_PAREN: ")"
+OP_BRACKETS: "["
+CL_BRACKETS: "]"
+OP_BRACES: "{"
+CL_BRACES:"}"
+DOT_ACC: "."
+COMMA: ","
+COLON: ":"
+SEMICOLON: ";"
+ZERO: "0"
+
+// LITERALS
+BEANLIT: /[0-9]+/
+DRIPLIT: /[0-9]+\.[0-9]+/
+CHURROLIT: /'(\\.|[^\\'])'/
+BLENDLIT: /"(\\.|[^\\"])*"/
+TEMPLIT: "hot" | "cold"
+ID: /(?!(backroom|batter@|bean|blend|brewed|cafe|crema|churro|cold|cup|decaf|drip|elifroth|elspress|empty|glaze|hot|ifbrew|mug|new|order|pour|recipe|refill\?|skip|snap|syrup|taste|till|temp|whilehot)\b)[a-z][a-zA-Z0-9_]{0,15}/
+
+// CFG - RULES START
+start: program
+
+program: global_def main_def
+global_def: global_dec global_def |  
+global_dec: dec | crema_def | recipe_def | empty_def | 
+
+dec: var_dec | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | object_def | crema_assign
+var_dec: acc_mod const_mod data_type ID var_dec_tail
+acc_mod: CAFE | BACKROOM | 
+const_mod: BREWED | 
+data_type: BEAN | DRIP | BLEND | CHURRO | TEMP 
+var_dec_tail: var_dec_cont | COMMA ID EQUALS value var_assign_val_tail | 
+var_dec_cont: EQUALS value var_assign_val_tail | 
+var_assign_val_tail: COMMA ID EQUALS value var_assign_val_tail |
+value: ID | expressions | call | literals
+literals: BEANLIT | DRIPLIT | BLENDLIT | TEMPLIT | CHURROLIT
+call: mug_call | mug_glob_call | arr_call | recipe_call | crema_call | glob_var_acc
+
+mug_call: ID DOT_ACC ID
+mug_glob_call: ORDER DOT_ACC ID DOT_ACC ID
+arr_call: ID OP_BRACKETS array_index CL_BRACKETS
+array_index: BEANLIT
+recipe_call: ID OP_PAREN recipe_args recipe_args_tail CL_PAREN
+recipe_args: ID | literals | mug_call | mug_glob_call | arr_call | 
+recipe_args_tail: COMMA recipe_args recipe_args_tail |
+crema_call: ID DOT_ACC crema_member
+crema_member: ID | mug_call | mug_glob_call | arr_call | recipe_call
+
+expressions: arith_expressions | logic_expressions | rel_expressions
+arith_expressions: num_operand arithm_op num_operand arith_expr_tail | OP_PAREN arith_expressions CL_PAREN
+arith_expr_tail: arithm_op num_operand arith_expr_tail | 
+num_operand: BEANLIT | DRIPLIT | TEMPLIT | ID | call | unary_expressions
+arithm_op: PLUS | MINUS | MULTIPLY | DIVIDE | MODULO
+unary_expressions: unary_op ID | ID unary_op
+unary_op: INCREMENT | DECREMENT
+logic_expressions: bool_term logic_op bool_term logic_expr_tail
+bool_term: num_operand | NOT OP_PAREN bool_term CL_PAREN | rel_expressions | OP_PAREN logic_expressions CL_PAREN
+logic_op: AND | OR
+logic_expr_tail: logic_op bool_term logic_expr_tail |
+rel_expressions: rel_term rel_op rel_term rel_expr_tail
+rel_term: num_operand | OP_PAREN rel_expressions CL_PAREN | arith_expressions
+rel_expr_tail: rel_op rel_term rel_expr_tail | 
+rel_op: GREATER_THAN | LESSER_THAN | EQ_EQUALS | NOT_EQUAL | GREATER_EQUAL | LESSER_EQUAL
+
+mug_dec: MUG ID OP_BRACKETS var_dec var_assign_val_tail CL_BRACKETS
+mug_call_assign: mug_call EQUALS value
+mug_glob_assign: mug_glob_call EQUALS value
+
+glob_var_acc: ORDER DOT_ACC ID
+glob_var_acc_val: glob_var_acc EQUALS value
+
+arr_dec: acc_mod const_mod data_type ID arr_size EQUALS OP_BRACKETS arr_elem ext_arr_elem CL_BRACKETS ext_2d
+arr_size: OP_BRACKETS arr_size_val CL_BRACKETS arr_size_2d | BEANLIT | FLEX_ASTERISK
+arr_size_val: BEANLIT | FLEX_ASTERISK
+arr_size_2d: OP_BRACKETS arr_size_val CL_BRACKETS | 
+arr_elem: literals | expressions | ID | 
+ext_arr_elem: COMMA arr_elem ext_arr_elem | 
+ext_2d: OP_BRACKETS arr_elem ext_arr_elem CL_BRACKETS | 
+
+object_def: NEW ID EQUALS ID
+crema_assign: crema_call EQUALS value
+
+recipe_def: RECIPE data_type ID OP_PAREN parameter CL_PAREN OP_BRACKETS recipe_body refill_final CL_BRACKETS
+parameter: param_val add_param | 
+param_val: var_dec | mug_call | mug_glob_call 
+add_param: COMMA param_val add_param | 
+recipe_body: statement recipe_body | dec recipe_body | 
+refill_body: REFILL refill_arg | 
+refill_final: REFILL refill_arg
+refill_arg: OP_PAREN refill_arg_cont CL_PAREN | ZERO | 
+refill_arg_cont: refill_content extra_refill_val
+refill_content: literals | expressions | mug_call | ID 
+extra_refill_val: COMMA refill_content extra_refill_val | 
+
+empty_def: EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS statement CL_BRACKETS
+
+crema_def: CREMA ID OP_BRACKETS crema_body CL_BRACKETS
+crema_body: crema_body_cont crema_body | 
+crema_body_cont: acc_mod recipe_def | acc_mod empty_def | dec
+
+main_def: BEAN CUP OP_PAREN CL_PAREN OP_BRACKETS main_body REFILL ZERO CL_BRACKETS
+main_body: dec main_body | statement main_body
+statement: refill_body statement | dec statement | input_stmt statement | output_stmt statement | if_cond statement | flav_switch statement | pour_loop statement | whilehot_loop statement | tasteill_loop statement |
+
+input_stmt: BATTER input_args input_val 
+input_args: input_args_unit input_args_unit_tail
+input_args_unit: ID | crema_inp_call | mug_call | mug_glob_call | arr_call | glob_var_acc
+crema_inp_call: ID DOT_ACC mug_call | ID DOT_ACC mug_glob_call | ID DOT_ACC arr_call 
+input_args_unit_tail: COMMA input_args_unit input_args_unit_tail | 
+input_val: OP_PAREN BLENDLIT CL_PAREN | 
+
+output_stmt: GLAZE OP_PAREN output_args CL_PAREN
+output_args: value concat | 
+concat: PLUS value concat | 
+
+if_cond: IFBREW OP_PAREN expressions CL_PAREN OP_BRACES statement CL_BRACES if_cond_tail
+if_cond_tail: ELIFROTH OP_PAREN expressions CL_PAREN OP_BRACES statement CL_BRACES if_cond_tail | ELSPRESS OP_PAREN expressions CL_PAREN OP_BRACES statement CL_BRACES | 
+
+flav_switch: FLAVOUR OP_PAREN expressions CL_PAREN OP_BRACES syrup_switch CL_BRACES
+syrup_switch: SYRUP OP_PAREN expressions CL_PAREN COLON statement SNAP defoam_stmt syrup_switch | 
+defoam_stmt: DEFOAM COLON statement SNAP | 
+
+pour_loop: POUR OP_PAREN pour_init SEMICOLON rel_expressions SEMICOLON update CL_PAREN OP_BRACES statement intrpt_stmt CL_BRACES
+pour_init: acc_mod const_mod data_type ID EQUALS value var_assign_val_tail 
+update: update_unit update_tail
+update_tail: COMMA update_unit update_tail | 
+update_unit: ID assign_op arith_expressions | unary_expressions
+assign_op: EQUALS | EQUAL_PLUS | EQUAL_MINUS | EQUAL_ASTERISK | EQUAL_DIVIDE 
+
+whilehot_loop: WHILEHOT OP_PAREN expressions CL_PAREN OP_BRACES statement intrpt_stmt CL_BRACES
+tasteill_loop: TASTE OP_BRACES statement intrpt_stmt CL_BRACES TILL COLON OP_PAREN expressions CL_PAREN
+
+intrpt_stmt: SNAP | SKIP | 
