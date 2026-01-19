@@ -1,21 +1,33 @@
-from lark import Lark, Token
-with open("src/Parser/cfg2.lark") as f:
+from lark import Lark, UnexpectedInput
+
+with open("src/Parser/cfg.lark") as f:
     grammar = f.read()
 
 parser = Lark(
     grammar,
-    parser="earley",    
-    lexer="dynamic",      
-    start="start"
+    parser="earley",
+    lexer="basic",
+    start="start",
+    debug=True 
 )
 
-tokens = [
-    Token("ID", "a"),
-    Token("PLUS", "+"),
-    Token("ID", "b"),
-    Token("MULTIPLY", "*"),
-    Token("ID", "c")
-]
+code = f'print " hello " \n'   # <-- newline terminator is required
 
-tree = parser.parse(tokens)
-print(tree.pretty())
+print("=== Tokens ===")
+for token in parser.lex(code):
+    print(f"{token.type:12} -> {token.value!r}")
+
+try:
+    tree = parser.parse(code)
+    print("\n=== Parse Tree ===")
+    print(tree.pretty())
+
+except UnexpectedInput as e:
+    print("\n=== PARSE ERROR ===")
+    print("Error at position:", e.pos_in_stream)
+    print("Line:", e.line, "Column:", e.column)
+    print("Got token:", e.get_context(code))
+    print("Expected:", e.expected)
+
+    print("\nExpected (human-readable):")
+    print(", ".join(sorted(e.expected)))
