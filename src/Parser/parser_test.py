@@ -19,6 +19,21 @@ code = '''bean x = 4
         bean g = 5, v = 4, p = 9
         bean x = 3
     ]
+    ifbrew(age < 18){
+        glaze("MINOR")
+        glaze("MINOR1")
+        x = 4+4
+    }
+    elifroth(age >= 18){
+        glaze("ADULT")
+        glaze("MINOR1")
+        x = 4+4
+    }
+    elspress{
+        glaze("INVALID!")
+        glaze("MINOR1")
+        x = 4+4
+    }
     bean number
     drip average = 1.75
     blend greeting = "Hello"

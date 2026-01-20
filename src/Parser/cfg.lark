@@ -91,7 +91,7 @@ program: global_def main_def
 global_def: (global_dec NEWLINE)*
 global_dec: dec | crema_def | recipe_def | empty_def  | _empty
 
-dec: var_dec | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | object_def | crema_assign
+dec: update_unit | var_dec | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | object_def | crema_assign
 
 var_dec: acc_mod const_mod data_type ID var_dec_tail
 acc_mod: CAFE | BACKROOM | _empty
@@ -191,8 +191,9 @@ output_stmt: GLAZE OP_PAREN output_args CL_PAREN
 output_args: value concat | _empty
 concat: PLUS value concat | _empty
 
-if_cond: IFBREW OP_PAREN expressions CL_PAREN OP_BRACES statement CL_BRACES if_cond_tail
-if_cond_tail: ELIFROTH OP_PAREN expressions CL_PAREN OP_BRACES statement CL_BRACES if_cond_tail | ELSPRESS OP_PAREN expressions CL_PAREN OP_BRACES statement CL_BRACES | _empty
+if_cond: IFBREW OP_PAREN expressions CL_PAREN OP_BRACES NEWLINE (statement NEWLINE)* CL_BRACES if_cond_tail
+
+if_cond_tail: NEWLINE ELIFROTH OP_PAREN expressions CL_PAREN OP_BRACES NEWLINE (statement NEWLINE)* CL_BRACES if_cond_tail | NEWLINE ELSPRESS OP_BRACES NEWLINE (statement NEWLINE)* CL_BRACES | _empty
 
 flav_switch: FLAVOUR OP_PAREN expressions CL_PAREN OP_BRACES syrup_switch CL_BRACES
 syrup_switch: SYRUP OP_PAREN expressions CL_PAREN COLON statement SNAP defoam_stmt syrup_switch | _empty
