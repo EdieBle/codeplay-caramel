@@ -88,10 +88,11 @@ ID: /(?!(backroom|batter@|bean|blend|brewed|cafe|crema|churro|cold|cup|decaf|dri
 start: program
 
 program: global_def main_def
-global_def: global_dec global_def | _empty 
-global_dec: dec | crema_def | recipe_def | empty_def | _empty
+global_def: (global_dec NEWLINE)*
+global_dec: dec | crema_def | recipe_def | empty_def  | _empty
 
 dec: var_dec | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | object_def | crema_assign
+
 var_dec: acc_mod const_mod data_type ID var_dec_tail
 acc_mod: CAFE | BACKROOM | _empty
 const_mod: BREWED | _empty
@@ -129,7 +130,8 @@ rel_term: num_operand | OP_PAREN rel_expressions CL_PAREN | arith_expressions
 rel_expr_tail: rel_op rel_term rel_expr_tail | _empty
 rel_op: GREATER_THAN | LESSER_THAN | EQ_EQUALS | NOT_EQUAL | GREATER_EQUAL | LESSER_EQUAL
 
-mug_dec: MUG ID OP_BRACKETS var_dec var_assign_val_tail CL_BRACKETS
+mug_dec: MUG ID OP_BRACKETS NEWLINE (var_dec var_assign_val_tail NEWLINE)* CL_BRACKETS
+
 mug_call_assign: mug_call EQUALS value
 mug_glob_assign: mug_glob_call EQUALS value
 
@@ -165,9 +167,18 @@ crema_def: CREMA ID OP_BRACKETS crema_body CL_BRACKETS
 crema_body: crema_body_cont crema_body | _empty
 crema_body_cont: acc_mod recipe_def | acc_mod empty_def | dec
 
-main_def: BEAN CUP OP_PAREN CL_PAREN OP_BRACKETS main_body REFILL ZERO CL_BRACKETS
-main_body: dec main_body | statement main_body
-statement: refill_body statement | dec statement | input_stmt statement | output_stmt statement | if_cond statement | flav_switch statement | pour_loop statement | whilehot_loop statement | tastetill_loop statement | _empty
+main_def: BEAN CUP OP_PAREN CL_PAREN OP_BRACKETS NEWLINE main_body
+
+
+refill_main: early_refill | final_refill
+early_refill: REFILL ZERO NEWLINE main_body
+final_refill: REFILL ZERO NEWLINE CL_BRACKETS
+
+main_body: (statement NEWLINE)* refill_main
+
+
+statement: dec | input_stmt | output_stmt | if_cond | flav_switch | pour_loop | whilehot_loop | tastetill_loop
+
 
 input_stmt: BATTER input_args input_val 
 input_args: input_args_unit input_args_unit_tail
