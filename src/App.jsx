@@ -4,6 +4,7 @@ import "./styles.css";
 import NavBar from "./components/NavBar";
 import "./components/NavBar.css";
 import LexerError from "./components/LexerError";
+import SyntaxErrorPanel from "./components/SyntaxErrorPanel";
 
 export default function App() {
   const [code, setCode] = useState(
@@ -13,37 +14,6 @@ bean x = -4
     should flag the 2 statements below
     test multi  @$%^&*()[]~\`"{}|<>?/\\
 .~
-Drip draaaaaaaaaaaaaaaaaaaaaaa = 5.0 ~~more than 15 chars
-bean% bener = 3  
-
-mug [  ~~sample program lol bean x = 4 sample :D @$%^&*()[]~\`"{}|<>?/\ <-- tester ignore
-    bean x_bean = 40
-    drip y_bean = 20
-    blend b_blend = "Test string literal"
-    churro c_churro = 'a',k = '\\n'
-    temp t_temp = hot, t_ = cold
-]  
-
-recipe bean calc_test (bean x, bean y) [
-    bean sum = x + y
-    glaze(sum)
-    refill? sum
-]
-
-crema class_uno [
-    backroom bean not_pub = 7
-    bean not_pub_implic = 120
-    cafe bean pub = 5
-
-    cafe recipe drip cube_func (drip x) [
-      drip square = x * x * x
-      refill? square
-    ]
-    cafe recipe drip cube_func (drip x) [
-      drip square = x * x * x
-      refill? square
-    ]
-]
 
 bean cup() [
     bean x = 5, y = 7
@@ -122,6 +92,31 @@ bean cup() [
       setBusy(false);
     }
   };
+
+  const handleParse = async () => {
+  setBusy(true);
+  try {
+    const res = await axios.post("http://127.0.0.1:5000/parse", { code });
+    const parserErrors = res.data.errors || [];
+
+    setErrors(parserErrors);      // 👈 feeds SyntaxErrorPanel
+    setHasRun(true);
+  } catch (err) {
+    console.error("Parser error:", err);
+    setErrors([
+      {
+        type: "SYNTAX_ERROR",
+        message: "Parser service unavailable",
+        expected: [],
+        line: 0,
+        column: 0
+      }
+    ]);
+  } finally {
+    setBusy(false);
+  }
+};
+
 
   // Clear button functions
   const handleClearEditor = () => {
@@ -221,20 +216,23 @@ const handleScroll = () => {
             </div>
 
 
-            <div className="tokenize-btn-container">
-              <button className="tokenize-btn" onClick={handleTokenize} disabled={busy}>
-                {busy ? "Tokenizing..." : "Tokenize (full)"}
-              </button>
+              <div className="tokenize-btn-container">
+                <button className="tokenize-btn" onClick={handleTokenize} disabled={busy}>
+                  {busy ? "Tokenizing..." : "Tokenize (full)"}
+                </button>
 
-              <button className="tokenize-btn" onClick={handleTokenizeLine} disabled={busy}>
-                Tokenize line
-              </button>
+                <button className="tokenize-btn" onClick={handleTokenizeLine} disabled={busy}>
+                  Tokenize line
+                </button>
 
-              <button className="tokenize-btn" onClick={handleClearEditor} disabled={busy}>
-                Clear
-              </button>
-   
-            </div>
+                <button className="tokenize-btn" onClick={handleParse} disabled={busy}>
+                  Parse (full)
+                </button>
+
+                <button className="tokenize-btn" onClick={handleClearEditor} disabled={busy}>
+                  Clear
+                </button>
+              </div>
           </div>
           
           {/* Right Column: TOKENS PANEL */}
@@ -262,6 +260,7 @@ const handleScroll = () => {
         {/* This row contains the Lexical Error panel */}
         <div className="layout-panel-bottom">
           <LexerError errors={errors} />
+          <SyntaxErrorPanel errors={errors} />
         </div>
 
       </div>

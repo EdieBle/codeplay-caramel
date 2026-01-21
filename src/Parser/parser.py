@@ -2,15 +2,17 @@ from lark import Lark
 from .error_handler import UnexpectedError
 
 class Parser:
-    def _init_(self, source_code):
+    def __init__(self, source_code):
         self.log = ''
         self._source_code = source_code
         self.ast = ''
+        self.errors = []
     
     def clean_expected(self, expected: list):
         temp = []
         for allowed in expected:
-            token = allowed.lower()
+            # token = allowed.lower()
+            token = str(allowed).lower()
             
             # Token - Reserved Words
             if token == 'backroom': token = 'backroom'
@@ -85,7 +87,7 @@ class Parser:
         return temp 
     
     def start(self): 
-        with open("src/Parser/cfg.lark", "r") as file:
+        with open("Parser/cfg.lark", "r") as file:
             grammar = file.read()
             
         parser = Lark(grammar, parser = "earley", lexer = "basic")
@@ -93,17 +95,35 @@ class Parser:
         try:
             parse_tree = parser.parse(self._source_code)
             self.ast = parse_tree
+            # self.ast = parser.parse(self._source_code)
         
         except Exception as e:
-            source = self._source_code.splitlines('\n')
-            source[-1] += ' '
-            index = (e.line if e.line > 0 else len(source), e.column if e.column > 0 else len(source[-1]))
-            unexpected = UnexpectedError(source[index[0]-1], index)
+            source = self._source_code.split("\n")
+            source[-1] += " "
+            
+            # index = (e.line if e.line > 0 else len(source), e.column if e.column > 0 else len(source[-1]))
+            # unexpected = UnexpectedError(source[index[0]-1], index)
 
+            line = e.line if e.line > 0 else len(source)
+            column = e.column if e.column > 0 else len(source[-1])
+            
             try:
                 expected = e.allowed
             except:
                 expected = e.expected
 
-            expected = self.clean_expected(expected)
-            self.log = f'Unexpected token at line {index[0]} column {index[1]}: {unexpected}\nExpected any: {expected}'
+            # expected = self.clean_expected(expected)
+            # self.log = f'Unexpected token at line {index[0]} column {index[1]}: {unexpected}\nExpected any: {expected}'
+            
+            if isinstance(expected, str):
+                expected = [expected]
+            elif isinstance(expected, set):
+                expected = list(expected)
+            
+            self.errors.append({
+                "type": "SYNTAX_ERROR",
+                "message": "Unexpected token",
+                "expected": self.clean_expected(expected),
+                "line": line,
+                "column": column
+            })
