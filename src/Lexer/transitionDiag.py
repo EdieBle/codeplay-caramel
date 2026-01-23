@@ -11,8 +11,8 @@ class State:
 
 TRANSITIONS_DFA = {
     0: State('initial', [1, 31, 54, 69, 90, 98, 104, 108, 115, 119, 123, 129, 134, 147, 161, 175, 184, 188, 
-                        194, 200, 207, 211, 213, 217, 221, 225, 228, 231, 233, 235, 237, 239, 241, 243, 
-                        245, 247, 249, 251, 252, 293, 299, 304, 334]), 
+                        194, 200, 207, 211, 213, 217, 221, 225, 228, 231, 233, 235, 237, 238, 240, 241, 243, 
+                        245, 247, 249, 250, 291, 297, 302, 332]),
 
     # Backroom, batter@, bean, blend, brewed
     1: State('b', [2, 16, 20, 25]), 2: State('a', [3, 10]), 3: State('c', 4), 4: State('k', 5), 5: State('r', 6), 6: State('o', 7), 7: State('o', 8), 8: State('m', 9), 9: State(DELIM_VAL['space_delim'], end = True, token_type="backroom"),
@@ -263,10 +263,10 @@ TRANSITIONS_DFA = {
         # SINGLE LINE COMMENT
         # Pattern: ~~ comment until newline
         # status: okay
-        334: State('~', [335, 338]),
-            335: State('~', 336),
-            336: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL["escapeseq_let"]], [336, 337]),
-            337: State('\n', end=True, token_type="SL_COMMENT"),
+        332: State('~', [333, 336]),
+            333: State('~', 334),
+            334: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL["escapeseq_let"]], [335, 334]),
+            335: State('\n', end=True, token_type="SL_COMMENT"),
 
         # MULTI LINE COMMENT
         # Pattern: ~. comment content .~
