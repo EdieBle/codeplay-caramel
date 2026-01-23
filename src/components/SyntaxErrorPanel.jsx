@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./SyntaxErrorPanel.css";
 
-export default function SyntaxErrorPanel({ errors }) {
+export default function SyntaxErrorPanel({ errors, hasParsed }) {
   // --- STATE ---
   const [isCopied, setIsCopied] = useState(false);
 
@@ -31,7 +31,21 @@ export default function SyntaxErrorPanel({ errors }) {
   };
 
   // --- RENDER ---
-  if (errs.length === 0) return null;
+  if (errs.length === 0 && !hasParsed) return null;
+
+  if (errs.length === 0 && hasParsed) {
+    return (
+      <div className="syntax-success" role="status" aria-live="polite">
+        <div className="syntax-success__header">
+          <span className="syntax-success__icon">✅</span>
+          <div>
+            <div className="syntax-success__title">Parsing Successful</div>
+            <div className="syntax-success__summary">No syntax errors found</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="syntax-error" role="alert" aria-live="polite">

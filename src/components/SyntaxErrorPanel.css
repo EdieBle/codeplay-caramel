@@ -84,3 +84,35 @@
   color: #806341;
   font-size: 0.85rem;
 }
+
+.syntax-success {
+  background: #F0FFF4;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #166534;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-top: 0.75rem;
+  box-shadow: 0 4px 10px rgba(34, 197, 94, 0.1);
+  font-family: "JetBrains Mono", monospace;
+}
+
+.syntax-success__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.syntax-success__icon {
+  font-size: 1.2rem;
+  margin-right: 0.25rem;
+}
+
+.syntax-success__title {
+  font-weight: 700;
+  color: #166534;
+}
+
+.syntax-success__summary {
+  font-size: 0.85rem;
+  color: #166534;
+}

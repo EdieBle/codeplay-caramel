@@ -27,6 +27,7 @@ bean cup() [
   const [tokens, setTokens] = useState([]);
   const [errors, setErrors] = useState([]);
   const [hasRun, setHasRun] = useState(false);
+  const [hasParsed, setHasParsed] = useState(false);
 
   const [showTokens, setShowTokens] = useState(true);
   const [lineTokens, setLineTokens] = useState([]);
@@ -101,6 +102,7 @@ bean cup() [
 
     setErrors(parserErrors);      // 👈 feeds SyntaxErrorPanel
     setHasRun(true);
+    setHasParsed(true);
   } catch (err) {
     console.error("Parser error:", err);
     setErrors([
@@ -125,6 +127,7 @@ bean cup() [
     setErrors([]);
     setLineTokens([]);
     setHasRun(false);
+    setHasParsed(false);
     setShowLineTokens(false);
     setShowTokens(true);
     setCurrentLine(1);
@@ -260,7 +263,7 @@ const handleScroll = () => {
         {/* This row contains the Lexical Error panel */}
         <div className="layout-panel-bottom">
           <LexerError errors={errors} />
-          <SyntaxErrorPanel errors={errors} />
+          <SyntaxErrorPanel errors={errors} hasParsed={hasParsed} />
         </div>
 
       </div>

@@ -1,5 +1,10 @@
 from .atomDelim import ATOMIC_VAL, DELIM_VAL, KEYWORDS_TABLE
 from .transitionDiag import TRANSITIONS_DFA
+from lark.lexer import Token
+
+class Token(Token):
+    def __repr__(self):
+        return f"Token({self.type!r}, {self.value!r}, line={self.line}, column={self.column})"
 
 def tokenize(code):
     # code += '$' # for appending an eof haha
@@ -566,3 +571,41 @@ def tokenize(code):
 
     print("\n=== OUTER LOOP COMPLETE | DFA scan finished successfully ===\n")
     return tokens
+
+
+def tokens_to_lark(tokens):
+    lark_tokens = []
+
+    for t in tokens:
+        if t["type"] == "WHITESPACE":
+            continue
+        
+        tok = Token(
+            t["type"],
+            t["lexeme"]
+        )
+
+        
+        # Preserve original lexer info ( i think this stupid thing is hidden as metadata when the dict token from the above, it is printable though is it's there.)
+        tok.line = t["line"]
+        # print(tok.line)
+        tok.column = t["column"]
+        # print(tok.column)
+
+
+        # tok.end_line = t["line"]
+        # tok.end_column = t["column"] + len(t["lexeme"])
+
+        # Error messages, maybe?
+        # tok.meta = {
+        #     "original_type": t["type"],
+        #     "message": t.get("message"),
+        # }
+
+        lark_tokens.append(tok)
+
+    return lark_tokens
+
+def token_final_out(code):
+    lexified = tokenize(code)
+    return tokens_to_lark(lexified)

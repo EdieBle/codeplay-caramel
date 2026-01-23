@@ -1,5 +1,6 @@
 from lark import Lark
 from .error_handler import UnexpectedError
+from src.Lexer.lexer import tokenize
 
 class Parser:
     def __init__(self, source_code):
