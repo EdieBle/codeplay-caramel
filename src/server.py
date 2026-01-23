@@ -1,8 +1,8 @@
 # server.py
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from Lexer.lexer import tokenize
-from Parser.parser import Parser
+from src.Lexer.lexer import tokenize
+from src.Parser.parser import Parser
 
 app = Flask(__name__)
 CORS(app)
