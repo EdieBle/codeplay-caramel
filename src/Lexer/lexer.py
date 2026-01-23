@@ -61,21 +61,6 @@ def tokenize(code):
             column += 4
             continue
 
-        # Below check was for the now less simple newline tokenizer
-        # if ch == ("\n"): #would be best if any line counting logic is here
-        #     print(f"\n=== [NEWLINE] detected at pos={pos}, col={column}, char='newline', tokenizing... ===") #debug
-        #     push("NEWLINE", '␊', column)
-        #     pos += 1
-        #     column += 1
-        #     continue
-        # Below check was for the now dead EOF
-        # if ch == '$' and pos==(len(code) - 1):
-        #     print(f"\n=== [EOF] detected at pos={pos}, col={column}, char='End of File sign', tokenizing... ===") #debug
-        #     push("EOF", '$', column)
-        #     pos += 1
-        #     column += 1
-        #     continue
-
 
         # ----------------------------------------------------------
         # DFA CRAWLING STARTS
@@ -579,7 +564,7 @@ def tokens_to_lark(tokens):
     for t in tokens:
         if t["type"] == "WHITESPACE":
             continue
-        
+
         tok = Token(
             t["type"],
             t["lexeme"]
