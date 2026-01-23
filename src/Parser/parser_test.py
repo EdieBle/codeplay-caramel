@@ -2,19 +2,6 @@ from lark import Token, Lark, UnexpectedInput
 from src.Lexer.lexer import tokenize
 
 
-def adapt_tokens_for_lark(tokens_from_lexer):
-    """
-    Converts lexer tokens into Lark tokens.
-    """
-    lark_tokens = []
-
-    for tok in tokens_from_lexer:
-        # Lark's Token takes (type, value)
-        lark_tokens.append(Token(tok["type"], tok["lexeme"]))
-
-    return lark_tokens
-
-
 with open("src/Parser/cfg.lark") as f:
     grammar = f.read()
 
@@ -27,34 +14,38 @@ parser = Lark(
 )
 
 # code = f'print " hello " \n'   # <-- newline terminator is required
+# code = '''bean x = 4
+#     drip y = 4+5*6/7-8+(4)-(6+4)*(8/2)/(2)
+#     bean cup()[
+#     mug x [
+#         bean g = 5, v = 4, p = 9
+#         bean x = 3
+#     ]
+#     ifbrew(age < 18){
+#         glaze("MINOR")
+#         glaze("MINOR1")
+#         x = 4+4
+#     }
+#     elifroth(age >= 18){
+#         glaze("ADULT")
+#         glaze("MINOR1")
+#         x = 4+4
+#     }
+#     elspress{
+#         glaze("INVALID!")
+#         glaze("MINOR1")
+#         x = 4+4
+#     }
+#     bean number
+#     drip average = 1.75
+#     blend greeting = "Hello"
+#     churro choice = 'A'
+#     refill? 0
+# ]
+# '''
+
 code = '''bean x = 4
-    drip y = 2-3*4/5+10+10+10+10+(4+5)
-    bean cup()[
-    mug x [
-        bean g = 5, v = 4, p = 9
-        bean x = 3
-    ]
-    ifbrew(age < 18){
-        glaze("MINOR")
-        glaze("MINOR1")
-        x = 4+4
-    }
-    elifroth(age >= 18){
-        glaze("ADULT")
-        glaze("MINOR1")
-        x = 4+4
-    }
-    elspress{
-        glaze("INVALID!")
-        glaze("MINOR1")
-        x = 4+4
-    }
-    bean number
-    drip average = 1.75
-    blend greeting = "Hello"
-    churro choice = 'A'
-    refill? 0
-]
+    drip y = 4+5*6/7-8+(4)-(6+4)*(8/2)/(2)
 '''
 
 # print("=== Tokens ===")
@@ -62,10 +53,7 @@ code = '''bean x = 4
 #     print(f"{token.type:12} -> {token.value!r}")
 
 try:
-    lexer_tokens = tokenize(code)
-    lark_tokens = adapt_tokens_for_lark(lexer_tokens)
-
-    tree = parser.parse(lark_tokens)
+    tree = parser.parse(code)
     print("\n=== Parse Tree ===")
     print(tree.pretty())
 
