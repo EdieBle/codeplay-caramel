@@ -55,6 +55,7 @@ parser = Lark(
 
 code = '''bean cup()[
 temp p = hot
+temp c = cold
 refill? 0
 ]'''
 

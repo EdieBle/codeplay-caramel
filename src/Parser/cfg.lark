@@ -81,7 +81,9 @@ BEANLIT: /[0-9]+/
 DRIPLIT: /[0-9]+\.[0-9]+/
 CHURROLIT: /'(\\.|[^\\'])'/
 BLENDLIT: /"(\\.|[^\\"])*"/
-TEMPLIT.2: "hot" | "cold"
+
+# TEMPLIT.2: HOT | COLD
+
 ID: /(?!(backroom|batter@|bean|blend|brewed|cafe|crema|churro|cold|cup|decaf|drip|elifroth|elspress|empty|glaze|hot|ifbrew|mug|new|order|pour|recipe|refill\?|skip|snap|syrup|taste|till|temp|whilehot)(?![a-zA-Z0-9_]))[a-z][a-zA-Z0-9_]{0,14}/
 
 # CFG - RULES START
@@ -101,7 +103,7 @@ var_dec_tail: var_dec_cont | COMMA ID var_dec_tail  | _empty
 var_dec_cont: EQUALS value var_assign_val_tail | EQUALS value var_dec_tail | _empty 
 var_assign_val_tail: COMMA ID EQUALS value var_dec_tail | _empty 
 value: ID | expressions | call | literals
-literals: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | BLENDLIT | TEMPLIT | CHURROLIT
+literals: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | BLENDLIT | HOT | COLD | CHURROLIT
 call: mug_call | mug_glob_call | arr_call | recipe_call | crema_call | glob_var_acc
 
 mug_call: ID DOT_ACC ID
@@ -119,7 +121,7 @@ expressions: arith_expressions | logic_expressions | rel_expressions | unary_exp
 arith_expressions: num_operand arithm_op num_operand arith_expr_tail | OP_PAREN arith_expressions CL_PAREN | arith_expressions arith_expr_tail
 arith_expr_tail: arithm_op num_operand arith_expr_tail | arithm_op arith_expressions | _empty
 
-num_operand: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | TEMPLIT | ID | call | OP_PAREN num_operand CL_PAREN
+num_operand: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | HOT | COLD | ID | call | OP_PAREN num_operand CL_PAREN
 
 arithm_op: PLUS | MINUS | MULTIPLY | DIVIDE | MODULO
 
