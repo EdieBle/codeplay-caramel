@@ -580,14 +580,15 @@ def tokenize(code):
 def tokens_to_lark(tokens):
     lark_tokens = []
     last_token_type = None # just use this to check if the token is a refill, can be used for other toke types 
+    last_token_was_newline = False
 
     for t in tokens:
-        if t["type"] == "WHITESPACE" or t["type"] == "TAB":
+        if t["type"] == "WHITESPACE" or t["type"] == "TAB" or t["type"] == "SL_COMMENT" or t["type"] == "ML_COMMENT":
             continue
         
         typeOfTok = t["type"].upper()
         stripNumTok = ''.join(ch for ch in typeOfTok if not ch.isdigit())   # Filter out non-letter characters, use the mapped identifier at the beginning of this program for semantic.
-        
+
         if last_token_type == "REFILL" and stripNumTok == "BEANLIT" and t["lexeme"] == "0":
             stripNumTok = "ZERO"
         
