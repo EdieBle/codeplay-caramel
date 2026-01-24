@@ -91,15 +91,15 @@ program: global_def main_def
 global_def: (global_dec NEWLINE)*
 global_dec: dec | crema_def | recipe_def | empty_def  | _empty
 
-dec: update_unit | var_dec | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | object_def | crema_assign
+dec: var_dec | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | object_def | crema_assign
 
 var_dec: acc_mod const_mod data_type ID var_dec_tail
 acc_mod: CAFE | BACKROOM | _empty
 const_mod: BREWED | _empty
 data_type: BEAN | DRIP | BLEND | CHURRO | TEMP 
-var_dec_tail: var_dec_cont | COMMA ID EQUALS value var_assign_val_tail | COMMA ID var_assign_val_tail | _empty 
-var_dec_cont: EQUALS value var_assign_val_tail | _empty 
-var_assign_val_tail: COMMA ID EQUALS value var_assign_val_tail | COMMA ID var_assign_val_tail |  _empty 
+var_dec_tail: var_dec_cont | COMMA ID var_dec_tail  | _empty 
+var_dec_cont: EQUALS value var_assign_val_tail | EQUALS value var_dec_tail |_empty 
+var_assign_val_tail: COMMA ID EQUALS value var_dec_tail | _empty 
 value: ID | expressions | call | literals
 literals: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | BLENDLIT | TEMPLIT | CHURROLIT
 call: mug_call | mug_glob_call | arr_call | recipe_call | crema_call | glob_var_acc
@@ -114,17 +114,23 @@ recipe_args_tail: COMMA recipe_args recipe_args_tail | _empty
 crema_call: ID DOT_ACC crema_member
 crema_member: ID | mug_call | mug_glob_call | arr_call | recipe_call
 
-expressions: arith_expressions | logic_expressions | rel_expressions
-arith_expressions: num_operand arithm_op num_operand arith_expr_tail | OP_PAREN arith_expressions CL_PAREN
-arith_expr_tail: arithm_op num_operand arith_expr_tail | _empty
-num_operand: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | TEMPLIT | ID | call | unary_expressions
+expressions: arith_expressions | logic_expressions | rel_expressions | unary_expressions
+
+arith_expressions: num_operand arithm_op num_operand arith_expr_tail | OP_PAREN arith_expressions CL_PAREN | arith_expressions arith_expr_tail
+arith_expr_tail: arithm_op num_operand arith_expr_tail | arithm_op arith_expressions | _empty
+
+num_operand: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | TEMPLIT | ID | call | OP_PAREN num_operand CL_PAREN
+
 arithm_op: PLUS | MINUS | MULTIPLY | DIVIDE | MODULO
-unary_expressions: unary_op ID | ID unary_op
+
+unary_expressions: unary_op ID |  ID unary_op
 unary_op: INCREMENT | DECREMENT
-logic_expressions: bool_term logic_op bool_term logic_expr_tail
-bool_term: num_operand | NOT OP_PAREN bool_term CL_PAREN | rel_expressions | OP_PAREN logic_expressions CL_PAREN
+
+logic_expressions: bool_term logic_op bool_term logic_expr_tail | (OP_PAREN)* bool_term (CL_PAREN)* logic_op (OP_PAREN)* bool_term (CL_PAREN)* logic_expr_tail
+bool_term: num_operand | NOT OP_PAREN bool_term CL_PAREN | rel_expressions | OP_PAREN rel_expressions CL_PAREN | OP_PAREN logic_expressions CL_PAREN
 logic_op: AND | OR
-logic_expr_tail: logic_op bool_term logic_expr_tail | _empty
+logic_expr_tail: logic_op bool_term logic_expr_tail | _empty 
+
 rel_expressions: rel_term rel_op rel_term rel_expr_tail
 rel_term: num_operand | OP_PAREN rel_expressions CL_PAREN | arith_expressions
 rel_expr_tail: rel_op rel_term rel_expr_tail | _empty
@@ -149,7 +155,7 @@ ext_2d: OP_BRACKETS arr_elem ext_arr_elem CL_BRACKETS | _empty
 object_def: NEW ID EQUALS ID
 crema_assign: crema_call EQUALS value
 
-recipe_def: RECIPE data_type ID OP_PAREN parameter CL_PAREN OP_BRACKETS NEWLINE recipe_body refill_final NEWLINE CL_BRACKETS
+recipe_def: RECIPE data_type ID OP_PAREN parameter CL_PAREN OP_BRACKETS NEWLINE recipe_body refill_final NEWLINE CL_BRACKETS NEWLINE
 parameter: param_val add_param | _empty
 param_val: var_dec | mug_call | mug_glob_call 
 add_param: COMMA param_val add_param | _empty
@@ -163,7 +169,7 @@ extra_refill_val: COMMA refill_content extra_refill_val | _empty
 
 empty_def: EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS NEWLINE statement NEWLINE CL_BRACKETS 
 
-crema_def: CREMA ID OP_BRACKETS crema_body CL_BRACKETS
+crema_def: CREMA ID OP_BRACKETS NEWLINE crema_body CL_BRACKETS
 crema_body: crema_body_cont crema_body | _empty
 crema_body_cont: acc_mod recipe_def | acc_mod empty_def | dec
 
@@ -174,7 +180,7 @@ refill_main: early_refill | final_refill
 early_refill: REFILL ZERO NEWLINE main_body
 final_refill: REFILL ZERO NEWLINE CL_BRACKETS
 
-main_body: (statement NEWLINE)* refill_main
+main_body: (statement)* (NEWLINE)* refill_main
 
 
 statement: dec | input_stmt | output_stmt | if_cond | flav_switch | pour_loop | whilehot_loop | tastetill_loop

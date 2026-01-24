@@ -1,14 +1,23 @@
 from lark import Token, Lark, UnexpectedInput
-from src.Lexer.lexer import tokenize
+from lark.lexer import Lexer
+from src.Lexer.lexer import token_final_out
+
+class FunctionLexer(Lexer):
+    def __init__(self, lexer_conf):
+        pass
+    
+    def lex(self, data):
+        yield from token_final_out(data)
 
 
 with open("src/Parser/cfg.lark") as f:
     grammar = f.read()
 
+
 parser = Lark(
     grammar,
     parser="earley",
-    lexer="basic",
+    lexer=FunctionLexer,
     start="start",
     debug=True 
 )
@@ -44,13 +53,16 @@ parser = Lark(
 # ]
 # '''
 
-code = '''bean x = 4
-    drip y = 4+5*6/7-8+(4)-(6+4)*(8/2)/(2)
-'''
+code = '''bean x = 0
+bean y = x++
+bean cup()[
 
-# print("=== Tokens ===")
-# for token in parser.lex(code):
-#     print(f"{token.type:12} -> {token.value!r}")
+refill? 0
+]'''
+
+print("=== Tokens ===")
+for token in parser.lex(code):
+    print(f"{token.type:12} -> {token.value!r}")
 
 try:
     tree = parser.parse(code)
@@ -62,7 +74,8 @@ except UnexpectedInput as e:
     print("Error at position:", e.pos_in_stream)
     print("Line:", e.line, "Column:", e.column)
     print("Got token:", e.get_context(code))
-    print("Expected:", e.expected)
+    expected = sorted(set(e.expected))
+    print("Expected:", list(set(expected)))
 
     print("\n=== OFFENDING TOKEN ===")
     print("Token:", e.token)
@@ -72,5 +85,5 @@ except UnexpectedInput as e:
     print("Col  :", e.column)
     
 
-    print("\nExpected (human-readable):")
+    print("\nExpected (human-readable, also dont panic if may dupe, those are differing branches):")
     print(", ".join(sorted(e.expected)))

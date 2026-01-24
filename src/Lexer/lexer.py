@@ -135,7 +135,7 @@ def tokenize(code):
                 node = TRANSITIONS_DFA[nxt]
                 if curr_state == 0 and nxt == 249 and ch == "\n": # check might be unnecessary for ch but might as well just to make sure amirite
                     print("\033[92m[NEWLINE]\033[0m Consuming newline")
-                    push(node.token_type, "␊", column)
+                    push(node.token_type, "\n", column)
 
                     pos += 1     
                     line += 1
@@ -579,26 +579,33 @@ def tokenize(code):
 
 def tokens_to_lark(tokens):
     lark_tokens = []
+    last_token_type = None # just use this to check if the token is a refill, can be used for other toke types 
 
     for t in tokens:
-        if t["type"] == "WHITESPACE":
+        if t["type"] == "WHITESPACE" or t["type"] == "TAB":
             continue
-
+        
+        typeOfTok = t["type"].upper()
+        stripNumTok = ''.join(ch for ch in typeOfTok if not ch.isdigit())   # Filter out non-letter characters, use the mapped identifier at the beginning of this program for semantic.
+        
+        if last_token_type == "REFILL" and stripNumTok == "BEANLIT" and t["lexeme"] == "0":
+            stripNumTok = "ZERO"
+        
         tok = Token(
-            t["type"],
+            stripNumTok,
             t["lexeme"]
         )
-
-        
         # Preserve original lexer info ( i think this stupid thing is hidden as metadata when the dict token from the above, it is printable though is it's there.)
         tok.line = t["line"]
-        # print(tok.line)
         tok.column = t["column"]
-        # print(tok.column)
 
+        if tok.type == "NEWLINE":
+            if last_token_was_newline:
+                continue
+            last_token_was_newline = True
+        else:
+            last_token_was_newline = False
 
-        # tok.end_line = t["line"]
-        # tok.end_column = t["column"] + len(t["lexeme"])
 
         # Error messages, maybe?
         # tok.meta = {
@@ -606,8 +613,8 @@ def tokens_to_lark(tokens):
         #     "message": t.get("message"),
         # }
 
+        last_token_type = stripNumTok
         lark_tokens.append(tok)
-
     return lark_tokens
 
 def token_final_out(code):
