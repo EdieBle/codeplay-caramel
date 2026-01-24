@@ -53,10 +53,8 @@ parser = Lark(
 # ]
 # '''
 
-code = '''bean x = 0
-bean y = x++
-bean cup()[
-
+code = '''bean cup()[
+temp p = hot
 refill? 0
 ]'''
 
