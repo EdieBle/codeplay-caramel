@@ -17,7 +17,7 @@ class Parser:
         self.errors = []
    
     def start(self): 
-        with open("Parser/cfg.lark", "r") as file:
+        with open("src/Parser/cfg.lark", "r") as file:
             grammar = file.read()
             
         parser = Lark(grammar, parser = "earley", lexer = FunctionLexer)
@@ -25,6 +25,7 @@ class Parser:
         try:
             parse_tree = parser.parse(self._source_code)
             self.ast = parse_tree
+            print(parse_tree.pretty())
             # self.ast = parser.parse(self._source_code)
         
         except Exception as e:
