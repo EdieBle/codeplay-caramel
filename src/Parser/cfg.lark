@@ -138,7 +138,7 @@ rel_term: num_operand | OP_PAREN rel_expressions CL_PAREN | arith_expressions
 rel_expr_tail: rel_op rel_term rel_expr_tail | _empty
 rel_op: GREATER_THAN | LESSER_THAN | EQ_EQUALS | NOT_EQUAL | GREATER_EQUAL | LESSER_EQUAL
 
-mug_dec: MUG ID OP_BRACKETS NEWLINE (var_dec var_assign_val_tail NEWLINE)* CL_BRACKETS
+mug_dec: MUG ID OP_BRACKETS NEWLINE (var_dec NEWLINE)* CL_BRACKETS
 
 mug_call_assign: mug_call EQUALS value
 mug_glob_assign: mug_glob_call EQUALS value
