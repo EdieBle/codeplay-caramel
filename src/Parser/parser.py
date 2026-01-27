@@ -2,59 +2,72 @@ from lark import Lark, UnexpectedInput
 from lark.lexer import Lexer
 from src.Lexer.lexer import token_final_out
 
+class LexerError(Exception):
+    def __init__(self, errors):
+        """
+        errors: list of dicts with keys: message, line, column
+        """
+        self.errors = errors
+        super().__init__("Lexer found errors")
+
 class FunctionLexer(Lexer):
     def __init__(self, lexer_conf):
         pass
     
     def lex(self, data):
-        yield from token_final_out(data)
+        errors = []
+        for tok in token_final_out(data):
+            if tok.type == "ERROR":
+                # Collect the error
+                errors.append({
+                    "type": tok.type,          # ERROR
+                    "message": tok.meta["message"],    # e.g. "Unclosed Token"
+                    "lexeme": tok.value,       # the actual text that caused the error
+                    "line": tok.line,
+                    "column": tok.column
+                })
+            else:
+                yield tok
+        
+        # After processing all tokens, raise if there were errors
+        if errors:
+            raise LexerError(errors)
 
 class Parser:
     def __init__(self, source_code):
-        self.log = ''
-        self._source_code = source_code
-        self.ast = ''
+        self.source_code = source_code
+        self.ast = None
         self.errors = []
-   
-    def start(self): 
-        with open("src/Parser/cfg.lark", "r") as file:
-            grammar = file.read()
-            
-        parser = Lark(grammar, parser = "earley", lexer = FunctionLexer)
-        
+
+    def start(self):
+        # run the lexer first
+        lexer = FunctionLexer(None)
         try:
-            parse_tree = parser.parse(self._source_code)
+            # This will raise LexerError if any ERROR token is emitted
+            list(lexer.lex(self.source_code))
+        except LexerError as lex_err:
+            self.errors.extend(lex_err.errors)
+
+            # if theres a lexical error it should just not throw anything at all
+            return
+
+        # If no lexer error, continue parsing
+        with open("src/Parser/cfg.lark", "r") as f:
+            grammar = f.read()
+
+        parser = Lark(grammar, parser="earley", lexer=FunctionLexer)
+
+        try:
+            parse_tree = parser.parse(self.source_code)
             self.ast = parse_tree
             print(parse_tree.pretty())
-            # self.ast = parser.parse(self._source_code)
-        
-        except Exception as e:
-            source = self._source_code.split("\n")
-            source[-1] += " "
-            
-            # index = (e.line if e.line > 0 else len(source), e.column if e.column > 0 else len(source[-1]))
-            # unexpected = UnexpectedError(source[index[0]-1], index)
-
-            line = e.line if e.line > 0 else len(source)
-            column = e.column if e.column > 0 else len(source[-1])
-            
-            try:
-                expected = e.allowed
-            except:
-                expected = e.expected
-
-            # expected = self.clean_expected(expected)
-            # self.log = f'Unexpected token at line {index[0]} column {index[1]}: {unexpected}\nExpected any: {expected}'
-            
-            if isinstance(expected, str):
-                expected = [expected]
-            elif isinstance(expected, set):
-                expected = list(expected)
-            
+        except UnexpectedInput as e:
+            # Parser error handling
+            expected = list(dict.fromkeys(getattr(e, "expected", [])))
             self.errors.append({
                 "type": "SYNTAX_ERROR",
                 "message": "Unexpected token",
-                "expected": self.clean_expected(expected),
-                "line": line,
-                "column": column
+                "expected": expected,
+                "line": getattr(e, "line", None),
+                "column": getattr(e, "column", None)
             })

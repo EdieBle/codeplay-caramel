@@ -608,14 +608,15 @@ def tokens_to_lark(tokens):
             last_token_was_newline = False
 
 
-        # Error messages, maybe?
-        # tok.meta = {
-        #     "original_type": t["type"],
-        #     "message": t.get("message"),
-        # }
+        # Error messages, maybe? TESTING MUNA
+        tok.meta = {
+            "message": t.get("message", None),
+        }
+
 
         last_token_type = stripNumTok
         lark_tokens.append(tok)
+
     return lark_tokens
 
 def token_final_out(code):

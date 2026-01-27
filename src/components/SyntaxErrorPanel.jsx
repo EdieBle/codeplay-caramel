@@ -7,8 +7,16 @@ export default function SyntaxErrorPanel({ errors, hasParsed }) {
 
   // --- FILTER ---
   // Only syntax errors
-  const errs = errors
+  const syn_errs = errors
     ? errors.filter(e => e.type === "SYNTAX_ERROR")
+    : [];
+
+  const lex_errs = errors
+    ? errors.filter(e => e.type === "LEXICAL_ERROR")
+    : [];
+
+  const errs = errors
+    ? errors.filter(e => e.type === "ERROR")
     : [];
 
   // --- EFFECT ---
@@ -33,14 +41,28 @@ export default function SyntaxErrorPanel({ errors, hasParsed }) {
   // --- RENDER ---
   if (errs.length === 0 && !hasParsed) return null;
 
-  if (errs.length === 0 && hasParsed) {
+  if (syn_errs.length === 0 && errs.length === 0 && lex_errs.length === 0 && hasParsed) {
     return (
       <div className="syntax-success" role="status" aria-live="polite">
         <div className="syntax-success__header">
           <span className="syntax-success__icon">✅</span>
           <div>
             <div className="syntax-success__title">Parsing Successful</div>
-            <div className="syntax-success__summary">No syntax errors found</div>
+            <div className="syntax-success__summary">No lexical or syntax errors found</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (syn_errs.length > 0 || errs.length > 0 || lex_errs.length > 0 && hasParsed) {
+    return (
+      <div className="syntax-error" role="status" aria-live="polite">
+        <div className="syntax-success__header">
+          <span className="syntax-success__icon">❌</span>
+          <div>
+            <div className="syntax-success__title">Parser not started, Lexer unsuccessful</div>
+            <div className="syntax-success__summary">Lexical error/s found.</div>
           </div>
         </div>
       </div>
