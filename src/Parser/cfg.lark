@@ -102,7 +102,7 @@ data_type: BEAN | DRIP | BLEND | CHURRO | TEMP
 var_dec_tail: var_dec_cont | COMMA ID var_dec_tail  | _empty 
 var_dec_cont: EQUALS value var_assign_val_tail | EQUALS value COMMA ID var_dec_tail | _empty 
 var_assign_val_tail: COMMA ID EQUALS value var_dec_tail | _empty 
-value: ID | expressions | call | literals
+value: ID | MINUS ID | expressions | call | literals
 literals: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | BLENDLIT | HOT | COLD | CHURROLIT
 call: mug_call | mug_glob_call | arr_call | recipe_call | crema_call | glob_var_acc
 

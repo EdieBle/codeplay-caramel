@@ -64,6 +64,10 @@ class Parser:
         except UnexpectedInput as e:
             # Parser error handling
             expected = list(dict.fromkeys(getattr(e, "expected", [])))
+
+            if not expected:
+                expected.append("NONE")
+            
             self.errors.append({
                 "type": "SYNTAX_ERROR",
                 "message": "Unexpected token",
@@ -71,3 +75,4 @@ class Parser:
                 "line": getattr(e, "line", None),
                 "column": getattr(e, "column", None)
             })
+            print(f"[SYNTAX ERROR (temp)]: \n\n{self.errors}")
