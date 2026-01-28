@@ -55,7 +55,21 @@ export default function SyntaxErrorPanel({ errors, hasParsed }) {
     );
   }
 
-  if (syn_errs.length > 0 || errs.length > 0 || lex_errs.length > 0 && hasParsed) {
+  if (syn_errs.length > 0 && hasParsed) {
+    return (
+      <div className="syntax-error" role="status" aria-live="polite">
+        <div className="syntax-success__header">
+          <span className="syntax-success__icon">❌</span>
+          <div>
+            <div className="syntax-success__title">Unsuccessful Parser, Parser detected errors</div>
+            <div className="syntax-success__summary">Parser error/s found.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (errs.length > 0 || lex_errs.length > 0 && hasParsed) {
     return (
       <div className="syntax-error" role="status" aria-live="polite">
         <div className="syntax-success__header">
@@ -69,6 +83,7 @@ export default function SyntaxErrorPanel({ errors, hasParsed }) {
     );
   }
 
+  
   return (
     <div className="syntax-error" role="alert" aria-live="polite">
       <div className="syntax-error__header">
