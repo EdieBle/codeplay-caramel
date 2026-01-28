@@ -11,9 +11,9 @@ export default function SyntaxErrorPanel({ errors, hasParsed }) {
     ? errors.filter(e => e.type === "SYNTAX_ERROR")
     : [];
 
-  const lex_errs = errors
-    ? errors.filter(e => e.type === "LEXICAL_ERROR")
-    : [];
+  // const lex_errs = errors
+  //   ? errors.filter(e => e.type === "LEXICAL_ERROR")
+  //   : [];
 
   const errs = errors
     ? errors.filter(e => e.type === "ERROR")
@@ -41,7 +41,7 @@ export default function SyntaxErrorPanel({ errors, hasParsed }) {
   // --- RENDER ---
   if (errs.length === 0 && !hasParsed) return null;
 
-  if (syn_errs.length === 0 && errs.length === 0 && lex_errs.length === 0 && hasParsed) {
+  if (syn_errs.length === 0 && errs.length === 0 && hasParsed) {
     return (
       <div className="syntax-success" role="status" aria-live="polite">
         <div className="syntax-success__header">
@@ -55,21 +55,21 @@ export default function SyntaxErrorPanel({ errors, hasParsed }) {
     );
   }
 
-  if (syn_errs.length > 0 && hasParsed) {
-    return (
-      <div className="syntax-error" role="status" aria-live="polite">
-        <div className="syntax-success__header">
-          <span className="syntax-success__icon">❌</span>
-          <div>
-            <div className="syntax-success__title">Unsuccessful Parser, Parser detected errors</div>
-            <div className="syntax-success__summary">Parser error/s found.</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    // if (syn_errs.length > 0 && hasParsed) {
+    //   return (
+    //     <div className="syntax-error" role="status" aria-live="polite">
+    //       <div className="syntax-success__header">
+    //         <span className="syntax-success__icon">❌</span>
+    //         <div>
+    //           <div className="syntax-success__title">Unsuccessful Parse, Parser detected errors</div>
+    //           <div className="syntax-success__summary">Parser error/s found.</div>
+    //         </div>
+    //       </div>
+    //     </div>
+    //   );
+    // }
 
-  if (errs.length > 0 || lex_errs.length > 0 && hasParsed) {
+  if (errs.length > 0 && hasParsed) {
     return (
       <div className="syntax-error" role="status" aria-live="polite">
         <div className="syntax-success__header">
@@ -90,10 +90,10 @@ export default function SyntaxErrorPanel({ errors, hasParsed }) {
         <span className="syntax-error__icon">❌</span>
         <div>
           <div className="syntax-error__title">
-            Syntax error{errs.length > 1 ? "s" : ""}
+            Syntax error{syn_errs.length > 1 ? "s" : ""}
           </div>
           <div className="syntax-error__summary">
-            {errs.length} problem{errs.length > 1 ? "s" : ""} found
+            {syn_errs.length} problem{syn_errs.length > 1 ? "s" : ""} found
           </div>
         </div>
 
@@ -108,7 +108,7 @@ export default function SyntaxErrorPanel({ errors, hasParsed }) {
       </div>
 
       <div className="syntax-error__list">
-        {errs.map((e, i) => (
+        {syn_errs.map((e, i) => (
           <div key={i} className="syntax-error__item">
             <div className="syntax-error__type-line">
               SYNTAX ERROR{e.message ? `: ${e.message}` : ":"}
