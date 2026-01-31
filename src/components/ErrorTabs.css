@@ -1,0 +1,116 @@
+.error-tabs-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #FFFBF9;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(85, 77, 64, 0.1);
+  margin-top: 0.75rem;
+}
+
+/* Tab Navigation */
+.error-tabs-nav {
+  display: flex;
+  gap: 0;
+  background: #FFF5F0;
+  border-bottom: 2px solid rgba(85, 77, 64, 0.1);
+  padding: 0;
+}
+
+.error-tab-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #554d40;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  position: relative;
+}
+
+.error-tab-btn:hover {
+  background: rgba(85, 77, 64, 0.05);
+  color: #3d3a36;
+}
+
+.error-tab-btn.active {
+  color: #DDA96D;
+  border-bottom-color: #DDA96D;
+  background: rgba(241, 76, 76, 0.03);
+}
+
+.error-tab-label {
+  white-space: nowrap;
+}
+
+.error-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.4rem;
+  background: #C53030;
+  color: white;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.error-tab-btn.active .error-tab-badge {
+  background: #9B2C2C;
+}
+
+/* Tab Content */
+.error-tabs-content {
+  padding: 0.75rem 1rem;
+  min-height: 60px;
+}
+
+.error-tab-pane {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ensure error panels inside tabs don't have extra margins */
+.error-tab-pane .lexer-error,
+.error-tab-pane .syntax-error,
+.error-tab-pane .syntax-success {
+  margin-top: 0;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .error-tab-btn {
+    font-size: 0.85rem;
+    padding: 0.6rem 0.75rem;
+  }
+
+  .error-tab-label {
+    display: none;
+  }
+
+  .error-tab-btn {
+    justify-content: center;
+  }
+}

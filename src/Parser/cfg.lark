@@ -93,9 +93,12 @@ program: global_def main_def
 global_def: (global_dec NEWLINE)*
 global_dec: dec | crema_def | recipe_def | empty_def  | _empty
 
-dec: var_dec | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | object_def crema_assign | recipe_call
+dec: var_dec | var_assign | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | object_def crema_assign | recipe_call
 
 var_dec: acc_mod const_mod data_type ID var_dec_tail 
+
+var_assign: ID EQUALS (()*value())*
+
 acc_mod: CAFE | BACKROOM | _empty
 const_mod: BREWED | _empty
 data_type: BEAN | DRIP | BLEND | CHURRO | TEMP 
@@ -118,7 +121,11 @@ crema_member: ID | mug_call | mug_glob_call | arr_call | recipe_call
 
 expressions: arith_expressions | logic_expressions | rel_expressions | unary_expressions | ID
 
-arith_expressions: num_operand arithm_op num_operand arith_expr_tail | OP_PAREN arith_expressions CL_PAREN | arith_expressions arith_expr_tail
+# arith_expressions: num_operand arithm_op num_operand arith_expr_tail | OP_PAREN arith_expressions CL_PAREN | arith_expressions arith_expr_tail
+
+arith_expressions: arith_expressions arithm_op term | term
+term: OP_PAREN arith_expressions CL_PAREN | num_operand
+
 arith_expr_tail: arithm_op num_operand arith_expr_tail | arithm_op arith_expressions | _empty
 
 num_operand: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | HOT | COLD | ID | call | OP_PAREN num_operand CL_PAREN

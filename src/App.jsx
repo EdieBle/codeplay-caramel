@@ -3,25 +3,14 @@ import axios from "axios";
 import "./styles.css";
 import NavBar from "./components/NavBar";
 import "./components/NavBar.css";
-import LexerError from "./components/LexerError";
-import SyntaxErrorPanel from "./components/SyntaxErrorPanel";
+import ErrorTabs from "./components/ErrorTabs";
 
 export default function App() {
   const [code, setCode] = useState(
-`~~this is supposed to be an unclosed multi-line comment, but thats the problem of the parser afaik
-bean x = -4
-~. 
-    should flag the 2 statements below
-    test multi  @$%^&*()[]~\`"{}|<>?/\\
-.~
-
-bean cup() [
-    bean x = 5, y = 7
-    bean sum = glob_x + calc_test(order.x, y)
-    glaze("Function sum and glob_x = " + sum)
-    refill? 0
-]
-`
+    `bean cup() [
+bean x = 5, y = 7
+refill? 0
+]`,
   );
 
   const [tokens, setTokens] = useState([]);
@@ -33,6 +22,7 @@ bean cup() [
   const [lineTokens, setLineTokens] = useState([]);
   const [showLineTokens, setShowLineTokens] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [showTokenTable, setShowTokenTable] = useState(true);
 
   const textareaRef = useRef(null);
   const lineNumbersRef = useRef(null);
@@ -45,8 +35,12 @@ bean cup() [
       const res = await axios.post("http://127.0.0.1:5000/tokenize", { code });
       const result = res.data;
 
-      const errors = result.filter((t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR");
-      const validTokens = result.filter((t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR");
+      const errors = result.filter(
+        (t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR",
+      );
+      const validTokens = result.filter(
+        (t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR",
+      );
 
       setTokens(validTokens);
       setErrors(errors);
@@ -73,14 +67,20 @@ bean cup() [
       const lines = code.split("\n");
       const lineText = lines[lineIndex] ?? "";
 
-      const res = await axios.post("http://127.0.0.1:5000/tokenize", { code: lineText });
+      const res = await axios.post("http://127.0.0.1:5000/tokenize", {
+        code: lineText,
+      });
       const result = res.data;
 
       const normalized = result.map((t) => ({ ...t, line: lineIndex + 1 }));
 
       // Error handler for the single line
-      const lineErrors = normalized.filter((t) => t.type === "ERROR" || t.type ===  "LEXICAL_ERROR");
-      const validLineTokens = normalized.filter((t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR");
+      const lineErrors = normalized.filter(
+        (t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR",
+      );
+      const validLineTokens = normalized.filter(
+        (t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR",
+      );
 
       setLineTokens(validLineTokens);
       setErrors(lineErrors);
@@ -95,30 +95,80 @@ bean cup() [
   };
 
   const handleParse = async () => {
-  setBusy(true);
-  try {
-    const res = await axios.post("http://127.0.0.1:5000/parse", { code });
-    const parserErrors = res.data.errors || [];
+    // Check if there are any lexer errors
+    const hasLexerErrors = errors.some(
+      (e) => e.type === "ERROR" || e.type === "LEXICAL_ERROR",
+    );
 
-    setErrors(parserErrors);      // 👈 feeds SyntaxErrorPanel
-    setHasRun(true);
-    setHasParsed(true);
-  } catch (err) {
-    console.error("Parser error:", err);
-    setErrors([
-      {
-        type: "SYNTAX_ERROR",
-        message: "Parser service unavailable",
-        expected: [],
-        line: 0,
-        column: 0
+    if (hasLexerErrors) {
+      // Don't proceed with parsing if there are lexer errors
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const res = await axios.post("http://127.0.0.1:5000/parse", { code });
+      const parserErrors = res.data.errors || [];
+
+      setErrors(parserErrors); // 👈 feeds SyntaxErrorPanel
+      setHasRun(true);
+      setHasParsed(true);
+    } catch (err) {
+      console.error("Parser error:", err);
+      setErrors([
+        {
+          type: "SYNTAX_ERROR",
+          message: "Parser service unavailable",
+          expected: [],
+          line: 0,
+          column: 0,
+        },
+      ]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Tokenize and Parse together
+  const handleTokenizeAndParse = async () => {
+    setBusy(true);
+    try {
+      // First, tokenize
+      const tokenRes = await axios.post("http://127.0.0.1:5000/tokenize", {
+        code,
+      });
+      const tokenResult = tokenRes.data;
+
+      const lexerErrors = tokenResult.filter(
+        (t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR",
+      );
+      const validTokens = tokenResult.filter(
+        (t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR",
+      );
+
+      setTokens(validTokens);
+      setErrors(lexerErrors);
+      setHasRun(true);
+      setShowLineTokens(false);
+      setShowTokens(true);
+
+      // If there are no lexer errors, proceed with parsing
+      if (lexerErrors.length === 0) {
+        const parseRes = await axios.post("http://127.0.0.1:5000/parse", {
+          code,
+        });
+        const parserErrors = parseRes.data.errors || [];
+
+        setErrors(parserErrors);
+        setHasParsed(true);
       }
-    ]);
-  } finally {
-    setBusy(false);
-  }
-};
-
+    } catch (err) {
+      console.error("Error contacting backend:", err);
+      setErrors([{ type: "CONNECTION_ERROR", lexeme: "Backend not running" }]);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // Clear button functions
   const handleClearEditor = () => {
@@ -148,13 +198,12 @@ bean cup() [
     setCurrentLine(lineIndex + 1);
   };
 
-const handleScroll = () => {
-  const ta = textareaRef.current;
-  const ln = lineNumbersRef.current;
-  if (!ta || !ln) return;
-  ln.scrollTop = ta.scrollTop; // keeps numbers aligned while scrolling
-};
-
+  const handleScroll = () => {
+    const ta = textareaRef.current;
+    const ln = lineNumbersRef.current;
+    if (!ta || !ln) return;
+    ln.scrollTop = ta.scrollTop; // keeps numbers aligned while scrolling
+  };
 
   useEffect(() => {
     updateCurrentLine();
@@ -166,16 +215,12 @@ const handleScroll = () => {
 
       {/* Main Content Area: Stacks Top Row and Bottom Row vertically */}
       <div className="main-content">
-
         {/* === TOP ROW === */}
         {/* This row contains the Editor and Tokenizer side-by-side */}
         <div className="layout-row-top">
-
           {/* Left Column: CODE EDITOR */}
           {/* We apply both .editor and our new .layout-flex class */}
-          <div 
-            className="editor layout-flex" 
-          >
+          <div className="editor layout-flex">
             <h3 className="play-bold">Code Editor</h3>
 
             {/* .editor-container styles are now updated in styles.css */}
@@ -206,7 +251,8 @@ const handleScroll = () => {
                     const ta = textareaRef.current;
                     const start = ta.selectionStart;
                     const end = ta.selectionEnd;
-                    const newValue = code.slice(0, start) + "\t" + code.slice(end);
+                    const newValue =
+                      code.slice(0, start) + "\t" + code.slice(end);
                     setCode(newValue);
                     requestAnimationFrame(() => {
                       ta.selectionStart = ta.selectionEnd = start + 1;
@@ -218,54 +264,80 @@ const handleScroll = () => {
               />
             </div>
 
+            <div className="tokenize-btn-container">
+              <button
+                className="tokenize-btn"
+                onClick={handleTokenizeAndParse}
+                disabled={busy}
+              >
+                {busy ? "Processing..." : "Tokenize and Parse"}
+              </button>
 
-              <div className="tokenize-btn-container">
-                <button className="tokenize-btn" onClick={handleTokenize} disabled={busy}>
-                  {busy ? "Tokenizing..." : "Tokenize (full)"}
-                </button>
+              <button
+                className="tokenize-btn"
+                onClick={handleTokenize}
+                disabled={busy}
+              >
+                {busy ? "Tokenizing..." : "Tokenize"}
+              </button>
 
-                <button className="tokenize-btn" onClick={handleTokenizeLine} disabled={busy}>
-                  Tokenize line
-                </button>
+              <button
+                className="tokenize-btn"
+                onClick={handleParse}
+                disabled={
+                  busy ||
+                  errors.some(
+                    (e) => e.type === "ERROR" || e.type === "LEXICAL_ERROR",
+                  )
+                }
+              >
+                Parse
+              </button>
 
-                <button className="tokenize-btn" onClick={handleParse} disabled={busy}>
-                  Parse (full)
-                </button>
+              <button
+                className="tokenize-btn"
+                onClick={handleClearEditor}
+                disabled={busy}
+              >
+                Clear
+              </button>
 
-                <button className="tokenize-btn" onClick={handleClearEditor} disabled={busy}>
-                  Clear
-                </button>
-              </div>
-          </div>
-          
-          {/* Right Column: TOKENS PANEL */}
-          <div
-            className="tokens layout-panel-right"
-          >
-            <h3 className="play-bold">Tokens</h3>
-            
-            {/* NEW: Add a scrollable container FOR THE TABLE ONLY */}
-            <div className="token-table-container">
-              {showLineTokens ? (
-                <TokenTable tokens={lineTokens} />
-              ) : hasRun ? (
-                <TokenTable tokens={tokens} />
-              ) : (
-                <p>Press “Tokenize (full)” or “Tokenize line” to see results.</p>
-              )}
+              <button
+                className="tokenize-btn"
+                onClick={() => setShowTokenTable(!showTokenTable)}
+                disabled={busy}
+              >
+                {showTokenTable ? "Hide Tokens" : "Show Tokens"}
+              </button>
             </div>
-            
           </div>
 
-        </div>
-        
-        {/* === BOTTOM ROW === */}
-        {/* This row contains the Lexical Error panel */}
-        <div className="layout-panel-bottom">
-          <LexerError errors={errors} />
-          <SyntaxErrorPanel errors={errors} hasParsed={hasParsed} />
+          {/* Right Column: TOKENS PANEL */}
+          {showTokenTable && (
+            <div className="tokens layout-panel-right">
+              <h3 className="play-bold">Tokens</h3>
+
+              {/* NEW: Add a scrollable container FOR THE TABLE ONLY */}
+              <div className="token-table-container">
+                {showLineTokens ? (
+                  <TokenTable tokens={lineTokens} />
+                ) : hasRun ? (
+                  <TokenTable tokens={tokens} />
+                ) : (
+                  <p>
+                    Press "Tokenize (full)" or "Tokenize line" to see results.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
+        {/* === BOTTOM ROW === */}
+        {/* This row contains the tabbed error panels */}
+        <div className="layout-panel-bottom">
+          <ErrorTabs errors={errors} hasParsed={hasParsed} hasRun={hasRun} />
+        </div>
       </div>
     </div>
   );
