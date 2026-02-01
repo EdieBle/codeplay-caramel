@@ -1,6 +1,6 @@
-from lark import Lark, UnexpectedInput
+from lark import Lark, UnexpectedInput, UnexpectedToken
 from lark.lexer import Lexer
-from src.Lexer.lexer import token_final_out
+from src.Lexer.lexer import token_final_out, OPERATOR_MAP, KEYWORD_MAP
 
 class LexerError(Exception):
     def __init__(self, errors):
@@ -61,18 +61,70 @@ class Parser:
             parse_tree = parser.parse(self.source_code)
             self.ast = parse_tree
             print(parse_tree.pretty())
-        except UnexpectedInput as e:
-            # Parser error handling
+        
+        except UnexpectedToken as e:
+            # for testing :D   :
+            # unexpected = {
+            #     "type": e.token.type,
+            #     "value": e.token.value,
+            # }
+            # print(e.token.type)
+
             expected = list(dict.fromkeys(getattr(e, "expected", [])))
+            if not expected:
+                expected.append("NONE")
+
+            REVERSE_OPERATOR_MAP = {
+                token: symbol
+                for symbol, token in OPERATOR_MAP.items()
+            }
+
+            REVERSE_KEYWORD_MAP = {
+                token: lexeme.lower()
+                for lexeme, token in KEYWORD_MAP.items()
+            }
+
+            def token_to_display(tok):
+                if tok == "ZERO":
+                    return "0"
+
+                return (
+                    REVERSE_OPERATOR_MAP.get(tok)
+                    or REVERSE_KEYWORD_MAP.get(tok)
+                    or tok
+                )
+
+
+            expected_readable = [token_to_display(tok) for tok in expected]
+            message_display = token_to_display(e.token.type)
 
             if not expected:
                 expected.append("NONE")
-            
+
             self.errors.append({
                 "type": "SYNTAX_ERROR",
-                "message": "Unexpected token",
-                "expected": expected,
+                "message": f"Unexpected token [{message_display}, {e.token.value}]",
+                "expected": expected_readable,
                 "line": getattr(e, "line", None),
                 "column": getattr(e, "column", None)
             })
-            print(f"[SYNTAX ERROR (temp)]: \n\n{self.errors}")
+    
+
+        # Deprecated, remove later as UnexpectedInput is just a base class
+
+        # except UnexpectedInput as e:
+        #     # Parser error handling
+        #     print(e)
+        #     expected = list(dict.fromkeys(getattr(e, "expected", [])))
+
+        #     if not expected:
+        #         expected.append("NONE")
+            
+        #     self.errors.append({
+        #         "type": "SYNTAX_ERROR",
+        #         "message": "Unexpected token",
+        #         "expected": expected,
+        #         "line": getattr(e, "line", None),
+        #         "column": getattr(e, "column", None)
+        #     })
+    

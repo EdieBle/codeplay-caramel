@@ -16,7 +16,7 @@ TRANSITIONS_DFA = {
 
     # Backroom, batter@, bean, blend, brewed
     1: State('b', [2, 16, 20, 25]), 2: State('a', [3, 10]), 3: State('c', 4), 4: State('k', 5), 5: State('r', 6), 6: State('o', 7), 7: State('o', 8), 8: State('m', 9), 9: State(DELIM_VAL['space_delim'], end = True, token_type="BACKROOM"),
-                                    10: State('t', 11), 11: State('t', 12), 12: State('e', 13), 13: State('r', 14), 14: State('@', 15), 15: State(DELIM_VAL['batter@_delim'], end = True, token_type="BATTER"),
+                                    10: State('t', 11), 11: State('t', 12), 12: State('e', 13), 13: State('r', 14), 14: State('@', 15), 15: State(DELIM_VAL['batter@_delim'], end = True, token_type="batter@"),
         16: State('e', 17), 17: State('a', 18), 18: State('n', 19), 19: State(DELIM_VAL['space_delim'], end = True, token_type="BEAN"),
         20: State('l', 21), 21: State('e', 22), 22: State('n', 23), 23: State('d', 24), 24: State(DELIM_VAL['space_delim'], end = True, token_type="BLEND"),
         25: State('r', 26), 26: State('e', 27), 27: State('w', 28), 28: State('e', 29), 29: State('d', 30), 30: State(DELIM_VAL['space_delim'], end = True, token_type="BREWED"),
@@ -56,7 +56,7 @@ TRANSITIONS_DFA = {
     
     # recipe and refill?
     134: State('r', 135), 135: State('e', [136, 141]), 136: State('c', 137), 137: State('i', 138), 138: State('p', 139), 139: State('e', 140), 140: State(DELIM_VAL['space_delim'], end = True, token_type="recipe"),
-    141: State('f', 142), 142: State('i', 143), 143: State('l', 144), 144: State('l', 145), 145: State('?', 146), 146: State([*DELIM_VAL['refill_delim'], "\n"], end = True, token_type="refill"),
+    141: State('f', 142), 142: State('i', 143), 143: State('l', 144), 144: State('l', 145), 145: State('?', 146), 146: State([*DELIM_VAL['refill_delim'], "\n"], end = True, token_type="refill?"),
     
     # skip, snap, syrup
     147: State('s', [148, 152, 156]), 148: State('k', 149), 149: State('i', 150), 150: State('p', 151), 151: State(ATOMIC_VAL['newline'], end = True, token_type="skip"),
@@ -192,7 +192,7 @@ TRANSITIONS_DFA = {
             293: State('\'', 294), 
 
             # delimiter
-            294: State([*DELIM_VAL["space_delim"], ',', '\n', ']'], end=True, token_type="CHURROLIT"),
+            294: State([*DELIM_VAL["space_delim"], ',', '\n', ']', ')'], end=True, token_type="CHURROLIT"),
 
             # Escape sequence
             295: State('\\', 296), 296: State(ATOMIC_VAL["escapeseq_let"], [293]),

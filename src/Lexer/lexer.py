@@ -6,6 +6,80 @@ class Token(Token):
     def __repr__(self):
         return f"Token({self.type!r}, {self.value!r}, line={self.line}, column={self.column})"
 
+OPERATOR_MAP = {
+    "==": "EQ_EQUALS",
+    "!=": "NOT_EQUAL",
+    ">=": "GREATER_EQUAL",
+    "<=": "LESSER_EQUAL",
+    "&&": "AND",
+    "||": "OR",
+    "++": "INCREMENT",
+    "--": "DECREMENT",
+    "+=": "EQUAL_PLUS",
+    "-=": "EQUAL_MINUS",
+    "*=": "EQUAL_ASTERISK",
+    "/=": "EQUAL_DIVIDE",
+    "***": "FLEX_ASTERISK",
+
+    "=": "EQUALS",
+    "+": "PLUS",
+    "-": "MINUS",
+    "*": "MULTIPLY",
+    "/": "DIVIDE",
+    "%": "MODULO",
+    ">": "GREATER_THAN",
+    "<": "LESSER_THAN",
+    "!": "NOT",
+
+    "(": "OP_PAREN",
+    ")": "CL_PAREN",
+    "[": "OP_BRACKETS",
+    "]": "CL_BRACKETS",
+    "{": "OP_BRACES",
+    "}": "CL_BRACES",
+
+    ".": "DOT_ACC",
+    ",": "COMMA",
+    ":": "COLON",
+    ";": "SEMICOLON",
+}
+
+KEYWORD_MAP = {
+    "BACKROOM": "BACKROOM",
+    "BATTER@": "BATTER",
+    "BEAN": "BEAN",
+    "BLEND": "BLEND",
+    "BREWED": "BREWED",
+    "CAFE": "CAFE",
+    "CREMA": "CREMA",
+    "CHURRO": "CHURRO",
+    "COLD": "COLD",
+    "CUP": "CUP",
+    "DECAF": "DECAF",
+    "DEFOAM": "DEFOAM",
+    "DRIP": "DRIP",
+    "ELIFROTH": "ELIFROTH",
+    "ELSPRESS": "ELSPRESS",
+    "EMPTY": "EMPTY",
+    "FLAVOUR": "FLAVOUR",
+    "GLAZE": "GLAZE",
+    "HOT": "HOT",
+    "IFBREW": "IFBREW",
+    "MUG": "MUG",
+    "NEW": "NEW",
+    "ORDER": "ORDER",
+    "POUR": "POUR",
+    "RECIPE": "RECIPE",
+    "REFILL?": "REFILL",
+    "SKIP": "SKIP",
+    "SNAP": "SNAP",
+    "SYRUP": "SYRUP",
+    "TASTE": "TASTE",
+    "TILL": "TILL",
+    "TEMP": "TEMP",
+    "WHILEHOT": "WHILEHOT",
+}
+
 def tokenize(code):
     # code += '$' # for appending an eof haha
     tokens = []
@@ -587,11 +661,17 @@ def tokens_to_lark(tokens):
             continue
         
         typeOfTok = t["type"].upper()
-        stripNumTok = ''.join(ch for ch in typeOfTok if not ch.isdigit())   # Filter out non-letter characters, use the mapped identifier at the beginning of this program for semantic.
+        stripNumTok = ''.join(ch for ch in typeOfTok if not ch.isdigit())   # Filter out non-letter characters, use the mapped identifier at the beginning of this program for semantic. Only exists due to the lexer outputting IDENTIFIER# where # is a number
+
 
         if last_token_type == "REFILL" and stripNumTok == "BEANLIT" and t["lexeme"] == "0":
             stripNumTok = "ZERO"
-        
+        elif typeOfTok in KEYWORD_MAP:
+            stripNumTok = KEYWORD_MAP[typeOfTok]
+        elif typeOfTok in OPERATOR_MAP:
+            stripNumTok = OPERATOR_MAP[typeOfTok]
+
+
         tok = Token(
             stripNumTok,
             t["lexeme"]
