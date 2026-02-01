@@ -73,7 +73,7 @@ DELIM_VAL = {
     "clbrackets_delim": list(set(space_delim + newline + ['[', ']', ',', ')'])),
     "clparen_delim": list(set(space_delim + newline + ['[','(', ')', '{', '&', '|'] + arithmetic_op + relational_op + logical_op)), # added opening square bracket. '['
     "colon_delim": list(set(space_delim + newline + ['('])),
-    "comma_delim": list(set(space_delim + alpha_small + whole + ['"', "'", '('])),
+    "comma_delim": list(set(space_delim + alpha_small + whole + ['"', "'", '(','['])),
     "id_delim": list(set(space_delim + assignment_op + arithmetic_op + relational_op + [';', ',', '{', '[', ']', '(', ')', '\n', '=', '.', '&','|'])), # had ", ' initially
     "logical_delim": list(set(space_delim + alpha_small + whole + ['-', '('])),
     "numeric_delim": list(set(space_delim + newline + [',', ')', ']', ':', ';','&','|'] + arithmetic_op + relational_op)), # added colon. ':'
