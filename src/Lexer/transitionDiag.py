@@ -73,80 +73,80 @@ TRANSITIONS_DFA = {
 
     # Reserved Symbols
     # Equals (=)
-    184: State('=', [185, 186]), 185: State(DELIM_VAL['assignment_delim'], end = True, token_type="EQUALS"),
-        186: State('=', 187), 187: State(DELIM_VAL['relational_delim'], end = True, token_type="EQ_EQUALS"),
+    184: State('=', [185, 186]), 185: State(DELIM_VAL['assignment_delim'], end = True, token_type="="),
+        186: State('=', 187), 187: State(DELIM_VAL['relational_delim'], end = True, token_type="=="),
     
     # Plus (+)
-    188: State('+', [189, 190, 192]), 189: State(DELIM_VAL['plus_delim'], end = True, token_type="PLUS"),
-        190: State('+', 191), 191: State(DELIM_VAL['unary_delim'], end = True, token_type="INCREMENT"),
-        192: State('=', 193), 193: State(DELIM_VAL['assignment_delim'], end = True, token_type="EQUAL_PLUS"),
+    188: State('+', [189, 190, 192]), 189: State(DELIM_VAL['plus_delim'], end = True, token_type="+"),
+        190: State('+', 191), 191: State(DELIM_VAL['unary_delim'], end = True, token_type="++"),
+        192: State('=', 193), 193: State(DELIM_VAL['assignment_delim'], end = True, token_type="+="),
     
     # Minus (-)
-    194: State('-', [252, 195, 196, 198]), 195: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="MINUS"),
-    196: State('-', 197), 197: State(DELIM_VAL['unary_delim'], end = True, token_type="DECREMENT"),
-    198: State('=', 199), 199: State(DELIM_VAL['assignment_delim'], end = True, token_type="EQUAL_MINUS"),
+    194: State('-', [252, 195, 196, 198]), 195: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="-"),
+    196: State('-', 197), 197: State(DELIM_VAL['unary_delim'], end = True, token_type="--"),
+    198: State('=', 199), 199: State(DELIM_VAL['assignment_delim'], end = True, token_type="-="),
     
     # Asterisk (*)
-    200: State('*', [201, 202, 205]), 201: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="MULTIPLY"),
-    202: State('*', 203), 203: State('*', 204), 204: State([']', *DELIM_VAL['space_delim']], end = True, token_type="FLEX_ASTERISK"),
-    205: State('=', 206), 206: State(DELIM_VAL['assignment_delim'], end = True, token_type="EQUAL_ASTERISK"),
+    200: State('*', [201, 202, 205]), 201: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="*"),
+    202: State('*', 203), 203: State('*', 204), 204: State([']', *DELIM_VAL['space_delim']], end = True, token_type="***"),
+    205: State('=', 206), 206: State(DELIM_VAL['assignment_delim'], end = True, token_type="*="),
     
     # Slash (/)
-    207: State('/', [209, 208]), 208: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="DIVIDE"),
-    209: State('=', 210), 210: State(DELIM_VAL['assignment_delim'], end = True, token_type="EQUAL_DIVIDE"),
+    207: State('/', [209, 208]), 208: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="/"),
+    209: State('=', 210), 210: State(DELIM_VAL['assignment_delim'], end = True, token_type="/="),
     
     # Modulo (%)
-    211: State('%', 212), 212: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="MODULO"),
+    211: State('%', 212), 212: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="%"),
     
     # Greater than (>)
-    213: State('>', [214, 215]), 214: State(DELIM_VAL['relational_delim'], end = True, token_type="GREATER_THAN"),
-        215: State('=', 216), 216: State(DELIM_VAL['relational_delim'], end = True, token_type="GREATER_EQUAL"),
+    213: State('>', [214, 215]), 214: State(DELIM_VAL['relational_delim'], end = True, token_type=">"),
+        215: State('=', 216), 216: State(DELIM_VAL['relational_delim'], end = True, token_type=">="),
     
     # Lesser than (<)
-    217: State('<', [218, 219]), 218: State(DELIM_VAL['relational_delim'], end = True, token_type="LESSER_THAN"),
-        219: State('=', 220), 220: State(DELIM_VAL['relational_delim'], end = True, token_type="LESSER_EQUAL"), 
+    217: State('<', [218, 219]), 218: State(DELIM_VAL['relational_delim'], end = True, token_type="<"),
+        219: State('=', 220), 220: State(DELIM_VAL['relational_delim'], end = True, token_type="<="), 
     
     # NOT (!)
-    221: State('!', [222, 223]), 222: State(DELIM_VAL['not_delim'], end = True, token_type="NOT"),
-    223: State('=', 224), 224: State(DELIM_VAL['relational_delim'], end = True, token_type="NOT_EQUAL"),
+    221: State('!', [222, 223]), 222: State(DELIM_VAL['not_delim'], end = True, token_type="!"),
+    223: State('=', 224), 224: State(DELIM_VAL['relational_delim'], end = True, token_type="!="),
     
     # AND (&) 
-    225: State('&', 226), 226: State('&', 227), 227: State(DELIM_VAL['logical_delim'], end = True, token_type="AND"),
+    225: State('&', 226), 226: State('&', 227), 227: State(DELIM_VAL['logical_delim'], end = True, token_type="&&"),
     
     # OR (|)
-    228: State('|', 229), 229: State('|', 230), 230: State(DELIM_VAL['logical_delim'], end = True, token_type="OR"),
+    228: State('|', 229), 229: State('|', 230), 230: State(DELIM_VAL['logical_delim'], end = True, token_type="||"),
     
     # Open Paren (
-    231: State( '(', 232), 232: State(DELIM_VAL['opparen_delim'], end = True, token_type="OP_PAREN"),
+    231: State( '(', 232), 232: State(DELIM_VAL['opparen_delim'], end = True, token_type="("),
     
     # Close Paren )
-    233: State( ')', 234), 234: State(DELIM_VAL['clparen_delim'], end = True, token_type="CL_PAREN"),
+    233: State( ')', 234), 234: State(DELIM_VAL['clparen_delim'], end = True, token_type=")"),
     
     # Open Bracket [ 
-    235: State( '[', 236), 236: State(DELIM_VAL['opbrackets_delim'], end = True, token_type="OP_BRACKETS"),
+    235: State( '[', 236), 236: State(DELIM_VAL['opbrackets_delim'], end = True, token_type="["),
     
     # Close Bracket ]
     237: State( ']', end = True, token_type="CL_BRACKETS"), 
-    # Deleted -> 238: State(DELIM_VAL['clbrackets_delim', ']'], end = True, token_type="CL_BRACKETS"),
+    # Deleted -> 238: State(DELIM_VAL['clbrackets_delim', ']'], end = True, token_type="]"),
     
     # Open Brace {    
-    238: State( '{', 239), 239: State(DELIM_VAL['braces_delim'], end = True, token_type="OP_BRACES"),    
+    238: State( '{', 239), 239: State(DELIM_VAL['braces_delim'], end = True, token_type="{"),    
         
     # Close Brace }
-    240: State( '}', end = True, token_type="CL_BRACES"),
+    240: State( '}', end = True, token_type="}"),
     # Deleted -> 242: State(DELIM_VAL['braces_delim'], 
     
     # Dot Accessor (.)
-    241: State('.', 242), 242: State(ATOMIC_VAL['alpha_small'], end = True, token_type="DOT_ACC"),
+    241: State('.', 242), 242: State(ATOMIC_VAL['alpha_small'], end = True, token_type="."),
 
     # Comma (,)
-    243: State( ',' , 244), 244: State(DELIM_VAL['comma_delim'], end = True, token_type="COMMA"),
+    243: State( ',' , 244), 244: State(DELIM_VAL['comma_delim'], end = True, token_type=","),
     
     # Colon (:)
-    245: State(':', 246), 246: State(DELIM_VAL['colon_delim'], end = True, token_type="COLON"),
+    245: State(':', 246), 246: State(DELIM_VAL['colon_delim'], end = True, token_type=":"),
     
     # Semicolon (;)
-    247: State(';' , 248), 248: State(DELIM_VAL['semicolon_delim'], end = True, token_type="SEMICOLON"),
+    247: State(';' , 248), 248: State(DELIM_VAL['semicolon_delim'], end = True, token_type=";"),
     
     # Newline (commented out cuz causing issues sa actual thingy)
     # 251: State('\n',  end = True, token_type="NEWLINE"), #ISSUES: CAUSING RECURSION
