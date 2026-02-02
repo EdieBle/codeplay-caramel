@@ -90,10 +90,10 @@ ID: /(?!(backroom|batter@|bean|blend|brewed|cafe|crema|churro|cold|cup|decaf|dri
 start: program
 
 program: global_def main_def
-global_def: (global_dec NEWLINE)*
+global_def: ((global_dec)* (NEWLINE)*)*
 global_dec: dec | crema_def | recipe_def | empty_def
 
-dec: var_dec | var_assign | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | crema_assign | object_def | object_def NEWLINE crema_call | recipe_call | unary_expressions
+dec: var_dec | var_assign | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | crema_assign | object_def | crema_call | recipe_call | unary_expressions
 
 acc_mod: CAFE | BACKROOM | _empty
 data_type: BEAN | DRIP | BLEND | CHURRO | TEMP 
@@ -127,7 +127,6 @@ crema_member: ID | mug_call | mug_glob_call | arr_call | recipe_call
 expressions: arith_expressions | logic_expressions | rel_expressions | unary_expressions
 arith_expressions: arith_expressions arithm_op term | term
 term: OP_PAREN arith_expressions CL_PAREN | num_operand
-arith_expr_tail: arithm_op num_operand arith_expr_tail | arithm_op arith_expressions | _empty
 num_operand: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | HOT | COLD | ID | call | unary_expressions
 arithm_op: PLUS | MINUS | MULTIPLY | DIVIDE | MODULO
 
@@ -142,7 +141,7 @@ logic_op: AND | OR
 
 rel_expressions: rel_factor rel_expr_tail
 rel_expr_tail: rel_op rel_factor rel_expr_tail | _empty
-rel_factor: arith_expressions | num_operand | OP_PAREN rel_expressions CL_PAREN | OP_PAREN logic_expressions CL_PAREN
+rel_factor: arith_expressions | num_operand | OP_PAREN logic_expressions CL_PAREN
 rel_op: GREATER_THAN | LESSER_THAN | EQ_EQUALS | NOT_EQUAL | GREATER_EQUAL | LESSER_EQUAL
 
 mug_dec: MUG ID OP_BRACKETS NEWLINE (var_dec NEWLINE)* CL_BRACKETS
@@ -197,7 +196,7 @@ statement: dec | input_stmt | output_stmt | if_cond | flav_switch | pour_loop | 
 input_stmt: BATTER input_args input_val 
 input_args: input_args_unit input_args_unit_tail
 input_args_unit: ID | crema_inp_call | mug_call | mug_glob_call | arr_call | glob_var_acc
-crema_inp_call: ID DOT_ACC mug_call | ID DOT_ACC mug_glob_call | ID DOT_ACC arr_call 
+crema_inp_call: ID DOT_ACC mug_call
 input_args_unit_tail: COMMA input_args_unit input_args_unit_tail | _empty
 input_val: OP_PAREN BLENDLIT CL_PAREN | _empty
 
