@@ -93,7 +93,7 @@ program: global_def main_def
 global_def: (global_dec NEWLINE)*
 global_dec: dec | crema_def | recipe_def | empty_def
 
-dec: var_dec | var_assign | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | crema_assign | object_def NEWLINE crema_call | recipe_call | unary_expressions
+dec: var_dec | var_assign | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | crema_assign | object_def | object_def NEWLINE crema_call | recipe_call | unary_expressions
 
 acc_mod: CAFE | BACKROOM | _empty
 data_type: BEAN | DRIP | BLEND | CHURRO | TEMP 
