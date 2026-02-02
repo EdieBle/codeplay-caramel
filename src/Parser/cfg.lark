@@ -93,7 +93,7 @@ program: global_def main_def
 global_def: (global_dec NEWLINE)*
 global_dec: dec | crema_def | recipe_def | empty_def
 
-dec: var_dec | var_assign | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | object_def NEWLINE crema_assign | object_def NEWLINE crema_call | recipe_call | unary_expressions
+dec: var_dec | var_assign | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | crema_assign | object_def NEWLINE crema_call | recipe_call | unary_expressions
 
 acc_mod: CAFE | BACKROOM | _empty
 data_type: BEAN | DRIP | BLEND | CHURRO | TEMP 
@@ -188,7 +188,7 @@ main_def: BEAN CUP OP_PAREN CL_PAREN OP_BRACKETS NEWLINE main_body
 
 refill_main: REFILL ZERO NEWLINE main_body | REFILL ZERO NEWLINE CL_BRACKETS
 
-main_body: (statement NEWLINE)* refill_main
+main_body: (statement NEWLINE)* main_body | refill_main
 
 
 statement: dec | input_stmt | output_stmt | if_cond | flav_switch | pour_loop | whilehot_loop | tastetill_loop
@@ -213,7 +213,7 @@ flav_switch: FLAVOUR OP_PAREN expressions CL_PAREN OP_BRACES NEWLINE syrup_switc
 syrup_switch: SYRUP literals COLON NEWLINE statement NEWLINE SNAP NEWLINE defoam_stmt syrup_switch | SYRUP arith_expressions COLON NEWLINE statement NEWLINE SNAP NEWLINE defoam_stmt syrup_switch
 defoam_stmt: DEFOAM COLON NEWLINE statement NEWLINE SNAP NEWLINE | _empty
 
-pour_loop: POUR OP_PAREN pour_init SEMICOLON rel_expressions SEMICOLON update CL_PAREN OP_BRACES NEWLINE (statement NEWLINE)* intrpt_stmt CL_BRACES
+pour_loop: POUR OP_PAREN pour_init SEMICOLON logic_expressions SEMICOLON update CL_PAREN OP_BRACES NEWLINE (statement NEWLINE)* intrpt_stmt CL_BRACES
 pour_init: data_type ID EQUALS value var_dec_const_tail
 update: update_unit update_tail
 update_tail: COMMA update_unit update_tail | _empty
