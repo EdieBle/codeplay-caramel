@@ -90,7 +90,8 @@ ID: /(?!(backroom|batter@|bean|blend|brewed|cafe|crema|churro|cold|cup|decaf|dri
 start: program
 
 program: global_def main_def
-global_def: ((global_dec)* (NEWLINE)*)*
+global_def: global_dec global_def | _empty
+
 global_dec: dec | crema_def | recipe_def | empty_def
 
 dec: var_dec | var_assign | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | crema_assign | object_def | crema_call | recipe_call | unary_expressions
@@ -108,9 +109,9 @@ var_dec_init: ID opt_assign
 opt_assign: EQUALS value | _empty
 var_dec_tail: COMMA var_dec_init var_dec_tail | _empty
 
-var_assign: ID EQUALS (()*value())*
+var_assign: ID EQUALS value | ID EQUALS OP_PAREN value CL_PAREN | arr_call EQUALS arr_elem
 
-value: ID | MINUS ID | expressions | call | literals
+value: ID | MINUS ID | literals | call | expressions
 literals: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | BLENDLIT | HOT | COLD | CHURROLIT
 call: mug_call | mug_glob_call | arr_call | recipe_call | crema_call | glob_var_acc
 
@@ -144,7 +145,7 @@ rel_expr_tail: rel_op rel_factor rel_expr_tail | _empty
 rel_factor: arith_expressions | num_operand | OP_PAREN logic_expressions CL_PAREN
 rel_op: GREATER_THAN | LESSER_THAN | EQ_EQUALS | NOT_EQUAL | GREATER_EQUAL | LESSER_EQUAL
 
-mug_dec: MUG ID OP_BRACKETS NEWLINE (var_dec NEWLINE)* CL_BRACKETS
+mug_dec: MUG ID OP_BRACKETS (var_dec)* CL_BRACKETS
 
 mug_call_assign: mug_call EQUALS value
 mug_glob_assign: mug_glob_call EQUALS value
@@ -164,11 +165,11 @@ arr_cont_tail: COMMA OP_BRACKETS arr_elem ext_arr_elem CL_BRACKETS | _empty
 object_def: NEW ID EQUALS ID
 crema_assign: crema_call EQUALS value
 
-recipe_def: RECIPE data_type ID OP_PAREN parameter CL_PAREN OP_BRACKETS NEWLINE recipe_body refill_final NEWLINE CL_BRACKETS
+recipe_def: RECIPE data_type ID OP_PAREN parameter CL_PAREN OP_BRACKETS  recipe_body refill_final  CL_BRACKETS
 parameter: param_val add_param | _empty
 param_val: var_dec | mug_call | mug_glob_call 
 add_param: COMMA param_val add_param | _empty
-recipe_body: statement NEWLINE recipe_body | dec NEWLINE recipe_body | _empty 
+recipe_body: statement  recipe_body | dec  recipe_body | _empty 
 
 refill_final: REFILL refill_arg
 refill_arg: OP_PAREN refill_content extra_refill_val CL_PAREN | ZERO
@@ -176,22 +177,22 @@ refill_arg: OP_PAREN refill_content extra_refill_val CL_PAREN | ZERO
 refill_content: literals | expressions | mug_call | ID 
 extra_refill_val: COMMA refill_content extra_refill_val | _empty
 
-empty_def: EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS NEWLINE statement NEWLINE REFILL NEWLINE CL_BRACKETS 
+empty_def: EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS  statement  REFILL  CL_BRACKETS 
 
-crema_def: CREMA ID OP_BRACKETS NEWLINE crema_body CL_BRACKETS
-crema_body: crema_body_cont NEWLINE crema_body | _empty
+crema_def: CREMA ID OP_BRACKETS  crema_body CL_BRACKETS
+crema_body: crema_body_cont  crema_body | _empty
 crema_body_cont: acc_mod recipe_def | acc_mod empty_def | var_dec
 
-main_def: BEAN CUP OP_PAREN CL_PAREN OP_BRACKETS NEWLINE main_body
+main_def: BEAN CUP OP_PAREN CL_PAREN OP_BRACKETS main_body
 
 
-refill_main: REFILL ZERO NEWLINE main_body | REFILL ZERO NEWLINE CL_BRACKETS
+refill_main: REFILL ZERO  main_body | REFILL ZERO CL_BRACKETS
 
-main_body: (statement NEWLINE)* main_body | refill_main
+main_body: statement main_body | refill_main
 
 
 statement: dec | input_stmt | output_stmt | if_cond | flav_switch | pour_loop | whilehot_loop | tastetill_loop
-
+stmt_tail: statement stmt_tail | _empty
 
 input_stmt: BATTER input_args input_val 
 input_args: input_args_unit input_args_unit_tail
@@ -204,21 +205,21 @@ output_stmt: GLAZE OP_PAREN output_args CL_PAREN
 output_args: value concat | _empty
 concat: PLUS value concat | _empty
 
-if_cond: IFBREW OP_PAREN expressions CL_PAREN OP_BRACES NEWLINE (statement NEWLINE)* CL_BRACES if_cond_tail
+if_cond: IFBREW OP_PAREN expressions CL_PAREN OP_BRACES statement stmt_tail CL_BRACES if_cond_tail
 
-if_cond_tail: NEWLINE ELIFROTH OP_PAREN expressions CL_PAREN OP_BRACES NEWLINE (statement NEWLINE)* CL_BRACES if_cond_tail | NEWLINE ELSPRESS OP_BRACES NEWLINE (statement NEWLINE)* CL_BRACES | _empty
+if_cond_tail:  ELIFROTH OP_PAREN expressions CL_PAREN OP_BRACES statement stmt_tail CL_BRACES if_cond_tail | ELSPRESS OP_BRACES statement stmt_tail CL_BRACES | _empty
 
-flav_switch: FLAVOUR OP_PAREN expressions CL_PAREN OP_BRACES NEWLINE syrup_switch CL_BRACES 
-syrup_switch: SYRUP literals COLON NEWLINE statement NEWLINE SNAP NEWLINE defoam_stmt syrup_switch | SYRUP arith_expressions COLON NEWLINE statement NEWLINE SNAP NEWLINE defoam_stmt syrup_switch
-defoam_stmt: DEFOAM COLON NEWLINE statement NEWLINE SNAP NEWLINE | _empty
+flav_switch: FLAVOUR OP_PAREN expressions CL_PAREN OP_BRACES syrup_switch CL_BRACES 
+syrup_switch: SYRUP literals COLON  statement stmt_tail SNAP  defoam_stmt syrup_switch | SYRUP arith_expressions COLON  statement stmt_tail  SNAP  defoam_stmt syrup_switch | _empty
+defoam_stmt: DEFOAM COLON statement stmt_tail  SNAP  | _empty
 
-pour_loop: POUR OP_PAREN pour_init SEMICOLON logic_expressions SEMICOLON update CL_PAREN OP_BRACES NEWLINE (statement NEWLINE)* intrpt_stmt CL_BRACES
+pour_loop: POUR OP_PAREN pour_init SEMICOLON logic_expressions SEMICOLON update CL_PAREN OP_BRACES statement stmt_tail (intrpt_stmt)* CL_BRACES
 pour_init: data_type ID EQUALS value var_dec_const_tail
 update: update_unit update_tail
 update_tail: COMMA update_unit update_tail | _empty
 update_unit: ID assign_op arith_expressions | unary_expressions
 assign_op: EQUALS | EQUAL_PLUS | EQUAL_MINUS | EQUAL_ASTERISK | EQUAL_DIVIDE 
 
-whilehot_loop: WHILEHOT OP_PAREN logic_expressions CL_PAREN OP_BRACES NEWLINE (statement NEWLINE)* intrpt_stmt CL_BRACES
-tastetill_loop: TASTE OP_BRACES NEWLINE (statement NEWLINE)* intrpt_stmt CL_BRACES TILL COLON OP_PAREN logic_expressions CL_PAREN
-intrpt_stmt: SNAP NEWLINE | SKIP NEWLINE | _empty
+whilehot_loop: WHILEHOT OP_PAREN logic_expressions CL_PAREN OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES
+tastetill_loop: TASTE OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES TILL COLON OP_PAREN logic_expressions CL_PAREN
+intrpt_stmt: SNAP | SKIP  | _empty

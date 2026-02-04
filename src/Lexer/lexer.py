@@ -657,7 +657,7 @@ def tokens_to_lark(tokens):
     last_token_was_newline = False
 
     for t in tokens:
-        if t["type"] == "WHITESPACE" or t["type"] == "TAB" or t["type"] == "SL_COMMENT" or t["type"] == "ML_COMMENT":
+        if t["type"] == "WHITESPACE" or t["type"] == "TAB" or t["type"] == "SL_COMMENT" or t["type"] == "ML_COMMENT" or t["type"] == "NEWLINE":
             continue
         
         typeOfTok = t["type"].upper()
