@@ -26,7 +26,72 @@ refill? 0
 
   const textareaRef = useRef(null);
   const lineNumbersRef = useRef(null);
+  const fileInputRef = useRef(null);
   const [currentLine, setCurrentLine] = useState(1);
+
+  // Save file as .crml
+  const handleSaveFile = () => {
+    const filename = window.prompt("Enter filename:", "code");
+
+    if (filename === null) {
+      // User cancelled the dialog
+      return;
+    }
+
+    // Remove .crml extension if user included it
+    const cleanedFilename = filename.replace(/\.crml$/i, "");
+    const finalFilename = `${cleanedFilename}.crml`;
+
+    const element = document.createElement("a");
+    const file = new Blob([code], { type: "text/plain" });
+    element.href = URL.createObjectURL(file);
+    element.download = finalFilename;
+    document.body.appendChild(element);
+    element.click();
+    document.body.removeChild(element);
+    URL.revokeObjectURL(element.href);
+  };
+
+  // Open .crml file
+  const handleOpenFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check if file has .crml extension
+    if (!file.name.endsWith(".crml")) {
+      alert("Please select a .crml file");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result;
+      if (typeof content === "string") {
+        setCode(content);
+        setTokens([]);
+        setErrors([]);
+        setLineTokens([]);
+        setHasRun(false);
+        setHasParsed(false);
+        setShowLineTokens(false);
+        setShowTokens(true);
+        setCurrentLine(1);
+      }
+    };
+    reader.onerror = () => {
+      alert("Error reading file");
+    };
+    reader.readAsText(file);
+
+    // Reset the input so the same file can be opened again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   // Tokenize all lines
   const handleTokenize = async () => {
@@ -211,7 +276,14 @@ refill? 0
 
   return (
     <div className="app-root">
-      <NavBar />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".crml"
+        onChange={handleFileSelect}
+        style={{ display: "none" }}
+      />
+      <NavBar onSaveFile={handleSaveFile} onOpenFile={handleOpenFile} />
 
       {/* Main Content Area: Stacks Top Row and Bottom Row vertically */}
       <div className="main-content">

@@ -135,3 +135,64 @@
   font-size: 0.85rem;
   color: #166534;
 }
+
+/* ==================== DARK MODE STYLES ==================== */
+[data-theme="dark"] .lexer-error {
+  background: #3d2d2d;
+  border: 1px solid rgba(197, 48, 48, 0.4);
+  color: #ff6b6b;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .lexer-error__title {
+  color: #ff6b6b;
+}
+
+[data-theme="dark"] .lexer-error__summary {
+  color: #ff8888;
+}
+
+[data-theme="dark"] .lexer-error__copy {
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  color: #ff6b6b;
+}
+
+[data-theme="dark"] .lexer-error__copy:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+[data-theme="dark"] .lexer-error__item {
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+[data-theme="dark"] .lexer-error__type-line {
+  color: #ff6b6b;
+}
+
+[data-theme="dark"] .lexer-error__details-row {
+  background: #3d3d3d;
+}
+
+[data-theme="dark"] .lexer-error__lexeme {
+  color: #b0b0b0;
+}
+
+[data-theme="dark"] .lexer-error__loc {
+  color: #888888;
+}
+
+[data-theme="dark"] .lexer-success {
+  background: #2d3d2d;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #4caf50;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .lexer-success__title {
+  color: #4caf50;
+}
+
+[data-theme="dark"] .lexer-success__summary {
+  color: #7cb342;
+}

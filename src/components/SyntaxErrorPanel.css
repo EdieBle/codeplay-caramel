@@ -1,7 +1,7 @@
 .syntax-error {
-  background: #FFF1F1;
+  background: #fff1f1;
   border: 1px solid rgba(220, 38, 38, 0.35);
-  color: #9B2C2C;
+  color: #9b2c2c;
   padding: 0.75rem 1rem;
   border-radius: 8px;
   margin-top: 0.75rem;
@@ -23,18 +23,18 @@
 
 .syntax-error__title {
   font-weight: 700;
-  color: #9B2C2C;
+  color: #9b2c2c;
 }
 
 .syntax-error__summary {
   font-size: 0.85rem;
-  color: #9B2C2C;
+  color: #9b2c2c;
 }
 
 .syntax-error__copy {
   background: transparent;
   border: 1px solid rgba(155, 44, 44, 0.35);
-  color: #9B2C2C;
+  color: #9b2c2c;
   padding: 0.25rem 0.5rem;
   border-radius: 6px;
   cursor: pointer;
@@ -61,7 +61,7 @@
 
 .syntax-error__type-line {
   font-weight: 700;
-  color: #9B2C2C;
+  color: #9b2c2c;
   letter-spacing: 0.5px;
   margin-bottom: 0.35rem;
 }
@@ -70,7 +70,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  background: #FFF5EB;
+  background: #fff5eb;
   border-radius: 5px;
   padding: 0.35rem 0.6rem;
 }
@@ -86,7 +86,7 @@
 }
 
 .syntax-success {
-  background: #F0FFF4;
+  background: #f0fff4;
   border: 1px solid rgba(34, 197, 94, 0.35);
   color: #166534;
   padding: 0.75rem 1rem;
@@ -115,4 +115,66 @@
 .syntax-success__summary {
   font-size: 0.85rem;
   color: #166534;
+}
+
+/* ==================== DARK MODE STYLES ==================== */
+[data-theme="dark"] .syntax-error {
+  background: #3d2d2d;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  color: #ff6b6b;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .syntax-error__title {
+  color: #ff6b6b;
+}
+
+[data-theme="dark"] .syntax-error__summary {
+  color: #ff8888;
+}
+
+[data-theme="dark"] .syntax-error__copy {
+  background: transparent;
+  border: 1px solid rgba(255, 107, 107, 0.4);
+  color: #ff6b6b;
+}
+
+[data-theme="dark"] .syntax-error__copy:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+[data-theme="dark"] .syntax-error__item {
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+[data-theme="dark"] .syntax-error__type-line {
+  color: #ff6b6b;
+}
+
+[data-theme="dark"] .syntax-error__details-row {
+  background: #3d3d3d;
+}
+
+[data-theme="dark"] .syntax-error__expected {
+  color: #b0b0b0;
+}
+
+[data-theme="dark"] .syntax-error__loc {
+  color: #888888;
+}
+
+[data-theme="dark"] .syntax-success {
+  background: #2d3d2d;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  color: #4caf50;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .syntax-success__title {
+  color: #4caf50;
+}
+
+[data-theme="dark"] .syntax-success__summary {
+  color: #7cb342;
 }
