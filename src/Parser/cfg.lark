@@ -210,7 +210,8 @@ if_cond: IFBREW OP_PAREN expressions CL_PAREN OP_BRACES statement stmt_tail CL_B
 if_cond_tail:  ELIFROTH OP_PAREN expressions CL_PAREN OP_BRACES statement stmt_tail CL_BRACES if_cond_tail | ELSPRESS OP_BRACES statement stmt_tail CL_BRACES | _empty
 
 flav_switch: FLAVOUR OP_PAREN expressions CL_PAREN OP_BRACES syrup_switch CL_BRACES 
-syrup_switch: SYRUP literals COLON  statement stmt_tail SNAP  defoam_stmt syrup_switch | SYRUP arith_expressions COLON  statement stmt_tail  SNAP  defoam_stmt syrup_switch | _empty
+syrup_switch: SYRUP case_lit COLON  statement stmt_tail SNAP  defoam_stmt syrup_switch | _empty
+case_lit: BEANLIT | CHURROLIT | HOT | COLD 
 defoam_stmt: DEFOAM COLON statement stmt_tail  SNAP  | _empty
 
 pour_loop: POUR OP_PAREN pour_init SEMICOLON logic_expressions SEMICOLON update CL_PAREN OP_BRACES statement stmt_tail (intrpt_stmt)* CL_BRACES
