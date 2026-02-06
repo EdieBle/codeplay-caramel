@@ -151,7 +151,8 @@ rel_expr_tail: rel_op rel_factor rel_expr_tail | _empty
 rel_factor: arith_expressions | num_operand | OP_PAREN rel_expressions CL_PAREN | OP_PAREN logic_expressions CL_PAREN
 rel_op: GREATER_THAN | LESSER_THAN | EQ_EQUALS | NOT_EQUAL | GREATER_EQUAL | LESSER_EQUAL
 
-mug_dec: MUG ID OP_BRACKETS (var_dec)* CL_BRACKETS
+mug_dec: MUG ID OP_BRACKETS var_dec var_dec_cont CL_BRACKETS
+var_dec_cont: var_dec | _empty
 
 mug_call_assign: mug_call EQUALS value
 mug_glob_assign: mug_glob_call EQUALS value
