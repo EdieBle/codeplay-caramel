@@ -302,7 +302,7 @@ def tokenize(code):
                 print("\033[95m[FALLBACK] Starting identifier scan\033[0m")  # debug
 
                 lex = first_char
-                temp_state = 304
+                temp_state = 302
                 i = start_i + 1
 
                 while i < len(code):
