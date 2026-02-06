@@ -94,7 +94,7 @@ global_def: global_dec global_def | _empty
 
 global_dec: dec | crema_def | recipe_def | empty_def
 
-dec: var_dec | var_assign | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | crema_assign | object_def | crema_call | recipe_call | unary_expressions
+dec: var_dec | var_assign | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | crema_assign | object_def | crema_call | recipe_call | empty_call | unary_expressions
 
 acc_mod: CAFE | BACKROOM | _empty
 data_type: BEAN | DRIP | BLEND | CHURRO | TEMP 
@@ -113,22 +113,26 @@ var_assign: ID EQUALS value | ID EQUALS OP_PAREN value CL_PAREN | arr_call EQUAL
 
 value: ID | MINUS ID | literals | call | expressions
 literals: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | BLENDLIT | HOT | COLD | CHURROLIT
-call: mug_call | mug_glob_call | arr_call | recipe_call | crema_call | glob_var_acc
+call: mug_call | mug_glob_call | arr_call | recipe_call | empty_call | crema_call | glob_var_acc
 
 mug_call: ID DOT_ACC ID
 mug_glob_call: ORDER DOT_ACC ID DOT_ACC ID
 arr_call: ID OP_BRACKETS array_index CL_BRACKETS
 array_index: BEANLIT
 recipe_call: ID OP_PAREN recipe_args recipe_args_tail CL_PAREN
-recipe_args: ID | literals | mug_call | mug_glob_call | arr_call | glob_var_acc | _empty 
+recipe_args: ID | literals | mug_call | mug_glob_call | arr_call | glob_var_acc
+
 recipe_args_tail: COMMA recipe_args recipe_args_tail | _empty
+
+empty_call: ID OP_PAREN CL_PAREN
+
 crema_call: ID DOT_ACC crema_member
-crema_member: ID | mug_call | mug_glob_call | arr_call | recipe_call
+crema_member: ID | arr_call | recipe_call | empty_call
 
 expressions: arith_expressions | logic_expressions | rel_expressions | unary_expressions
 arith_expressions: arith_expressions arithm_op term | term
 term: OP_PAREN arith_expressions CL_PAREN | num_operand
-num_operand: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | HOT | COLD | ID | call | unary_expressions
+num_operand: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | CHURROLIT | HOT | COLD | ID | call | unary_expressions
 arithm_op: PLUS | MINUS | MULTIPLY | DIVIDE | MODULO
 
 unary_expressions: unary_op ID | ID unary_op 
@@ -181,7 +185,7 @@ empty_def: EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS  statement  REFILL  
 
 crema_def: CREMA ID OP_BRACKETS  crema_body CL_BRACKETS
 crema_body: crema_body_cont  crema_body | _empty
-crema_body_cont: acc_mod recipe_def | acc_mod empty_def | var_dec
+crema_body_cont: acc_mod recipe_def | acc_mod empty_def | var_dec | arr_dec
 
 main_def: BEAN CUP OP_PAREN CL_PAREN OP_BRACKETS main_body
 

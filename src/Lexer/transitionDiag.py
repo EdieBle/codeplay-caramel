@@ -59,8 +59,8 @@ TRANSITIONS_DFA = {
     141: State('f', 142), 142: State('i', 143), 143: State('l', 144), 144: State('l', 145), 145: State('?', 146), 146: State([*DELIM_VAL['refill_delim'], "\n"], end = True, token_type="refill?"),
     
     # skip, snap, syrup
-    147: State('s', [148, 152, 156]), 148: State('k', 149), 149: State('i', 150), 150: State('p', 151), 151: State(ATOMIC_VAL['newline'], end = True, token_type="skip"),
-                    152: State('n', 153), 153: State('a', 154), 154: State('p', 155), 155: State(ATOMIC_VAL['newline'], end = True, token_type="snap"),
+    147: State('s', [148, 152, 156]), 148: State('k', 149), 149: State('i', 150), 150: State('p', 151), 151: State([*DELIM_VAL['space_delim'], "\n"], end = True, token_type="skip"),
+                    152: State('n', 153), 153: State('a', 154), 154: State('p', 155), 155: State([*DELIM_VAL['space_delim'], "\n"], end = True, token_type="snap"),
                     156: State('y', 157), 157: State('r', 158), 158: State('u', 159), 159: State('p', 160), 160: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="syrup"),
     
     # taste, till, temp
