@@ -158,29 +158,29 @@ TRANSITIONS_DFA = {
     # Literals
     # BEANLIT *positive number issues
     # status: messy in particular to state 253
-    250: State([*ATOMIC_VAL['whole']], [251, 252, 270]), 251: State(DELIM_VAL['numeric_delim'], end = True, token_type = "BEANLIT"),
-        252: State(ATOMIC_VAL['whole'], [253, 254, 270]), 253: State(DELIM_VAL['numeric_delim'], end = True, token_type = "BEANLIT"),
-        254: State(ATOMIC_VAL['whole'], [255, 256, 270]), 255: State(DELIM_VAL['numeric_delim'], end = True, token_type = "BEANLIT"),
-        256: State(ATOMIC_VAL['whole'], [257, 258, 270]), 257: State(DELIM_VAL['numeric_delim'], end = True, token_type = "BEANLIT"), 
-        258: State(ATOMIC_VAL['whole'], [259, 260, 270]), 259: State(DELIM_VAL['numeric_delim'], end = True, token_type = "BEANLIT"), 
-        260: State(ATOMIC_VAL['whole'], [261, 262, 270]), 261: State(DELIM_VAL['numeric_delim'], end = True, token_type = "BEANLIT"), 
-        262: State(ATOMIC_VAL['whole'], [263, 264, 270]), 263: State(DELIM_VAL['numeric_delim'], end = True, token_type = "BEANLIT"), 
-        264: State(ATOMIC_VAL['whole'], [265, 266, 270]), 265: State(DELIM_VAL['numeric_delim'], end = True, token_type = "BEANLIT"), 
-        266: State(ATOMIC_VAL['whole'], [267, 268, 270]), 267: State(DELIM_VAL['numeric_delim'], end = True, token_type = "BEANLIT"), 
-        268: State(ATOMIC_VAL['whole'], [269, 270]), 269: State(DELIM_VAL['numeric_delim'], end = True, token_type = "BEANLIT"), 
+    250: State([*ATOMIC_VAL['whole']], [251, 252, 270]), 251: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"),
+        252: State(ATOMIC_VAL['whole'], [253, 254, 270]), 253: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"),
+        254: State(ATOMIC_VAL['whole'], [255, 256, 270]), 255: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"),
+        256: State(ATOMIC_VAL['whole'], [257, 258, 270]), 257: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"), 
+        258: State(ATOMIC_VAL['whole'], [259, 260, 270]), 259: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"), 
+        260: State(ATOMIC_VAL['whole'], [261, 262, 270]), 261: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"), 
+        262: State(ATOMIC_VAL['whole'], [263, 264, 270]), 263: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"), 
+        264: State(ATOMIC_VAL['whole'], [265, 266, 270]), 265: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"), 
+        266: State(ATOMIC_VAL['whole'], [267, 268, 270]), 267: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"), 
+        268: State(ATOMIC_VAL['whole'], [269, 270]), 269: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"), 
         
         # DRIPLIT
         270: State('.' , 271),
-            271: State(ATOMIC_VAL['whole'], [272, 273]), 272: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"), 
-            273: State(ATOMIC_VAL['whole'], [274, 275]), 274: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"), 
-            275: State(ATOMIC_VAL['whole'], [276, 277]), 276: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"),
-            277: State(ATOMIC_VAL['whole'], [278, 279]), 278: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"),
-            279: State(ATOMIC_VAL['whole'], [280, 281]), 280: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"),
-            281: State(ATOMIC_VAL['whole'], [282, 283]), 282: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"),
-            283: State(ATOMIC_VAL['whole'], [284, 285]), 284: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"),
-            285: State(ATOMIC_VAL['whole'], [286, 287]), 286: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"),
-            287: State(ATOMIC_VAL['whole'], [288, 289]), 288: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"),
-            289: State(ATOMIC_VAL['whole'], 290), 290: State(DELIM_VAL['numeric_delim'], end = True, token_type = "DRIPLIT"),
+            271: State(ATOMIC_VAL['whole'], [272, 273]), 272: State(DELIM_VAL['numeric_delim'], end = True, token_type = "driplit"), 
+            273: State(ATOMIC_VAL['whole'], [274, 275]), 274: State(DELIM_VAL['numeric_delim'], end = True, token_type = "driplit"), 
+            275: State(ATOMIC_VAL['whole'], [276, 277]), 276: State(DELIM_VAL['numeric_delim'], end = True, token_type = "driplit"),
+            277: State(ATOMIC_VAL['whole'], [278, 279]), 278: State(DELIM_VAL['numeric_delim'], end = True, token_type = "driplit"),
+            279: State(ATOMIC_VAL['whole'], [280, 281]), 280: State(DELIM_VAL['numeric_delim'], end = True, token_type = "driplit"),
+            281: State(ATOMIC_VAL['whole'], [282, 283]), 282: State(DELIM_VAL['numeric_delim'], end = True, token_type = "driplit"),
+            283: State(ATOMIC_VAL['whole'], [284, 285]), 284: State(DELIM_VAL['numeric_delim'], end = True, token_type = "driplit"),
+            285: State(ATOMIC_VAL['whole'], [286, 287]), 286: State(DELIM_VAL['numeric_delim'], end = True, token_type = "driplit"),
+            287: State(ATOMIC_VAL['whole'], [288, 289]), 288: State(DELIM_VAL['numeric_delim'], end = True, token_type = "driplit"),
+            289: State(ATOMIC_VAL['whole'], 290), 290: State(DELIM_VAL['numeric_delim'], end = True, token_type = "driplit"),
 
         # CHAR LITERAL (CHURROLIT)
         # Examples:  'a'  '\n'  '\t'
@@ -192,7 +192,7 @@ TRANSITIONS_DFA = {
             293: State('\'', 294), 
 
             # delimiter
-            294: State([*DELIM_VAL["space_delim"], ',', '\n', ']', ')', ':'], end=True, token_type="CHURROLIT"),
+            294: State([*DELIM_VAL["space_delim"], ',', '\n', ']', ')', ':'], end=True, token_type="churrolit"),
 
             # Escape sequence
             295: State('\\', 296), 296: State(ATOMIC_VAL["escapeseq_let"], [293]),
@@ -218,7 +218,7 @@ TRANSITIONS_DFA = {
             299: State('"', 300),
 
                 # Delimiter
-                300: State(DELIM_VAL["string_delim"], end=True, token_type="BLENDLIT"),
+                300: State(DELIM_VAL["string_delim"], end=True, token_type="blendlit"),
 
             # Escape sequence
             301: State("\\", 298),
