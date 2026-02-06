@@ -117,7 +117,8 @@ call: mug_call | mug_glob_call | arr_call | recipe_call | empty_call | crema_cal
 
 mug_call: ID DOT_ACC ID
 mug_glob_call: ORDER DOT_ACC ID DOT_ACC ID
-arr_call: ID OP_BRACKETS array_index CL_BRACKETS
+arr_call: ID OP_BRACKETS array_index CL_BRACKETS arr_call_tail
+arr_call_tail: OP_BRACKETS array_index CL_BRACKETS | _empty
 array_index: BEANLIT
 recipe_call: ID OP_PAREN recipe_args recipe_args_tail CL_PAREN
 recipe_args: ID | literals | mug_call | mug_glob_call | arr_call | glob_var_acc
