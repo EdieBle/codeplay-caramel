@@ -111,7 +111,7 @@ var_dec_tail: COMMA var_dec_init var_dec_tail | _empty
 
 var_assign: ID EQUALS value | ID EQUALS OP_PAREN value CL_PAREN | arr_call EQUALS arr_elem
 
-value: ID | MINUS ID | literals | call | expressions
+value: ID | (OP_PAREN)* MINUS ID (CL_PAREN)* | literals | call | expressions
 literals: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | BLENDLIT | HOT | COLD | CHURROLIT
 call: mug_call | mug_glob_call | arr_call | recipe_call | empty_call | crema_call | glob_var_acc
 
@@ -131,9 +131,10 @@ crema_call: ID DOT_ACC crema_member
 crema_member: ID | arr_call | recipe_call | empty_call
 
 expressions: arith_expressions | logic_expressions | rel_expressions | unary_expressions
-arith_expressions: arith_expressions arithm_op term | term
-term: OP_PAREN arith_expressions CL_PAREN | num_operand
-num_operand: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | CHURROLIT | HOT | COLD | ID | call | unary_expressions
+
+arith_expressions: num_operand arithm_op num_operand arith_expr_tail | OP_PAREN arith_expressions CL_PAREN | arith_expressions arith_expr_tail
+arith_expr_tail: arithm_op num_operand arith_expr_tail | arithm_op arith_expressions | _empty
+num_operand: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | HOT | COLD | ID | MINUS ID | call | unary_expressions | OP_PAREN num_operand CL_PAREN
 arithm_op: PLUS | MINUS | MULTIPLY | DIVIDE | MODULO
 
 unary_expressions: unary_op ID | ID unary_op 
@@ -141,13 +142,13 @@ unary_op: INCREMENT | DECREMENT
 
 logic_expressions: logic_factor logic_expr_tail
 logic_expr_tail: logic_op logic_factor logic_expr_tail | _empty
-logic_factor: NOT logic_factor | logic_atom
+logic_factor: NOT logic_factor | NOT num_operand | logic_atom
 logic_atom: rel_expressions | OP_PAREN logic_expressions CL_PAREN
 logic_op: AND | OR
 
-rel_expressions: rel_factor rel_expr_tail
+rel_expressions: rel_factor rel_op rel_factor rel_expr_tail
 rel_expr_tail: rel_op rel_factor rel_expr_tail | _empty
-rel_factor: arith_expressions | num_operand | OP_PAREN logic_expressions CL_PAREN
+rel_factor: arith_expressions | num_operand | OP_PAREN rel_expressions CL_PAREN | OP_PAREN logic_expressions CL_PAREN
 rel_op: GREATER_THAN | LESSER_THAN | EQ_EQUALS | NOT_EQUAL | GREATER_EQUAL | LESSER_EQUAL
 
 mug_dec: MUG ID OP_BRACKETS (var_dec)* CL_BRACKETS
