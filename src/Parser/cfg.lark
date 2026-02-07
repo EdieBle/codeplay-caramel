@@ -230,6 +230,6 @@ update_unit: ID assign_op update_val | unary_expressions
 assign_op: EQUALS | EQUAL_PLUS | EQUAL_MINUS | EQUAL_ASTERISK | EQUAL_DIVIDE 
 update_val: arith_expressions | BEANLIT | MINUS BEANLIT | CHURROLIT | HOT | COLD 
 
-whilehot_loop: WHILEHOT OP_PAREN logic_expressions CL_PAREN OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES
-tastetill_loop: TASTE OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES TILL COLON OP_PAREN logic_expressions CL_PAREN
+whilehot_loop: WHILEHOT OP_PAREN logic_expressions CL_PAREN OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES | WHILEHOT OP_PAREN rel_expressions CL_PAREN OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES
+tastetill_loop: TASTE OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES TILL COLON OP_PAREN logic_expressions CL_PAREN | TASTE OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES TILL COLON OP_PAREN rel_expressions CL_PAREN
 intrpt_stmt: SNAP | SKIP  | _empty
