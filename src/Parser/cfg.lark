@@ -184,7 +184,7 @@ refill_arg: OP_PAREN refill_content extra_refill_val CL_PAREN | ZERO
 refill_content: literals | expressions | mug_call | ID 
 extra_refill_val: COMMA refill_content extra_refill_val | _empty
 
-empty_def: EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS  statement  REFILL  CL_BRACKETS 
+empty_def: EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS  statement stmt_tail REFILL  CL_BRACKETS 
 
 crema_def: CREMA ID OP_BRACKETS  crema_body CL_BRACKETS
 crema_body: crema_body_cont  crema_body | _empty
