@@ -140,10 +140,10 @@ arithm_op: PLUS | MINUS | MULTIPLY | DIVIDE | MODULO
 unary_expressions: unary_op ID | ID unary_op 
 unary_op: INCREMENT | DECREMENT
 
-logic_expressions: logic_factor logic_expr_tail
+logic_expressions: logic_factor logic_op logic_factor logic_expr_tail
 logic_expr_tail: logic_op logic_factor logic_expr_tail | _empty
-logic_factor: NOT logic_factor | NOT num_operand | logic_atom | num_operand
-logic_atom: rel_expressions | OP_PAREN logic_expressions CL_PAREN
+logic_factor: NOT logic_atom | logic_atom 
+logic_atom: num_operand | rel_expressions | arith_expressions | OP_PAREN logic_expressions CL_PAREN | OP_PAREN rel_expressions CL_PAREN
 logic_op: AND | OR
 
 rel_expressions: rel_factor rel_op rel_factor rel_expr_tail
