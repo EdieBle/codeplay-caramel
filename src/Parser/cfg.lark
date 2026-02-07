@@ -162,7 +162,7 @@ glob_var_acc_val: glob_var_acc EQUALS value
 
 arr_dec: acc_mod data_type ID arr_size EQUALS OP_BRACKETS arr_cont CL_BRACKETS
 arr_size: OP_BRACKETS arr_size_val CL_BRACKETS arr_size_2d
-arr_size_val: BEANLIT | FLEX_ASTERISK
+arr_size_val: BEANLIT | MINUS BEANLIT | FLEX_ASTERISK
 arr_size_2d: OP_BRACKETS arr_size_val CL_BRACKETS | _empty
 arr_elem: literals | expressions | ID | _empty
 ext_arr_elem: COMMA arr_elem ext_arr_elem | _empty

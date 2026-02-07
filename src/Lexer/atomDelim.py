@@ -77,7 +77,7 @@ DELIM_VAL = {
     "id_delim": list(set(space_delim + assignment_op + arithmetic_op + relational_op + [';', ',', '{', '[', ']', '(', ')', '\n', '=', '.', '&','|'])), # had ", ' initially
     "logical_delim": list(set(space_delim + alpha_small + whole + ['-', '('])),
     "numeric_delim": list(set(space_delim + newline + [',', ')', ']', ':', ';','&','|'] + arithmetic_op + relational_op)), # added colon. ':'
-    "opbrackets_delim": list(set(space_delim + newline + whole + alpha_small + ['"', '\'', '*', '[', ']'])),
+    "opbrackets_delim": list(set(space_delim + newline + whole + alpha_small + ['"', '\'', '*', '[', ']', '-'])),
     "opparen_delim": list(set(space_delim + whole + alpha_small + ['"', '\'', ')', '+', '-', '(', '!'])), # added opening parenthesis. '(' and exclamation for not '!'
     "refill_delim": list(set(space_delim + ['(', '0'])),
     "relational_delim": list(set(space_delim + whole + alpha_small + ['-', '\'', '"', '('])), 
