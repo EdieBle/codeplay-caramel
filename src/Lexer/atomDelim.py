@@ -84,6 +84,7 @@ DELIM_VAL = {
     "semicolon_delim": list(set(space_delim + alpha_small + whole + ['('])),
     "spacebraces_delim": list(set(space_delim + ['{'])),
     "spaceparen_delim": list(set(space_delim + ['('])),
+    "spacenew_delim": list(set(space_delim + newline)),
     "string_delim": list(set(space_delim + [')', ']'] + newline + relational_op + ['+', ','])),
     "temp_delim": list(set(space_delim + newline + relational_op + [',', '&', '|', ':',')'])),
     "unary_delim": list(set(space_delim + newline + alpha_small + [')'])) # + ['1','2','3','4','5','6','7','8','9'] (removed these for now cuz a unary being delimited by a num makes no sense 4:17am)

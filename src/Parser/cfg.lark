@@ -94,7 +94,7 @@ global_def: global_dec global_def | _empty
 
 global_dec: dec | crema_def | recipe_def | empty_def
 
-dec: var_dec | var_assign | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | crema_assign | object_def | crema_call | recipe_call | empty_call | unary_expressions
+dec: var_dec | var_assign | mug_dec | mug_call_assign | mug_glob_assign | glob_var_acc | glob_var_acc_val | arr_dec | crema_assign | object_def | crema_call | function_call | unary_expressions
 
 acc_mod: CAFE | BACKROOM | _empty
 data_type: BEAN | DRIP | BLEND | CHURRO | TEMP 
@@ -113,22 +113,21 @@ var_assign: ID EQUALS value | ID EQUALS OP_PAREN value CL_PAREN | arr_call EQUAL
 
 value: ID | (OP_PAREN)* MINUS ID (CL_PAREN)* | literals | call | expressions
 literals: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | BLENDLIT | HOT | COLD | CHURROLIT
-call: mug_call | mug_glob_call | arr_call | recipe_call | empty_call | crema_call | glob_var_acc
+call: mug_call | mug_glob_call | arr_call | function_call | crema_call | glob_var_acc
 
 mug_call: ID DOT_ACC ID
 mug_glob_call: ORDER DOT_ACC ID DOT_ACC ID
+
 arr_call: ID OP_BRACKETS array_index CL_BRACKETS arr_call_tail
 arr_call_tail: OP_BRACKETS array_index CL_BRACKETS | _empty
 array_index: BEANLIT
-recipe_call: ID OP_PAREN recipe_args recipe_args_tail CL_PAREN
-recipe_args: ID | literals | mug_call | mug_glob_call | arr_call | glob_var_acc
 
-recipe_args_tail: COMMA recipe_args recipe_args_tail | _empty
-
-empty_call: ID OP_PAREN CL_PAREN
+function_call: ID OP_PAREN function_args function_args_tail CL_PAREN
+function_args: ID | literals | mug_call | mug_glob_call | arr_call | glob_var_acc | _empty
+function_args_tail: COMMA function_args function_args_tail | _empty
 
 crema_call: ID DOT_ACC crema_member
-crema_member: ID | arr_call | recipe_call | empty_call
+crema_member: ID | arr_call | function_call
 
 expressions: arith_expressions | logic_expressions | rel_expressions | unary_expressions
 
