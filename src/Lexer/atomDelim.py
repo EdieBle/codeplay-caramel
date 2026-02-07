@@ -65,7 +65,7 @@ unary_op = ATOMIC_VAL["unary_op"]
 DELIM_VAL = {
     "space_delim": [' ', '\t'],
     "not_delim": list(set(alpha_small + whole + ['('])), 
-    "arithmetic_delim": list(set(space_delim + alpha_small + whole + ['('])), # '-' shouldnt have minus
+    "arithmetic_delim": list(set(space_delim + alpha_small + whole + ['(','\''])), # '-' shouldnt have minus
     "plus_delim": list(set(space_delim + alpha_small + whole + ['(', '"', "'", '-'])), 
     "assignment_delim": list(set(space_delim + alpha_small + whole + ["'", '"', '-', '!', '(', '['])),
     "batter@_delim": list(set(alpha_small + space_delim)),
