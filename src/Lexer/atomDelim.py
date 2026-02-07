@@ -67,13 +67,13 @@ DELIM_VAL = {
     "not_delim": list(set(alpha_small + whole + ['('])), 
     "arithmetic_delim": list(set(space_delim + alpha_small + whole + ['('])), # '-' shouldnt have minus
     "plus_delim": list(set(space_delim + alpha_small + whole + ['(', '"', "'", '-'])), 
-    "assignment_delim": list(set(space_delim + alpha_small + whole + ["'", '"', '!', '(', '['])),
+    "assignment_delim": list(set(space_delim + alpha_small + whole + ["'", '"', '-', '!', '(', '['])),
     "batter@_delim": list(set(alpha_small + space_delim)),
     "braces_delim": list(set(space_delim + newline)),
     "clbrackets_delim": list(set(space_delim + newline + ['[', ']', ',', ')'])),
     "clparen_delim": list(set(space_delim + newline + ['[','(', ')', '{', '&', '|'] + arithmetic_op + relational_op + logical_op)), # added opening square bracket. '['
     "colon_delim": list(set(space_delim + newline + ['('])),
-    "comma_delim": list(set(space_delim + alpha_small + whole + ['"', "'", '(','['])),
+    "comma_delim": list(set(space_delim + alpha_small + whole + ['"', "'", '(','[', '-'])),
     "id_delim": list(set(space_delim + assignment_op + arithmetic_op + relational_op + [';', ',', '{', '[', ']', '(', ')', '\n', '=', '.', '&','|'])), # had ", ' initially
     "logical_delim": list(set(space_delim + alpha_small + whole + ['-', '('])),
     "numeric_delim": list(set(space_delim + newline + [',', ')', ']', ':', ';','&','|'] + arithmetic_op + relational_op)), # added colon. ':'

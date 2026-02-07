@@ -134,7 +134,7 @@ expressions: arith_expressions | logic_expressions | rel_expressions | unary_exp
 
 arith_expressions: num_operand arithm_op num_operand arith_expr_tail | OP_PAREN arith_expressions CL_PAREN | arith_expressions arith_expr_tail
 arith_expr_tail: arithm_op num_operand arith_expr_tail | arithm_op arith_expressions | _empty
-num_operand: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | HOT | COLD | ID | MINUS ID | call | unary_expressions | OP_PAREN num_operand CL_PAREN
+num_operand: BEANLIT | DRIPLIT | MINUS BEANLIT | MINUS DRIPLIT | HOT | COLD | CHURROLIT | ID | MINUS ID | call | unary_expressions | OP_PAREN num_operand CL_PAREN
 arithm_op: PLUS | MINUS | MULTIPLY | DIVIDE | MODULO
 
 unary_expressions: unary_op ID | ID unary_op 
@@ -217,7 +217,8 @@ if_cond: IFBREW OP_PAREN expressions CL_PAREN OP_BRACES statement stmt_tail CL_B
 if_cond_tail:  ELIFROTH OP_PAREN expressions CL_PAREN OP_BRACES statement stmt_tail CL_BRACES if_cond_tail | ELSPRESS OP_BRACES statement stmt_tail CL_BRACES | _empty
 
 flav_switch: FLAVOUR OP_PAREN expressions CL_PAREN OP_BRACES syrup_switch CL_BRACES 
-syrup_switch: SYRUP case_lit COLON  statement stmt_tail SNAP  defoam_stmt syrup_switch | _empty
+syrup_switch: SYRUP case_lit COLON  statement stmt_tail SNAP defoam_stmt syrup_switch_tail
+syrup_switch_tail: syrup_switch | _empty
 case_lit: BEANLIT | CHURROLIT | HOT | COLD 
 defoam_stmt: DEFOAM COLON statement stmt_tail  SNAP  | _empty
 
@@ -225,8 +226,9 @@ pour_loop: POUR OP_PAREN pour_init SEMICOLON logic_expressions SEMICOLON update 
 pour_init: data_type ID EQUALS value var_dec_const_tail
 update: update_unit update_tail
 update_tail: COMMA update_unit update_tail | _empty
-update_unit: ID assign_op arith_expressions | unary_expressions
+update_unit: ID assign_op update_val | unary_expressions
 assign_op: EQUALS | EQUAL_PLUS | EQUAL_MINUS | EQUAL_ASTERISK | EQUAL_DIVIDE 
+update_val: arith_expressions | BEANLIT | MINUS BEANLIT | CHURROLIT | HOT | COLD 
 
 whilehot_loop: WHILEHOT OP_PAREN logic_expressions CL_PAREN OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES
 tastetill_loop: TASTE OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES TILL COLON OP_PAREN logic_expressions CL_PAREN
