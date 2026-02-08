@@ -159,41 +159,6 @@ refill? 0
     }
   };
 
-  const handleParse = async () => {
-    // Check if there are any lexer errors
-    const hasLexerErrors = errors.some(
-      (e) => e.type === "ERROR" || e.type === "LEXICAL_ERROR",
-    );
-
-    if (hasLexerErrors) {
-      // Don't proceed with parsing if there are lexer errors
-      return;
-    }
-
-    setBusy(true);
-    try {
-      const res = await axios.post("http://127.0.0.1:5000/parse", { code });
-      const parserErrors = res.data.errors || [];
-
-      setErrors(parserErrors); // 👈 feeds SyntaxErrorPanel
-      setHasRun(true);
-      setHasParsed(true);
-    } catch (err) {
-      console.error("Parser error:", err);
-      setErrors([
-        {
-          type: "SYNTAX_ERROR",
-          message: "Parser service unavailable",
-          expected: [],
-          line: 0,
-          column: 0,
-        },
-      ]);
-    } finally {
-      setBusy(false);
-    }
-  };
-
   // Tokenize and Parse together
   const handleTokenizeAndParse = async () => {
     setBusy(true);
@@ -289,7 +254,11 @@ refill? 0
       <div className="main-content">
         {/* === TOP ROW === */}
         {/* This row contains the Editor and Tokenizer side-by-side */}
-        <div className="layout-row-top">
+        <div
+          className={`layout-row-top ${
+            showTokenTable ? "" : "layout-row-top--expanded"
+          }`}
+        >
           {/* Left Column: CODE EDITOR */}
           {/* We apply both .editor and our new .layout-flex class */}
           <div className="editor layout-flex">
@@ -355,19 +324,6 @@ refill? 0
 
               <button
                 className="tokenize-btn"
-                onClick={handleParse}
-                disabled={
-                  busy ||
-                  errors.some(
-                    (e) => e.type === "ERROR" || e.type === "LEXICAL_ERROR",
-                  )
-                }
-              >
-                Parse
-              </button>
-
-              <button
-                className="tokenize-btn"
                 onClick={handleClearEditor}
                 disabled={busy}
               >
@@ -375,11 +331,11 @@ refill? 0
               </button>
 
               <button
-                className="tokenize-btn"
+                className="tokenize-btn tokenize-btn--toggle"
                 onClick={() => setShowTokenTable(!showTokenTable)}
                 disabled={busy}
               >
-                {showTokenTable ? "Hide Tokens" : "Show Tokens"}
+                {showTokenTable ? "Hide Lexeme Output" : "Show Lexeme Output"}
               </button>
             </div>
           </div>
@@ -387,7 +343,7 @@ refill? 0
           {/* Right Column: TOKENS PANEL */}
           {showTokenTable && (
             <div className="tokens layout-panel-right">
-              <h3 className="play-bold">Tokens</h3>
+              <h3 className="play-bold">Lexeme Output</h3>
 
               {/* NEW: Add a scrollable container FOR THE TABLE ONLY */}
               <div className="token-table-container">
@@ -422,8 +378,6 @@ function TokenTable({ tokens }) {
         <tr>
           <th>Lexeme</th>
           <th>Tokens</th>
-          <th>Line</th>
-          <th>Column</th>
         </tr>
       </thead>
       <tbody>
@@ -431,8 +385,6 @@ function TokenTable({ tokens }) {
           <tr key={i}>
             <td>{t.lexeme}</td>
             <td>{t.type}</td>
-            <td>{t.line}</td>
-            <td>{t.column}</td>
           </tr>
         ))}
       </tbody>
