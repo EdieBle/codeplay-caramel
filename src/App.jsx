@@ -114,6 +114,7 @@ export default function App() {
   const lineNumbersRef = useRef(null);
   const fileInputRef = useRef(null);
   const [currentLine, setCurrentLine] = useState(1);
+  const [currentColumn, setCurrentColumn] = useState(1);
 
   // === Handlers === 
 
@@ -222,14 +223,21 @@ export default function App() {
     setCurrentLine(1);
   };
 
-  const updateCurrentLine = () => {
+  const updateCursorPosition = () => {
     const ta = textareaRef.current;
     if (!ta) return;
-    const pos = ta.selectionStart;
+
+    const pos = ta.selectionStart ?? 0;
     const before = code.slice(0, pos);
-    const lineIndex = before.split("\n").length - 1;
-    setCurrentLine(lineIndex + 1);
+
+    const lines = before.split("\n");
+
+    setCurrentLine(lines.length);
+
+    const lastLine = lines[lines.length - 1] ?? "";
+    setCurrentColumn(lastLine.length + 1);
   };
+
 
   const handleScroll = () => {
     const ta = textareaRef.current;
@@ -245,7 +253,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    updateCurrentLine();
+    updateCursorPosition();
   }, [code]);
 
   return (
@@ -291,8 +299,8 @@ export default function App() {
                   className="code-layer real-textarea"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
-                  onClick={updateCurrentLine}
-                  onKeyUp={updateCurrentLine}
+                  onClick={updateCursorPosition}
+                  onKeyUp={updateCursorPosition}
                   onScroll={handleScroll}
                   onKeyDown={(e) => {
                     if (e.key === "Tab") {
@@ -305,12 +313,15 @@ export default function App() {
                       setCode(newValue);
                       requestAnimationFrame(() => {
                         ta.selectionStart = ta.selectionEnd = start + 1;
-                        updateCurrentLine();
+                        updateCursorPosition();
                       });
                     }
                   }}
                   spellCheck={false}
                 />
+                  <div className="cursor-status">
+                    Ln {currentLine}, Col {currentColumn}
+                  </div>
               </div>
 
             </div>

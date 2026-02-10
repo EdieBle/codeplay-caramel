@@ -342,3 +342,23 @@ body {
 .textarea::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+
+.cursor-status {
+  position: absolute;
+  bottom: 6px;
+  right: 10px;
+
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: bold;
+  color: #000000;
+
+  background: rgba(255, 251, 251, 0.85);
+  padding: 2px 8px;
+  border-radius: 6px;
+
+  pointer-events: none; /* click-through */
+
+  box-shadow: 0 1px 4px rgba(85, 77, 64, 0.15);
+}
