@@ -406,8 +406,7 @@ unary_op: INCREMENT | DECREMENT
 # MUG (Struct) DECLARATIONS
 # --------------------------------------------------------------------------
 mug_dec: MUG ID OP_BRACKETS mug_var_dec (mug_var_dec_cont)* CL_BRACKETS     # added ()* in mug_var_dec_cont
-mug_var_dec: acc_mod_mug_var | dtype_mug_var
-acc_mod_mug_var: CAFE dtype_mug_var | BACKROOM dtype_mug_var
+mug_var_dec: dtype_mug_var
 dtype_mug_var: BREWED data_type var_dec_const_init var_dec_const_tail
     | data_type var_dec_init var_dec_tail
     | BREWED BLEND blend_const_init blend_const_init_tail
