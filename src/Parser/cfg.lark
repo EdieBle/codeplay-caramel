@@ -122,7 +122,7 @@ global_def: global_dec global_def | _empty
 #   by a data_type usage pattern (ID or brewed), NOT by 'cup'.
 #   Lark can handle this with priority, but for true LL(1) we restructure:
 
-global_dec: acc_mod_dec | id_dec_stmt | order_dec_stmt | pre_unary_dec | mug_dec | object_def | crema_def | recipe_def | empty_def
+global_dec: acc_mod_dec | id_dec_stmt | order_dec_stmt | mug_dec | object_def | crema_def | recipe_def | empty_def
 
 # --------------------------------------------------------------------------
 # DECLARATIONS (dec) - LEFT FACTORED
