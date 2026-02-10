@@ -159,13 +159,12 @@ def tokenize(code):
             branches = TRANSITIONS_DFA[curr_state].branches
             if isinstance(branches, int):
                 branches = [branches]
-            
 
             # for proper handling of minus, uses a slight lookahead and a lookback
             next_ch_la_1 = code[pos + 1] if pos + 1 < len(code) else None
             next_ch_la_2 = code[pos + 2] if pos + 2 < len(code) else None
 
-            can_go_to_194 = 194 in branches
+            can_go_to_194 = 194 in branches and ch == '-'
             IGNORED = {"WHITESPACE", "NEWLINE"}
             def last_significant_token(tokens):
                 for tok in reversed(tokens):
@@ -244,9 +243,10 @@ def tokenize(code):
             print(f"[INNER] Possible branches from state {curr_state}: {branches}") # debug
 
             handled = None
+
             for nxt in branches:
                 node = TRANSITIONS_DFA[nxt]
-                if curr_state == 0 and nxt == 249 and ch == "\n": # check might be unnecessary for ch but might as well just to make sure amirite
+                if (curr_state == 0 and nxt == 249 and ch == "\n"): # check might be unnecessary for ch but might as well just to make sure amirite
                     print("\033[92m[NEWLINE]\033[0m Consuming newline")
                     push(node.token_type, "\n", column)
 
@@ -257,6 +257,11 @@ def tokenize(code):
                     next_state = None
                     # IMPORTANT: break out of inner loop to restart outer loop
                     break
+                
+
+                if ((curr_state == 336 and nxt == 337 and ch == "\n") or (curr_state == 337 and nxt == 337 and ch == "\n") or (curr_state == 338 and nxt == 337 and ch == "\n")):
+                    line += 1
+                    column = 1
 
                 elif curr_state == 0 and nxt == 237 and ch == "]": 
                     push(node.token_type, "]", column)
@@ -483,7 +488,7 @@ def tokenize(code):
             
             if not code[fallback_pos].isalnum() and not code[fallback_pos:fallback_pos+2] == "~." and code[fallback_pos] not in {"'", '"'}:
                 print("\033[96m[IS A SYMBOL CHARACTER]\033[0m")
-                push("ERROR", code[fallback_pos], column, "Invalid or unexpected symbol")
+                push("ERROR", code[fallback_pos], column, "Invalid or unexpected symbol after character.")
                 # treat as single-character token or lexical error
                 pos = fallback_pos+1
                 
