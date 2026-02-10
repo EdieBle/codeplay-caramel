@@ -118,6 +118,7 @@ def tokenize(code):
         tokens.append(token)
 
     while pos < len(code):
+        print(tokens)
         ch = code[pos]
 
         print(f"\n=== OUTER LOOP: scanning new token at pos={pos}, col={column}, char='{ch}' ===") #debug
@@ -158,10 +159,44 @@ def tokenize(code):
             branches = TRANSITIONS_DFA[curr_state].branches
             if isinstance(branches, int):
                 branches = [branches]
+            
 
+            # for proper handling of minus, uses a slight lookahead and a lookback
+            next_ch_la_1 = code[pos + 1] if pos + 1 < len(code) else None
+            next_ch_la_2 = code[pos + 2] if pos + 2 < len(code) else None
+
+            can_go_to_194 = 194 in branches
+            IGNORED = {"WHITESPACE", "NEWLINE"}
+            def last_significant_token(tokens):
+                for tok in reversed(tokens):
+                    if tok["type"] not in IGNORED:
+                        return tok
+                return None
+            
+            if can_go_to_194 and next_ch_la_1 is not None and next_ch_la_1.isdigit():
+                prev = last_significant_token(tokens)
+                print(f"\n\n\n can go to 194 and next character digit? {can_go_to_194}\n\n\n")
+
+                if (prev and prev["type"] == "beanlit" and next_ch_la_1 is not None and next_ch_la_1.isdigit()):
+                    # Force binary minus
+                    push("-", "-", start_col)
+                    pos += 1
+                    column += 1
+                    continue
+
+            if can_go_to_194 and next_ch_la_2 is not None and next_ch_la_2.isdigit():
+                prev = last_significant_token(tokens)
+                print(f"\n\n\n can go to 194 and next character is minus but next next character is digit?{can_go_to_194}\n\n\n")
+
+                if (prev and prev["type"] == "beanlit" and next_ch_la_1 is not None and next_ch_la_2.isdigit()):
+                    # Force binary minus
+                    push("-", "-", start_col)
+                    pos += 1
+                    column += 1
+                    continue
 
             # Check if '0' can move us to state 253, this is for the bean and drip literal leading zero stuff
-            can_go_to_251 = any(
+            can_go_to_250 = any(
                 nxt for nxt in branches
                 if 0 in TRANSITIONS_DFA and '0' in TRANSITIONS_DFA[nxt].chars and nxt == 250
             )
@@ -182,7 +217,7 @@ def tokenize(code):
 
                     look += 1
 
-            if ch == '0' and can_go_to_251:
+            if ch == '0' and can_go_to_250:
                 lookahead = pos + 1
                 # first_non_zero_found = False
                 while lookahead < len(code):

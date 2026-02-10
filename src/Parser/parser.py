@@ -104,7 +104,7 @@ class Parser:
             self.errors.append({
                 "type": "SYNTAX_ERROR",
                 "message": f"Unexpected token [{message_display}, {e.token.value}]",
-                "expected": expected_readable,
+                "expected": sorted(expected_readable),
                 "line": getattr(e, "line", None),
                 "column": getattr(e, "column", None)
             })
