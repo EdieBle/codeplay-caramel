@@ -182,7 +182,7 @@ blend_assign: EQUALS blend_val | _empty
 blend_tail: COMMA ID blend_assign blend_tail | _empty
 blend_val: blend_term blend_val_tail
 blend_val_tail: PLUS blend_term blend_val_tail | _empty
-blend_term: BLENDLIT | ID | OP_PAREN blend_val CL_PAREN
+blend_term: BLENDLIT | CHURROLIT | ID | OP_PAREN blend_val CL_PAREN
 
 blend_arr_elem: blend_val |  _empty
 blend_ext_arr_elem: COMMA blend_arr_elem blend_ext_arr_elem | _empty
@@ -212,6 +212,7 @@ id_dec_tail: EQUALS assign_val                                                  
     | OP_PAREN function_args function_args_tail CL_PAREN                        # function_call: ID(args)
     | OP_BRACKETS array_index CL_BRACKETS id_bracket_tail                       # arr_call then assign
     | unary_op                                                                  # postfix unary: ID++, ID--
+
 
 assign_val: value | blend_val
 
@@ -254,6 +255,7 @@ order_dec_stmt: ORDER DOT_ACC ID order_dec_tail
 
 order_dec_tail: EQUALS value | EQUALS blend_val                                 # glob_var_acc_val: order.ID = value
     | DOT_ACC ID order_mug_tail                                                 # mug_glob_call/assign: order.ID.ID ...
+    | OP_BRACKETS array_index CL_BRACKETS arr_call_tail
     | _empty                                                                    # standalone glob_var_acc: order.ID
 
 order_mug_tail: EQUALS value | EQUALS blend_val                                 # mug_glob_assign: order.ID.ID = value
@@ -366,7 +368,7 @@ primary_dot_tail: DOT_ACC crema_member_inner
 # After order.ID in expression:
 #   '.'  → mug_glob_call: order.ID.ID
 #   else → glob_var_acc: order.ID
-primary_order_tail: DOT_ACC ID | _empty
+primary_order_tail: DOT_ACC ID | OP_BRACKETS array_index CL_BRACKETS arr_call_tail | _empty
 
 # --------------------------------------------------------------------------
 # ARRAY RULES (unchanged, already conflict-free)
@@ -408,7 +410,7 @@ unary_op: INCREMENT | DECREMENT
 mug_dec: MUG ID OP_BRACKETS mug_var_dec (mug_var_dec_cont)* CL_BRACKETS     # added ()* in mug_var_dec_cont
 mug_var_dec: dtype_mug_var
 dtype_mug_var: BREWED data_type var_dec_const_init var_dec_const_tail
-    | data_type var_dec_init var_dec_tail
+    | data_type ID dtype_id_tail
     | BREWED BLEND blend_const_init blend_const_init_tail
     | BLEND ID blend_id_tail
 mug_var_dec_cont: mug_var_dec | _empty
