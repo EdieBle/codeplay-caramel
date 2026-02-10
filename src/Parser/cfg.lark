@@ -382,7 +382,7 @@ arr_size_2d: OP_BRACKETS arr_size_val CL_BRACKETS | _empty
 
 # FIX: arr_elem had literals vs expressions vs ID overlap
 # SOLUTION: arr_elem is just an optional expression (value)
-arr_elem: expression |  _empty
+arr_elem: ID | BEANLIT | DRIPLIT | CHURROLIT | HOT | COLD | _empty
 
 ext_arr_elem: COMMA arr_elem ext_arr_elem | _empty
 arr_cont: OP_BRACKETS arr_elem ext_arr_elem CL_BRACKETS arr_cont_tail | arr_elem ext_arr_elem | _empty
