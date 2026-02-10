@@ -152,7 +152,7 @@ TRANSITIONS_DFA = {
     # 251: State('\n',  end = True, token_type="NEWLINE"), #ISSUES: CAUSING RECURSION
     
     # OLD Newline
-    249: State('\n', end = True, token_type="NEWLINE"),
+    249: State('\n', end = True, token_type="newline"),
     
     
     # Literals
@@ -228,35 +228,35 @@ TRANSITIONS_DFA = {
         # IDENTIFIERS (gotta limit to 15 characters lang with a starting small letter, and everything after can only be underscore or number)
         # Start with lowercase letter, can include digits or underscores
         302: State(ATOMIC_VAL["alpha_small"], [303, 304]), 
-                303: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                303: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             304: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [305, 306]), 
-                305: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                305: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             306: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [307, 308]), 
-                307: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                307: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             308: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [309, 310]), 
-                309: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                309: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             310: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [311, 312]), 
-                311: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                311: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             312: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [313, 314]), # was 329 earlier, broke the id
-                313: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                313: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             314: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [315, 316]), 
-                315: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                315: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             316: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [317, 318]), 
-                317: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                317: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             318: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [319, 320]), 
-                319: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                319: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             320: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [321, 322]), 
-                321: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                321: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             322: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [323, 324]), 
-                323: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                323: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             324: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [325, 326]), 
-                325: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                325: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             326: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [327, 328]), 
-                327: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                327: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             328: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], [329, 330]), 
-                329: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                329: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
             330: State([*ATOMIC_VAL["alpha_small"], *ATOMIC_VAL["whole"], "_"], 331), 
-                331: State(DELIM_VAL['id_delim'], end=True, token_type="ID"),
+                331: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
         
 
 
@@ -266,7 +266,7 @@ TRANSITIONS_DFA = {
         332: State('~', [333, 336]),
             333: State('~', 334),
             334: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL["escapeseq_let"]], [335, 334]),
-            335: State('\n', end=True, token_type="SL_COMMENT"),
+            335: State('\n', end=True, token_type="sl_comment"),
 
         # MULTI LINE COMMENT
         # Pattern: ~. comment content .~
@@ -275,6 +275,6 @@ TRANSITIONS_DFA = {
             337: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL['sp_symbols'], *ATOMIC_VAL['escapeseq_let'], '\n'], [338, 337]),
                 338: State('.', [339, 337]),
                 339: State('~', 340),
-                340: State([*DELIM_VAL['space_delim'], '\n'], end=True, token_type="ML_COMMENT")
+                340: State([*DELIM_VAL['space_delim'], '\n'], end=True, token_type="ml_comment")
 
 }

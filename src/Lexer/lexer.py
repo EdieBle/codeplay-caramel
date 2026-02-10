@@ -82,6 +82,7 @@ KEYWORD_MAP = {
     "TILL": "TILL",
     "TEMP": "TEMP",
     "WHILEHOT": "WHILEHOT",
+    "ID": "ID"
 }
 
 def tokenize(code):
@@ -128,14 +129,14 @@ def tokenize(code):
         # ----------------------------------------------------------
         if ch == (" "):
             print(f"\n=== [SPACE] space detected at pos={pos}, col={column}, char='{ch}', tokenizing... ===") #debug
-            push("WHITESPACE", '⎵', column)
+            push("whitespace", '⎵', column)
             pos += 1
             column += 1
             continue
 
         if ch == ("\t"):
             print(f"\n=== [TAB] tab detected at pos={pos}, col={column}, char='{ch}', tokenizing... ===") #debug
-            push("TAB", '⎵⎵⎵⎵', column)
+            push("tab", '⎵⎵⎵⎵', column)
             pos += 1
             column += 4
             continue
@@ -165,7 +166,7 @@ def tokenize(code):
             next_ch_la_2 = code[pos + 2] if pos + 2 < len(code) else None
 
             can_go_to_194 = 194 in branches and ch == '-'
-            IGNORED = {"WHITESPACE", "NEWLINE"}
+            IGNORED = {"whitespace", "newline"}
             def last_significant_token(tokens):
                 for tok in reversed(tokens):
                     if tok["type"] not in IGNORED:
@@ -701,7 +702,7 @@ def tokens_to_lark(tokens):
     last_token_was_newline = False
 
     for t in tokens:
-        if t["type"] == "WHITESPACE" or t["type"] == "TAB" or t["type"] == "SL_COMMENT" or t["type"] == "ML_COMMENT" or t["type"] == "NEWLINE":
+        if t["type"] == "whitespace" or t["type"] == "tab" or t["type"] == "sl_comment" or t["type"] == "ml_comment" or t["type"] == "newline":
             continue
         
         typeOfTok = t["type"].upper()
