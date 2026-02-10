@@ -339,7 +339,7 @@ unary_expr: INCREMENT primary | DECREMENT primary | primary
 # --- Primary level (atoms) ---
 # FIX: All ID-starting things (bare ID, mug_call, arr_call, function_call,
 #   crema_call, postfix unary) are left-factored into ID + primary_id_tail
-primary: ID primary_id_tail | MINUS ID primary_id_tail
+primary: ID primary_id_tail 
     | ORDER DOT_ACC ID primary_order_tail
     | BEANLIT | DRIPLIT | CHURROLIT | HOT | COLD
     | OP_PAREN expression CL_PAREN
@@ -464,8 +464,8 @@ extra_refill_val: COMMA refill_content extra_refill_val | _empty
 # --------------------------------------------------------------------------
 # EMPTY (Void Function) DEFINITION
 # --------------------------------------------------------------------------
-empty_def: EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS statement stmt_tail REFILL CL_BRACKETS
-
+empty_def: EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS empty_body REFILL CL_BRACKETS
+empty_body: statement empty_body | _empty
 # --------------------------------------------------------------------------
 # CREMA (Class) DEFINITION
 # --------------------------------------------------------------------------
@@ -566,7 +566,7 @@ flav_switch: FLAVOUR OP_PAREN flav_lit CL_PAREN OP_BRACES syrup_switch CL_BRACES
 flav_lit: BEANLIT | ID | CHURROLIT | HOT | COLD
 syrup_switch: SYRUP case_lit COLON statement stmt_tail SNAP defoam_stmt syrup_switch_tail
 syrup_switch_tail: syrup_switch | _empty
-case_lit: BEANLIT | MINUS BEANLIT | CHURROLIT | HOT | COLD
+case_lit: BEANLIT | CHURROLIT | HOT | COLD
 defoam_stmt: DEFOAM COLON statement stmt_tail SNAP | _empty
 
 # --------------------------------------------------------------------------
