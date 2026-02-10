@@ -1,5 +1,4 @@
 #root {
-  max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
@@ -39,4 +38,189 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* =========================================
+   SYNTAX HIGHLIGHTING & STACKING LOGIC
+   ========================================= */
+
+.code-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: white;
+  border-radius: 8px;
+}
+
+.code-layer {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  letter-spacing: normal;
+  tab-size: 4;
+  padding: 10px;
+  margin: 0;
+  border: none;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  white-space: pre;
+  overflow: auto;
+  text-align: left;
+}
+
+.highlight-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+  /* Default color for identifiers (unreserved words) */
+  color: #333333; 
+  background: transparent;
+}
+
+.real-textarea {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  color: transparent;
+  background: transparent;
+  caret-color: black;
+  resize: none;
+  outline: none;
+}
+
+/* =========================================
+   COLOR PALETTE (6 Distinct Groups)
+   ========================================= */
+
+/* 1. DATA TYPES (bean, drip, churro...) -> GREEN */
+.token-datatype {
+  color: #084690;
+  font-weight: bold;
+}
+
+/* 2. KEYWORDS (ifbrew, cup...) -> RED */
+.token-keyword {
+  color: #1c9cc8;
+  font-weight: bold;
+}
+
+/* 3. OPERATORS (++, --, ==, &&, +=...) -> BLUE */
+.token-operator {
+  color: #a10702;
+  font-weight: bold;
+}
+
+/* 4. SYMBOLS / PUNCTUATION (. , { } [ ] ( )) -> ORANGE */
+.token-punctuation {
+  color: #5f5d5d;
+  font-weight: bold;
+}
+
+/* 5. LITERALS ("text", 123) -> OLIVE */
+.token-literal {
+  color: #556B2F;
+}
+
+/* 6. IDENTIFIERS (val, char, int, x, y...) -> CHARCOAL/BLACK */
+/* Matches "unreserved keywords" and user variables */
+.token-identifier {
+  color: #f75830;
+  font-weight: normal;
+}
+
+/* =========================================
+   LAYOUT EXPANSION LOGIC
+   ========================================= */
+.layout-row-top--expanded .editor {
+  flex: 1;
+  width: 100%;
+  max-width: 100%;
+}
+
+.layout-row-top--expanded .editor-container {
+  width: 100%;
+  max-width: 100%;
+}
+
+.layout-row-top {
+  display: flex;
+  width: 100%;
+  gap: 1rem;
+}
+
+/* Override the global 'text-align: center' from #root */
+.layout-panel-bottom {
+  text-align: left;
+  width: 100%;
+}
+
+/* Optional: If you want the tabs themselves to remain centered 
+   but the content left-aligned, you might need to check your 
+   ErrorTabs component structure. But typically, this keeps it clean: */
+.layout-panel-bottom h3, 
+.layout-panel-bottom h2 {
+  text-align: center; /* Keep headers centered if desired */
+}
+
+/* =========================================
+   PERFECT ALIGNMENT FIX
+   ========================================= */
+
+/* 1. Flex container to hold Numbers and Code side-by-side */
+.editor-container {
+  display: flex;       /* Use Flexbox */
+  flex-direction: row; /* Align horizontally */
+  align-items: stretch; /* Make both same height */
+  
+  /* Optional: visual border/background for the whole box */
+  border: 1px solid #ddd;
+  background-color: white;
+  height: 500px; /* Or whatever height you want */
+  overflow: hidden;
+}
+
+/* 2. The Line Numbers Column */
+.line-numbers {
+  /* CRITICAL: Must match .code-layer typography EXACTLY */
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  
+  /* CRITICAL: Must match .code-layer padding-top (10px) */
+  /* Top padding moves the first number down to align with first line of code */
+  padding: 10px 0; 
+  
+  /* Visual styling for the gutter */
+  text-align: right;
+  background-color: #f7f7f7; /* Light grey background */
+  border-right: 1px solid #e0e0e0;
+  min-width: 45px; /* Fixed width */
+  user-select: none; /* Prevent selecting numbers */
+  color: #999;
+}
+
+/* 3. The Individual Number */
+.line-number {
+  /* Force each number to be exactly the height of one code line */
+  /* 14px font * 1.5 line-height = 21px height */
+  height: 21px; 
+  line-height: 21px;
+  padding-right: 10px; /* Space between number and border */
+}
+
+/* 4. The Code Wrapper (Right Side) */
+.code-wrapper {
+  flex-grow: 1; /* Fill the rest of the width */
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ensure code layer background is transparent so lines don't get cut off */
+.code-layer {
+  background: transparent;
 }

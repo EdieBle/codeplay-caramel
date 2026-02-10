@@ -254,7 +254,6 @@ body {
   height: 70vh;
 }
 
-
 .editor.layout-flex {
   flex: 1;
   min-height: 0;
@@ -343,4 +342,3 @@ body {
 .textarea::-webkit-scrollbar-corner {
   background: transparent;
 }
-

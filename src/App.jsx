@@ -1,15 +1,98 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "./styles.css";
+import "./App.css"; 
 import NavBar from "./components/NavBar";
 import "./components/NavBar.css";
 import ErrorTabs from "./components/ErrorTabs";
 
+// === Syntax Highlighting Helper ===
+const highlightCode = (code) => {
+  if (!code) return "";
+
+  // 1. Data Types (Use non-capturing group (?:) so we don't mess up indices)
+  const dataTypesRegex = /\b(?:bean|drip|churro|temp|mug|blend)\b/;
+
+  // 2. Literals (Strings & Numbers)
+  // Updated to support decimals like 4.5 using (?:\.\d+)?
+  const literalsRegex = /".*?"|'.*?'|\b\d+(?:\.\d+)?\b/;
+
+  // 3. Keywords
+  // Use non-capturing group (?:) for the OR logic
+  const keywordsRegex = /\b(?:ifbrew|elifroth|elspress|flavour|syrup|pour|whilehot|taste\s+till|snap|skip|brewed|decaf|defoam|cup|hot|cold|recipe|empty|crema|new|cafe|backroom|order|glaze)\b|refill\?|batter@/;
+
+  // 4. Operators
+  // Removed outer parentheses.
+  // Order matters: longer matches (+=) must come before single matches (+)
+  const operatorsRegex = /\+\+|--|\+=|-=|\*=|\/=|\=\=|!=|&&|\|\||>=|<=|[-+*/%=<>!]/;
+
+  // 5. Punctuation
+  // Removed outer parentheses.
+  const punctuationRegex = /[(){}[\].,]/;
+
+  // Combine into one master regex
+  // Each line here creates exactly ONE capturing group
+  const masterRegex = new RegExp(
+    `(${dataTypesRegex.source})|(${literalsRegex.source})|(${keywordsRegex.source})|(${operatorsRegex.source})|(${punctuationRegex.source})`,
+    "g"
+  );
+
+  let lastIndex = 0;
+  let match;
+  const elements = [];
+
+  while ((match = masterRegex.exec(code)) !== null) {
+    // === IDENTIFIERS LOGIC ===
+    // Any text *between* matches is treated as an identifier (variables like x, val)
+    if (match.index > lastIndex) {
+      elements.push(
+        <span key={lastIndex} className="token-identifier">
+          {code.slice(lastIndex, match.index)}
+        </span>
+      );
+    }
+    
+    let className = "token-identifier";
+
+    // Assign class based on which Group matched
+    if (match[1]) {
+      className = "token-datatype";    // SeaGreen
+    } else if (match[2]) {
+      className = "token-literal";     // Olive
+    } else if (match[3]) {
+      className = "token-keyword";     // Red
+    } else if (match[4]) {
+      className = "token-operator";    // Blue
+    } else if (match[5]) {
+      className = "token-punctuation"; // Orange
+    }
+
+    elements.push(
+      <span key={match.index} className={className}>
+        {match[0]}
+      </span>
+    );
+    lastIndex = masterRegex.lastIndex;
+  }
+
+  // Push remaining text
+  if (lastIndex < code.length) {
+    elements.push(
+      <span key={lastIndex} className="token-identifier">
+        {code.slice(lastIndex)}
+      </span>
+    );
+  }
+
+  return elements;
+};
+
 export default function App() {
   const [code, setCode] = useState(
     `bean cup() [
-bean x = 5, y = 7
-refill? 0
+  bean x = 5, y = 7
+  drip val = 4.5
+  refill? 0
 ]`,
   );
 
@@ -18,30 +101,27 @@ refill? 0
   const [hasRun, setHasRun] = useState(false);
   const [hasParsed, setHasParsed] = useState(false);
 
+  // Layout & UI States
   const [showTokens, setShowTokens] = useState(true);
   const [lineTokens, setLineTokens] = useState([]);
   const [showLineTokens, setShowLineTokens] = useState(false);
   const [busy, setBusy] = useState(false);
   const [showTokenTable, setShowTokenTable] = useState(true);
 
+  // Refs
   const textareaRef = useRef(null);
+  const highlightRef = useRef(null); 
   const lineNumbersRef = useRef(null);
   const fileInputRef = useRef(null);
   const [currentLine, setCurrentLine] = useState(1);
 
-  // Save file as .crml
+  // === Handlers === 
+
   const handleSaveFile = () => {
     const filename = window.prompt("Enter filename:", "code");
-
-    if (filename === null) {
-      // User cancelled the dialog
-      return;
-    }
-
-    // Remove .crml extension if user included it
+    if (filename === null) return;
     const cleanedFilename = filename.replace(/\.crml$/i, "");
     const finalFilename = `${cleanedFilename}.crml`;
-
     const element = document.createElement("a");
     const file = new Blob([code], { type: "text/plain" });
     element.href = URL.createObjectURL(file);
@@ -52,7 +132,6 @@ refill? 0
     URL.revokeObjectURL(element.href);
   };
 
-  // Open .crml file
   const handleOpenFile = () => {
     fileInputRef.current?.click();
   };
@@ -60,13 +139,10 @@ refill? 0
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Check if file has .crml extension
     if (!file.name.endsWith(".crml")) {
       alert("Please select a .crml file");
       return;
     }
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result;
@@ -82,31 +158,18 @@ refill? 0
         setCurrentLine(1);
       }
     };
-    reader.onerror = () => {
-      alert("Error reading file");
-    };
+    reader.onerror = () => alert("Error reading file");
     reader.readAsText(file);
-
-    // Reset the input so the same file can be opened again
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Tokenize all lines
   const handleTokenize = async () => {
     setBusy(true);
     try {
       const res = await axios.post("http://127.0.0.1:5000/tokenize", { code });
       const result = res.data;
-
-      const errors = result.filter(
-        (t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR",
-      );
-      const validTokens = result.filter(
-        (t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR",
-      );
-
+      const errors = result.filter((t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR");
+      const validTokens = result.filter((t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR");
       setTokens(validTokens);
       setErrors(errors);
       setHasRun(true);
@@ -120,75 +183,22 @@ refill? 0
     }
   };
 
-  // Tokenize only current line
-  const handleTokenizeLine = async () => {
-    setBusy(true);
-    try {
-      const ta = textareaRef.current;
-      if (!ta) return;
-      const pos = ta.selectionStart;
-      const before = code.slice(0, pos);
-      const lineIndex = before.split("\n").length - 1;
-      const lines = code.split("\n");
-      const lineText = lines[lineIndex] ?? "";
-
-      const res = await axios.post("http://127.0.0.1:5000/tokenize", {
-        code: lineText,
-      });
-      const result = res.data;
-
-      const normalized = result.map((t) => ({ ...t, line: lineIndex + 1 }));
-
-      // Error handler for the single line
-      const lineErrors = normalized.filter(
-        (t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR",
-      );
-      const validLineTokens = normalized.filter(
-        (t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR",
-      );
-
-      setLineTokens(validLineTokens);
-      setErrors(lineErrors);
-      setShowLineTokens(true);
-      setShowTokens(true);
-    } catch (err) {
-      console.error("Error contacting backend:", err);
-      setErrors([{ type: "CONNECTION_ERROR", lexeme: "Backend not running" }]);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // Tokenize and Parse together
   const handleTokenizeAndParse = async () => {
     setBusy(true);
     try {
-      // First, tokenize
-      const tokenRes = await axios.post("http://127.0.0.1:5000/tokenize", {
-        code,
-      });
+      const tokenRes = await axios.post("http://127.0.0.1:5000/tokenize", { code });
       const tokenResult = tokenRes.data;
-
-      const lexerErrors = tokenResult.filter(
-        (t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR",
-      );
-      const validTokens = tokenResult.filter(
-        (t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR",
-      );
-
+      const lexerErrors = tokenResult.filter((t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR");
+      const validTokens = tokenResult.filter((t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR");
       setTokens(validTokens);
       setErrors(lexerErrors);
       setHasRun(true);
       setShowLineTokens(false);
       setShowTokens(true);
 
-      // If there are no lexer errors, proceed with parsing
       if (lexerErrors.length === 0) {
-        const parseRes = await axios.post("http://127.0.0.1:5000/parse", {
-          code,
-        });
+        const parseRes = await axios.post("http://127.0.0.1:5000/parse", { code });
         const parserErrors = parseRes.data.errors || [];
-
         setErrors(parserErrors);
         setHasParsed(true);
       }
@@ -200,7 +210,6 @@ refill? 0
     }
   };
 
-  // Clear button functions
   const handleClearEditor = () => {
     setCode("");
     setTokens([]);
@@ -213,12 +222,6 @@ refill? 0
     setCurrentLine(1);
   };
 
-  const toggleShowTokens = () => {
-    setShowTokens((s) => !s);
-    if (!showTokens) setShowLineTokens(false);
-  };
-
-  // Detect active line
   const updateCurrentLine = () => {
     const ta = textareaRef.current;
     if (!ta) return;
@@ -231,8 +234,14 @@ refill? 0
   const handleScroll = () => {
     const ta = textareaRef.current;
     const ln = lineNumbersRef.current;
-    if (!ta || !ln) return;
-    ln.scrollTop = ta.scrollTop; // keeps numbers aligned while scrolling
+    const hl = highlightRef.current;
+    if (!ta) return;
+
+    if (ln) ln.scrollTop = ta.scrollTop;
+    if (hl) {
+      hl.scrollTop = ta.scrollTop;
+      hl.scrollLeft = ta.scrollLeft;
+    }
   };
 
   useEffect(() => {
@@ -250,23 +259,16 @@ refill? 0
       />
       <NavBar onSaveFile={handleSaveFile} onOpenFile={handleOpenFile} />
 
-      {/* Main Content Area: Stacks Top Row and Bottom Row vertically */}
       <div className="main-content">
-        {/* === TOP ROW === */}
-        {/* This row contains the Editor and Tokenizer side-by-side */}
         <div
           className={`layout-row-top ${
             showTokenTable ? "" : "layout-row-top--expanded"
           }`}
         >
-          {/* Left Column: CODE EDITOR */}
-          {/* We apply both .editor and our new .layout-flex class */}
           <div className="editor layout-flex">
             <h3 className="play-bold">Code Editor</h3>
 
-            {/* .editor-container styles are now updated in styles.css */}
             <div className="editor-container">
-              {/* Line numbers */}
               <div className="line-numbers" ref={lineNumbersRef}>
                 {code.split("\n").map((_, i) => (
                   <div
@@ -278,31 +280,39 @@ refill? 0
                 ))}
               </div>
 
-              <textarea
-                ref={textareaRef}
-                className="textarea"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                onClick={updateCurrentLine}
-                onKeyUp={updateCurrentLine}
-                onScroll={handleScroll}
-                onKeyDown={(e) => {
-                  if (e.key === "Tab") {
-                    e.preventDefault();
-                    const ta = textareaRef.current;
-                    const start = ta.selectionStart;
-                    const end = ta.selectionEnd;
-                    const newValue =
-                      code.slice(0, start) + "\t" + code.slice(end);
-                    setCode(newValue);
-                    requestAnimationFrame(() => {
-                      ta.selectionStart = ta.selectionEnd = start + 1;
-                      updateCurrentLine();
-                    });
-                  }
-                }}
-                spellCheck={false}
-              />
+              <div className="code-wrapper">
+                <pre className="code-layer highlight-overlay" ref={highlightRef}>
+                  {highlightCode(code)}
+                  <br /> 
+                </pre>
+
+                <textarea
+                  ref={textareaRef}
+                  className="code-layer real-textarea"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  onClick={updateCurrentLine}
+                  onKeyUp={updateCurrentLine}
+                  onScroll={handleScroll}
+                  onKeyDown={(e) => {
+                    if (e.key === "Tab") {
+                      e.preventDefault();
+                      const ta = textareaRef.current;
+                      const start = ta.selectionStart;
+                      const end = ta.selectionEnd;
+                      const newValue =
+                        code.slice(0, start) + "\t" + code.slice(end);
+                      setCode(newValue);
+                      requestAnimationFrame(() => {
+                        ta.selectionStart = ta.selectionEnd = start + 1;
+                        updateCurrentLine();
+                      });
+                    }
+                  }}
+                  spellCheck={false}
+                />
+              </div>
+
             </div>
 
             <div className="tokenize-btn-container">
@@ -340,12 +350,10 @@ refill? 0
             </div>
           </div>
 
-          {/* Right Column: TOKENS PANEL */}
           {showTokenTable && (
             <div className="tokens layout-panel-right">
               <h3 className="play-bold">Lexeme Output</h3>
 
-              {/* NEW: Add a scrollable container FOR THE TABLE ONLY */}
               <div className="token-table-container">
                 {showLineTokens ? (
                   <TokenTable tokens={lineTokens} />
@@ -361,8 +369,6 @@ refill? 0
           )}
         </div>
 
-        {/* === BOTTOM ROW === */}
-        {/* This row contains the tabbed error panels */}
         <div className="layout-panel-bottom">
           <ErrorTabs errors={errors} hasParsed={hasParsed} hasRun={hasRun} />
         </div>
