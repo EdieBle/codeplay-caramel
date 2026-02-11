@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "./styles.css";
-import "./App.css"; 
+import "./App.css";
 import NavBar from "./components/NavBar";
 import "./components/NavBar.css";
 import ErrorTabs from "./components/ErrorTabs";
+import Modal from "./components/Modal";
 
 // === Syntax Highlighting Helper ===
 const highlightCode = (code) => {
@@ -19,12 +20,14 @@ const highlightCode = (code) => {
 
   // 3. Keywords
   // Use non-capturing group (?:) for the OR logic
-  const keywordsRegex = /\b(?:ifbrew|elifroth|elspress|flavour|syrup|pour|whilehot|taste\s+till|snap|skip|brewed|decaf|defoam|cup|hot|cold|recipe|empty|crema|new|cafe|backroom|order|glaze)\b|refill\?|batter@/;
+  const keywordsRegex =
+    /\b(?:ifbrew|elifroth|elspress|flavour|syrup|pour|whilehot|taste\s+till|snap|skip|brewed|decaf|defoam|cup|hot|cold|recipe|empty|crema|new|cafe|backroom|order|glaze)\b|refill\?|batter@/;
 
   // 4. Operators
   // Removed outer parentheses.
   // Order matters: longer matches (+=) must come before single matches (+)
-  const operatorsRegex = /\+\+|--|\+=|-=|\*=|\/=|\=\=|!=|&&|\|\||>=|<=|[-+*/%=<>!]/;
+  const operatorsRegex =
+    /\+\+|--|\+=|-=|\*=|\/=|\=\=|!=|&&|\|\||>=|<=|[-+*/%=<>!]/;
 
   // 5. Punctuation
   // Removed outer parentheses.
@@ -34,7 +37,7 @@ const highlightCode = (code) => {
   // Each line here creates exactly ONE capturing group
   const masterRegex = new RegExp(
     `(${dataTypesRegex.source})|(${literalsRegex.source})|(${keywordsRegex.source})|(${operatorsRegex.source})|(${punctuationRegex.source})`,
-    "g"
+    "g",
   );
 
   let lastIndex = 0;
@@ -48,21 +51,21 @@ const highlightCode = (code) => {
       elements.push(
         <span key={lastIndex} className="token-identifier">
           {code.slice(lastIndex, match.index)}
-        </span>
+        </span>,
       );
     }
-    
+
     let className = "token-identifier";
 
     // Assign class based on which Group matched
     if (match[1]) {
-      className = "token-datatype";    // SeaGreen
+      className = "token-datatype"; // SeaGreen
     } else if (match[2]) {
-      className = "token-literal";     // Olive
+      className = "token-literal"; // Olive
     } else if (match[3]) {
-      className = "token-keyword";     // Red
+      className = "token-keyword"; // Red
     } else if (match[4]) {
-      className = "token-operator";    // Blue
+      className = "token-operator"; // Blue
     } else if (match[5]) {
       className = "token-punctuation"; // Orange
     }
@@ -70,7 +73,7 @@ const highlightCode = (code) => {
     elements.push(
       <span key={match.index} className={className}>
         {match[0]}
-      </span>
+      </span>,
     );
     lastIndex = masterRegex.lastIndex;
   }
@@ -80,7 +83,7 @@ const highlightCode = (code) => {
     elements.push(
       <span key={lastIndex} className="token-identifier">
         {code.slice(lastIndex)}
-      </span>
+      </span>,
     );
   }
 
@@ -108,20 +111,27 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [showTokenTable, setShowTokenTable] = useState(true);
 
+  // Save Modal State
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveFilename, setSaveFilename] = useState("code");
+
   // Refs
   const textareaRef = useRef(null);
-  const highlightRef = useRef(null); 
+  const highlightRef = useRef(null);
   const lineNumbersRef = useRef(null);
   const fileInputRef = useRef(null);
   const [currentLine, setCurrentLine] = useState(1);
   const [currentColumn, setCurrentColumn] = useState(1);
 
-  // === Handlers === 
+  // === Handlers ===
 
   const handleSaveFile = () => {
-    const filename = window.prompt("Enter filename:", "code");
-    if (filename === null) return;
-    const cleanedFilename = filename.replace(/\.crml$/i, "");
+    setShowSaveModal(true);
+  };
+
+  const handleSaveModalConfirm = () => {
+    if (!saveFilename.trim()) return;
+    const cleanedFilename = saveFilename.trim().replace(/\.crml$/i, "");
     const finalFilename = `${cleanedFilename}.crml`;
     const element = document.createElement("a");
     const file = new Blob([code], { type: "text/plain" });
@@ -131,6 +141,21 @@ export default function App() {
     element.click();
     document.body.removeChild(element);
     URL.revokeObjectURL(element.href);
+    setShowSaveModal(false);
+    setSaveFilename("code");
+  };
+
+  const handleSaveModalCancel = () => {
+    setShowSaveModal(false);
+    setSaveFilename("code");
+  };
+
+  const handleSaveModalKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleSaveModalConfirm();
+    } else if (e.key === "Escape") {
+      handleSaveModalCancel();
+    }
   };
 
   const handleOpenFile = () => {
@@ -169,8 +194,12 @@ export default function App() {
     try {
       const res = await axios.post("http://127.0.0.1:5000/tokenize", { code });
       const result = res.data;
-      const errors = result.filter((t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR");
-      const validTokens = result.filter((t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR");
+      const errors = result.filter(
+        (t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR",
+      );
+      const validTokens = result.filter(
+        (t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR",
+      );
       setTokens(validTokens);
       setErrors(errors);
       setHasRun(true);
@@ -187,10 +216,16 @@ export default function App() {
   const handleTokenizeAndParse = async () => {
     setBusy(true);
     try {
-      const tokenRes = await axios.post("http://127.0.0.1:5000/tokenize", { code });
+      const tokenRes = await axios.post("http://127.0.0.1:5000/tokenize", {
+        code,
+      });
       const tokenResult = tokenRes.data;
-      const lexerErrors = tokenResult.filter((t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR");
-      const validTokens = tokenResult.filter((t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR");
+      const lexerErrors = tokenResult.filter(
+        (t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR",
+      );
+      const validTokens = tokenResult.filter(
+        (t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR",
+      );
       setTokens(validTokens);
       setErrors(lexerErrors);
       setHasRun(true);
@@ -198,7 +233,9 @@ export default function App() {
       setShowTokens(true);
 
       if (lexerErrors.length === 0) {
-        const parseRes = await axios.post("http://127.0.0.1:5000/parse", { code });
+        const parseRes = await axios.post("http://127.0.0.1:5000/parse", {
+          code,
+        });
         const parserErrors = parseRes.data.errors || [];
         setErrors(parserErrors);
         setHasParsed(true);
@@ -237,7 +274,6 @@ export default function App() {
     const lastLine = lines[lines.length - 1] ?? "";
     setCurrentColumn(lastLine.length + 1);
   };
-
 
   const handleScroll = () => {
     const ta = textareaRef.current;
@@ -289,9 +325,12 @@ export default function App() {
               </div>
 
               <div className="code-wrapper">
-                <pre className="code-layer highlight-overlay" ref={highlightRef}>
+                <pre
+                  className="code-layer highlight-overlay"
+                  ref={highlightRef}
+                >
                   {highlightCode(code)}
-                  <br /> 
+                  <br />
                 </pre>
 
                 <textarea
@@ -319,11 +358,10 @@ export default function App() {
                   }}
                   spellCheck={false}
                 />
-                  <div className="cursor-status">
-                    Ln {currentLine}, Col {currentColumn}
-                  </div>
+                <div className="cursor-status">
+                  Ln {currentLine}, Col {currentColumn}
+                </div>
               </div>
-
             </div>
 
             <div className="tokenize-btn-container">
@@ -384,6 +422,41 @@ export default function App() {
           <ErrorTabs errors={errors} hasParsed={hasParsed} hasRun={hasRun} />
         </div>
       </div>
+
+      <Modal isOpen={showSaveModal} onClose={handleSaveModalCancel}>
+        <h2 className="modal-title">Save Your Code File</h2>
+        <div className="modal-body">
+          <p style={{ marginBottom: "1.5rem", textIndent: 0 }}>
+            Enter a filename for your Caramel code. The <code>.crml</code>{" "}
+            extension will be added automatically!
+          </p>
+          <div className="save-modal-form">
+            <input
+              type="text"
+              className="save-modal-input"
+              value={saveFilename}
+              onChange={(e) => setSaveFilename(e.target.value)}
+              onKeyDown={handleSaveModalKeyDown}
+              placeholder="Enter filename"
+              autoFocus
+            />
+          </div>
+        </div>
+        <div className="modal-actions">
+          <button
+            className="modal-btn modal-btn--primary"
+            onClick={handleSaveModalConfirm}
+          >
+            <i className="fa-solid fa-save"></i> Save File
+          </button>
+          <button
+            className="modal-btn modal-btn--secondary"
+            onClick={handleSaveModalCancel}
+          >
+            <i className="fa-solid fa-xmark"></i> Cancel
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

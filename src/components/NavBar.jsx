@@ -91,8 +91,8 @@ export default function NavBar({ onSaveFile, onOpenFile }) {
             </a>
           </li>
           <li>
-            <a href="#" onClick={handleModeToggle}>
-              <i className="fa-solid fa-moon"></i>
+            <a href="#" onClick={handleModeToggle} className="mode-toggle">
+              <i className={`fa-solid ${darkMode ? "fa-sun" : "fa-moon"}`}></i>
               <span>Mode</span>
             </a>
           </li>
