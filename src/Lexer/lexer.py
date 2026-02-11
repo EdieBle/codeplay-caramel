@@ -119,7 +119,6 @@ def tokenize(code):
         tokens.append(token)
 
     while pos < len(code):
-        print(tokens)
         ch = code[pos]
 
         print(f"\n=== OUTER LOOP: scanning new token at pos={pos}, col={column}, char='{ch}' ===") #debug
@@ -177,7 +176,7 @@ def tokenize(code):
                 prev = last_significant_token(tokens)
                 print(f"\n\n\n can go to 194 and next character digit? {can_go_to_194}\n\n\n")
 
-                if (prev and prev["type"] == "beanlit" and next_ch_la_1 is not None and next_ch_la_1.isdigit()):
+                if (prev and (prev["type"] == "beanlit" or prev["type"] == "id") and next_ch_la_1 is not None and next_ch_la_1.isdigit()):
                     # Force binary minus
                     push("-", "-", start_col)
                     pos += 1
@@ -188,7 +187,7 @@ def tokenize(code):
                 prev = last_significant_token(tokens)
                 print(f"\n\n\n can go to 194 and next character is minus but next next character is digit?{can_go_to_194}\n\n\n")
 
-                if (prev and prev["type"] == "beanlit" and next_ch_la_1 is not None and next_ch_la_2.isdigit()):
+                if (prev and (prev["type"] == "beanlit" or prev["type"] == "id") and next_ch_la_1 is not None and next_ch_la_2.isdigit()):
                     # Force binary minus
                     push("-", "-", start_col)
                     pos += 1
