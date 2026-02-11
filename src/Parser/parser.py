@@ -94,8 +94,28 @@ class Parser:
                     or tok
                 )
 
+            # Custom order for displaying expected terminals
+            DISPLAY_ORDER = [
+                "cafe", "backroom", "brewed", "id", "=", "[", "]", ".", "(", ")", 
+                "order", "bean", "drip", "blend", "churro", "temp", ",", "&&", "||", 
+                "!", "==", "!=", "+", "-", "*", "/", "%", "++", "--", "beanlit", 
+                "driplit", "blendlit", "churrolit", "hot", "cold", "***", "mug", "new", 
+                "recipe", "refill?", "0", "empty", "crema", "cup", "batter@", "glaze", 
+                "ifbrew", "{", "}", "elifroth", "elspress", "flavour", "syrup", ":", 
+                "snap", "defoam", "pour", ";", "+=", "-=", "*=", "/=", "whilehot", 
+                "taste", "till", "skip"
+            ]
 
+            # Sort expected tokens by custom order
             expected_readable = [token_to_display(tok) for tok in expected]
+            
+            def sort_key(token):
+                try:
+                    return DISPLAY_ORDER.index(token)
+                except ValueError:
+                    return len(DISPLAY_ORDER)  # Put unknown tokens at the end
+            
+            expected_readable = sorted(expected_readable, key=sort_key)
             message_display = token_to_display(e.token.type)
 
             if not expected:
@@ -104,27 +124,7 @@ class Parser:
             self.errors.append({
                 "type": "SYNTAX_ERROR",
                 "message": f"Unexpected token [{message_display}, {e.token.value}]",
-                "expected": sorted(expected_readable),
+                "expected": expected_readable,
                 "line": getattr(e, "line", None),
                 "column": getattr(e, "column", None)
             })
-    
-
-        # Deprecated, remove later as UnexpectedInput is just a base class
-
-        # except UnexpectedInput as e:
-        #     # Parser error handling
-        #     print(e)
-        #     expected = list(dict.fromkeys(getattr(e, "expected", [])))
-
-        #     if not expected:
-        #         expected.append("NONE")
-            
-        #     self.errors.append({
-        #         "type": "SYNTAX_ERROR",
-        #         "message": "Unexpected token",
-        #         "expected": expected,
-        #         "line": getattr(e, "line", None),
-        #         "column": getattr(e, "column", None)
-        #     })
-    
