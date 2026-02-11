@@ -86,8 +86,8 @@ ZERO: "0"
 _empty:
 
 # LITERALS
-BEANLIT: /[0-9]+/
-DRIPLIT: /[0-9]+\.[0-9]+/
+BEANLIT: /-?[0-9]+/
+DRIPLIT: /-?[0-9]+\.[0-9]+/
 CHURROLIT: /'(\\.|[^\\'])'/
 BLENDLIT: /"(\\.|[^\\"])*"/
 
@@ -149,26 +149,32 @@ dec: acc_mod_dec | id_dec_stmt | order_dec_stmt | pre_unary_dec | mug_dec | obje
 #   - Otherwise → var_dec
 acc_mod_dec: CAFE acc_mod_dec_body | BACKROOM acc_mod_dec_body | dtype_dec
 
-acc_mod_dec_body: BREWED data_type var_dec_const_init var_dec_const_tail
-    | BREWED BLEND blend_const_init blend_const_init_tail
+acc_mod_dec_body: BREWED acc_brewed_body                                         # ✓ FIXED: left-factored BREWED
     | BLEND ID blend_id_tail
-    | data_type ID acc_dtype_tail 
+    | data_type ID acc_dtype_tail
+
+acc_brewed_body: data_type var_dec_const_init var_dec_const_tail
+    | BLEND blend_const_init blend_const_init_tail
 
 # After acc_mod + data_type + ID, disambiguate:
-#   - OP_BRACKETS → array declaration (arr_size pattern)
+#   - OP_BRACKETS → array declaration (1D or 2D)
 #   - EQUALS or COMMA or other → variable declaration
-acc_dtype_tail: arr_size EQUALS OP_BRACKETS arr_cont CL_BRACKETS
+# FIX: arr_dec_dim enforces that 2D size requires 2D content, 1D size requires 1D content
+acc_dtype_tail: OP_BRACKETS arr_size_val CL_BRACKETS arr_dec_dim
     | opt_assign var_dec_tail
 
 # --- Data-type-led declarations (no access modifier) ---
 # FIX: Merges var_dec (without acc_mod) and arr_dec (without acc_mod)
-dtype_dec: BREWED data_type var_dec_const_init var_dec_const_tail
-    | BREWED BLEND blend_const_init blend_const_init_tail
+dtype_dec: BREWED dtype_brewed_body                                              # ✓ FIXED: left-factored BREWED
     | BLEND ID blend_id_tail
-    | data_type ID dtype_id_tail 
+    | data_type ID dtype_id_tail
+
+dtype_brewed_body: data_type var_dec_const_init var_dec_const_tail
+    | BLEND blend_const_init blend_const_init_tail
 
 # Same disambiguation after data_type + ID:
-dtype_id_tail: arr_size EQUALS OP_BRACKETS arr_cont CL_BRACKETS
+# FIX: arr_dec_dim enforces 1D/2D content must match declared dimensions
+dtype_id_tail: OP_BRACKETS arr_size_val CL_BRACKETS arr_dec_dim
     | opt_assign var_dec_tail
 
 # --------------------------------------------------------------------------
@@ -176,18 +182,24 @@ dtype_id_tail: arr_size EQUALS OP_BRACKETS arr_cont CL_BRACKETS
 # --------------------------------------------------------------------------
 blend_const_init: ID EQUALS blend_val 
 blend_const_init_tail: COMMA ID EQUALS blend_val blend_const_init_tail | _empty
-blend_id_tail: blend_assign blend_tail | arr_size EQUALS OP_BRACKETS blend_arr_cont CL_BRACKETS
+blend_id_tail: blend_assign blend_tail | OP_BRACKETS arr_size_val CL_BRACKETS blend_arr_dec_dim
 
 blend_assign: EQUALS blend_val | _empty
 blend_tail: COMMA ID blend_assign blend_tail | _empty
 blend_val: blend_term blend_val_tail
 blend_val_tail: PLUS blend_term blend_val_tail | _empty
-blend_term: BLENDLIT | CHURROLIT | ID | OP_PAREN blend_val CL_PAREN
+blend_term: BLENDLIT | ID blend_term_id_tail | ORDER DOT_ACC ID | OP_PAREN blend_val CL_PAREN
 
-blend_arr_elem: blend_val |  _empty
+# After ID in blend_term context:
+#   '.' → mug_call: ID.ID (e.g. blend b = x.y)
+#   else → bare ID variable reference
+blend_term_id_tail: DOT_ACC ID | _empty
+
+blend_arr_elem: BLENDLIT |  _empty
 blend_ext_arr_elem: COMMA blend_arr_elem blend_ext_arr_elem | _empty
-blend_arr_cont: OP_BRACKETS blend_arr_elem blend_ext_arr_elem CL_BRACKETS blend_arr_cont_tail | blend_arr_elem blend_ext_arr_elem | _empty
-blend_arr_cont_tail: COMMA OP_BRACKETS blend_arr_elem blend_ext_arr_elem CL_BRACKETS | _empty
+blend_arr_cont_1d: blend_arr_elem blend_ext_arr_elem | _empty
+blend_arr_cont_2d: OP_BRACKETS blend_arr_elem blend_ext_arr_elem CL_BRACKETS blend_arr_cont_2d_tail | _empty
+blend_arr_cont_2d_tail: COMMA OP_BRACKETS blend_arr_elem blend_ext_arr_elem CL_BRACKETS blend_arr_cont_2d_tail | _empty
 
 
 # --------------------------------------------------------------------------
@@ -213,21 +225,27 @@ id_dec_tail: EQUALS assign_val                                                  
     | OP_BRACKETS array_index CL_BRACKETS id_bracket_tail                       # arr_call then assign
     | unary_op                                                                  # postfix unary: ID++, ID--
 
-
-assign_val: value | blend_val
+# FIX: assign_val had FIRST-FIRST conflict on {ID, OP_PAREN} between value and blend_val
+#   value → expression → primary → ID | ( expression )
+#   blend_val → blend_term → ID | ( blend_val )
+# SOLUTION: BLENDLIT is the ONLY token unique to blend_val (not in expression's FIRST set).
+#   Split: BLENDLIT-led RHS uses concat (string concatenation), everything else uses expression.
+#   FIRST(BLENDLIT concat) = {BLENDLIT}, FIRST(expression) = {!,++,--,-,ID,order,...,(}
+#   Overlap = ∅ → ambiguity resolved.
+assign_val: BLENDLIT concat | expression
 
 # After ID.ID, what follows?
 #   '='          → mug_call_assign: ID.ID = value
 #   '.' | '(' | '[' → crema member access chain, possibly with assignment
 #   otherwise    → standalone mug_call or crema_call (field access)
-id_dot_tail: EQUALS value | EQUALS blend_val                                                       # mug_call_assign
+id_dot_tail: EQUALS assign_val                                                   # mug_call_assign ✓ FIXED
     | DOT_ACC crema_member_inner id_crema_assign_tail                           # crema_call / crema_assign: ID.ID.member...
     | OP_BRACKETS array_index CL_BRACKETS arr_call_tail id_crema_assign_tail    # ID.arr_call[i] possibly = value
     | OP_PAREN function_args function_args_tail CL_PAREN                        # ID.func_call()
     | _empty                                                                    # standalone mug_call (ID.ID)
 
 # After crema member access, optionally assign
-id_crema_assign_tail: EQUALS value | EQUALS blend_val | _empty
+id_crema_assign_tail: EQUALS assign_val | _empty                                 # ✓ FIXED
 
 # After ID[index]..., check for assignment
 id_bracket_tail: OP_BRACKETS array_index CL_BRACKETS EQUALS arr_elem           # 2D arr_call = arr_elem
@@ -253,12 +271,11 @@ crema_member_inner_tail: OP_BRACKETS array_index CL_BRACKETS arr_call_tail      
 # --------------------------------------------------------------------------
 order_dec_stmt: ORDER DOT_ACC ID order_dec_tail
 
-order_dec_tail: EQUALS value | EQUALS blend_val                                 # glob_var_acc_val: order.ID = value
+order_dec_tail: EQUALS assign_val                                                # glob_var_acc_val ✓ FIXED
     | DOT_ACC ID order_mug_tail                                                 # mug_glob_call/assign: order.ID.ID ...
-    | OP_BRACKETS array_index CL_BRACKETS arr_call_tail
     | _empty                                                                    # standalone glob_var_acc: order.ID
 
-order_mug_tail: EQUALS value | EQUALS blend_val                                 # mug_glob_assign: order.ID.ID = value
+order_mug_tail: EQUALS assign_val                                                # mug_glob_assign ✓ FIXED
     | _empty                                                                    # standalone mug_glob_call: order.ID.ID
 
 # --------------------------------------------------------------------------
@@ -300,7 +317,7 @@ value: expression
 #   1. logic_expr      (&&, ||)
 #   2. rel_expr        (<, >, ==, !=, <=, >=)
 #   3. arith_expr      (+, -, *, /, %)
-#   4. unary_expr      (prefix ++/--, prefix -, prefix !)
+#   4. unary_expr      (prefix ++/--, prefix -ID, prefix -(expr))
 #   5. primary         (ID, literals, calls, parenthesized)
 #
 # This ELIMINATES:
@@ -334,17 +351,23 @@ arithm_op: PLUS | MINUS | MULTIPLY | DIVIDE | MODULO
 # FIX: unary_expressions had ID overlap (prefix vs postfix)
 # SOLUTION: prefix unary consumes op then primary; postfix is handled
 #   inside primary_tail after ID
-unary_expr: INCREMENT primary | DECREMENT primary | primary
+# UPDATED: MINUS now supports both -ID and -(expression) via neg_operand
+unary_expr: INCREMENT primary | DECREMENT primary | MINUS neg_operand | primary
+
+# After MINUS, determine the negated target:
+#   ID        → variable negation: -myVar
+#   '(' expr ')' → parenthesized expression negation: -(3 + 2)
+neg_operand: ID | OP_PAREN expression CL_PAREN
 
 # --- Primary level (atoms) ---
 # FIX: All ID-starting things (bare ID, mug_call, arr_call, function_call,
 #   crema_call, postfix unary) are left-factored into ID + primary_id_tail
-primary: ID primary_id_tail 
+primary: ID primary_id_tail
     | ORDER DOT_ACC ID primary_order_tail
     | BEANLIT | DRIPLIT | CHURROLIT | HOT | COLD
     | OP_PAREN expression CL_PAREN
-# NOTE: MINUS BEANLIT / MINUS DRIPLIT are handled by: unary_expr → MINUS primary
-# No need to duplicate them here.
+# NOTE: Negative beanlit/driplit are handled by the literal tokens themselves.
+# Unary MINUS applies to ID (-myVar) or parenthesized expressions (-(3+2)).
 
 # After ID in an expression, determine what it is:
 #   '.'      → mug_call (ID.ID) or crema_call (ID.member)
@@ -368,25 +391,45 @@ primary_dot_tail: DOT_ACC crema_member_inner
 # After order.ID in expression:
 #   '.'  → mug_glob_call: order.ID.ID
 #   else → glob_var_acc: order.ID
-primary_order_tail: DOT_ACC ID | OP_BRACKETS array_index CL_BRACKETS arr_call_tail | _empty
+primary_order_tail: DOT_ACC ID | _empty
 
 # --------------------------------------------------------------------------
-# ARRAY RULES (unchanged, already conflict-free)
+# ARRAY RULES
+# --------------------------------------------------------------------------
+# FIX: Original arr_size + arr_cont allowed 2D-declared arrays with 1D content.
+#   e.g. bean room[3][3] = [5,3,2] was accepted (should be INVALID).
+# SOLUTION: After the first [N], look at what follows to determine dimensionality:
+#   [M] → 2D declaration → content MUST be nested brackets: [[...], [...]]
+#   =   → 1D declaration → content MUST be flat elements: [1, 2, 3]
+# This enforces that declared dimensions match the content structure.
 # --------------------------------------------------------------------------
 arr_call_tail: OP_BRACKETS array_index CL_BRACKETS | _empty
 array_index: BEANLIT
 
-arr_size: OP_BRACKETS arr_size_val CL_BRACKETS arr_size_2d
 arr_size_val: BEANLIT | FLEX_ASTERISK
-arr_size_2d: OP_BRACKETS arr_size_val CL_BRACKETS | _empty
+
+# After data_type ID [N], determine 1D vs 2D:
+#   [M] = [[...]] → 2D array (nested bracket content required)
+#   = [...]       → 1D array (flat element content required)
+arr_dec_dim: OP_BRACKETS arr_size_val CL_BRACKETS EQUALS OP_BRACKETS arr_cont_2d CL_BRACKETS
+    | EQUALS OP_BRACKETS arr_cont_1d CL_BRACKETS
+
+# After blend ID [N], determine 1D vs 2D for blend arrays:
+blend_arr_dec_dim: OP_BRACKETS arr_size_val CL_BRACKETS EQUALS OP_BRACKETS blend_arr_cont_2d CL_BRACKETS
+    | EQUALS OP_BRACKETS blend_arr_cont_1d CL_BRACKETS
 
 # FIX: arr_elem had literals vs expressions vs ID overlap
 # SOLUTION: arr_elem is just an optional expression (value)
-arr_elem: ID | BEANLIT | DRIPLIT | CHURROLIT | HOT | COLD | _empty
+arr_elem: expression |  _empty
 
 ext_arr_elem: COMMA arr_elem ext_arr_elem | _empty
-arr_cont: OP_BRACKETS arr_elem ext_arr_elem CL_BRACKETS arr_cont_tail | arr_elem ext_arr_elem | _empty
-arr_cont_tail: COMMA OP_BRACKETS arr_elem ext_arr_elem CL_BRACKETS | _empty
+
+# 1D array content: flat elements only (e.g. [1, 2, 3])
+arr_cont_1d: arr_elem ext_arr_elem | _empty
+
+# 2D array content: nested bracket rows only (e.g. [[1,2], [3,4]])
+arr_cont_2d: OP_BRACKETS arr_elem ext_arr_elem CL_BRACKETS arr_cont_2d_tail | _empty
+arr_cont_2d_tail: COMMA OP_BRACKETS arr_elem ext_arr_elem CL_BRACKETS arr_cont_2d_tail | _empty
 
 # --------------------------------------------------------------------------
 # FUNCTION CALLS & ARGUMENTS
@@ -407,13 +450,14 @@ unary_op: INCREMENT | DECREMENT
 # --------------------------------------------------------------------------
 # MUG (Struct) DECLARATIONS
 # --------------------------------------------------------------------------
-mug_dec: MUG ID OP_BRACKETS mug_var_dec (mug_var_dec_cont)* CL_BRACKETS     # added ()* in mug_var_dec_cont
-mug_var_dec: dtype_mug_var
-dtype_mug_var: BREWED data_type var_dec_const_init var_dec_const_tail
-    | data_type ID dtype_id_tail
-    | BREWED BLEND blend_const_init blend_const_init_tail
+mug_dec: MUG ID OP_BRACKETS dtype_mug_var mug_var_dec_cont CL_BRACKETS            # ✓ FIXED: pure CFG (removed EBNF *)
+dtype_mug_var: BREWED mug_brewed_body                                            # ✓ FIXED: left-factored BREWED
+    | data_type var_dec_init var_dec_tail
     | BLEND ID blend_id_tail
-mug_var_dec_cont: mug_var_dec | _empty
+
+mug_brewed_body: data_type var_dec_const_init var_dec_const_tail
+    | BLEND blend_const_init blend_const_init_tail
+mug_var_dec_cont: dtype_mug_var mug_var_dec_cont | _empty                         # ✓ recursive for multiple members
 
 # --------------------------------------------------------------------------
 # OBJECT DEFINITION
@@ -426,19 +470,20 @@ object_def: NEW ID EQUALS ID
 # FIX: recipe_body had statement vs dec overlap (dec is subset of statement)
 # SOLUTION: recipe_body only uses statement (which already includes dec)
 # --------------------------------------------------------------------------
-recipe_def: RECIPE data_type ID OP_PAREN parameter CL_PAREN OP_BRACKETS recipe_body refill_final CL_BRACKETS
-   | RECIPE BLEND ID OP_PAREN parameter CL_PAREN OP_BRACKETS recipe_body refill_final CL_BRACKETS
-parameter: param_val add_param | _empty
+recipe_def: RECIPE recipe_ret_type ID OP_PAREN parameter CL_PAREN OP_BRACKETS recipe_body refill_final CL_BRACKETS  # ✓ FIXED: left-factored RECIPE
+
+recipe_ret_type: data_type | BLEND
+parameter: dtype_param  add_param | _empty
 
 # FIX: param_val had var_dec vs mug_call vs mug_glob_call overlap
 # SOLUTION: Left-factor. Parameters starting with ID need disambiguation.
-param_val: acc_mod_param | dtype_param | ID param_id_tail | ORDER DOT_ACC ID DOT_ACC ID
 
-acc_mod_param: CAFE param_dtype_body | BACKROOM param_dtype_body
-dtype_param: BREWED data_type var_dec_const_init var_dec_const_tail
+dtype_param: BREWED param_brewed_body                                            # ✓ FIXED: left-factored BREWED
     | data_type var_dec_init var_dec_tail
-    | BREWED BLEND blend_const_init blend_const_init_tail
     | BLEND ID blend_assign blend_tail
+
+param_brewed_body: data_type var_dec_const_init var_dec_const_tail
+    | BLEND blend_const_init blend_const_init_tail
 
 param_dtype_body: BREWED data_type var_dec_const_init var_dec_const_tail
     | data_type var_dec_init var_dec_tail
@@ -449,7 +494,7 @@ param_dtype_body: BREWED data_type var_dec_const_init var_dec_const_tail
 #   param context doesn't make sense without data_type prefix, so this is mug_call
 param_id_tail: DOT_ACC ID
 
-add_param: COMMA param_val add_param | _empty
+add_param: COMMA dtype_param add_param | _empty
 
 recipe_body: statement recipe_body | _empty
 
@@ -465,7 +510,9 @@ extra_refill_val: COMMA refill_content extra_refill_val | _empty
 # EMPTY (Void Function) DEFINITION
 # --------------------------------------------------------------------------
 empty_def: EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS empty_body REFILL CL_BRACKETS
+
 empty_body: statement empty_body | _empty
+
 # --------------------------------------------------------------------------
 # CREMA (Class) DEFINITION
 # --------------------------------------------------------------------------
@@ -477,22 +524,28 @@ crema_body: crema_body_cont crema_body | _empty
 crema_body_cont: CAFE crema_acc_body | BACKROOM crema_acc_body | crema_dtype_body
 
 crema_acc_body: RECIPE data_type ID OP_PAREN parameter CL_PAREN OP_BRACKETS recipe_body refill_final CL_BRACKETS
-    | EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS statement stmt_tail REFILL CL_BRACKETS
-    | BREWED data_type var_dec_const_init var_dec_const_tail
+    | EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS empty_body REFILL CL_BRACKETS
+    | BREWED crema_acc_brewed_body                                               # ✓ FIXED: left-factored BREWED
     | data_type ID crema_dtype_id_tail
-    | BREWED BLEND blend_const_init blend_const_init_tail
     | BLEND ID blend_id_tail
 
-crema_dtype_body: RECIPE data_type ID OP_PAREN parameter CL_PAREN OP_BRACKETS recipe_body refill_final CL_BRACKETS
-    | RECIPE BLEND ID OP_PAREN parameter CL_PAREN OP_BRACKETS recipe_body refill_final CL_BRACKETS
-    | EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS statement stmt_tail REFILL CL_BRACKETS
-    | BREWED data_type var_dec_const_init var_dec_const_tail
+crema_acc_brewed_body: data_type var_dec_const_init var_dec_const_tail
+    | BLEND blend_const_init blend_const_init_tail
+
+crema_dtype_body: RECIPE crema_recipe_type ID OP_PAREN parameter CL_PAREN OP_BRACKETS recipe_body refill_final CL_BRACKETS  # ✓ FIXED: left-factored RECIPE
+    | EMPTY ID OP_PAREN parameter CL_PAREN OP_BRACKETS empty_body REFILL CL_BRACKETS
+    | BREWED crema_dtype_brewed_body                                             # ✓ FIXED: left-factored BREWED
     | data_type ID crema_dtype_id_tail
-    | BREWED BLEND blend_const_init blend_const_init_tail
     | BLEND ID blend_id_tail
+
+crema_recipe_type: data_type | BLEND
+
+crema_dtype_brewed_body: data_type var_dec_const_init var_dec_const_tail
+    | BLEND blend_const_init blend_const_init_tail
 
 # In crema body, after data_type + ID, disambiguate var vs array:
-crema_dtype_id_tail: arr_size EQUALS OP_BRACKETS arr_cont CL_BRACKETS
+# FIX: arr_dec_dim enforces 1D/2D content must match declared dimensions
+crema_dtype_id_tail: OP_BRACKETS arr_size_val CL_BRACKETS arr_dec_dim
     | opt_assign var_dec_tail
 
 # --------------------------------------------------------------------------
@@ -500,13 +553,14 @@ crema_dtype_id_tail: arr_size EQUALS OP_BRACKETS arr_cont CL_BRACKETS
 # --------------------------------------------------------------------------
 main_def: BEAN CUP OP_PAREN CL_PAREN OP_BRACKETS main_body
 
-refill_main: REFILL ZERO main_body | REFILL ZERO CL_BRACKETS
+refill_main: REFILL ZERO refill_main_tail                                       # ✓ FIXED: left-factored REFILL ZERO
+refill_main_tail: main_body | CL_BRACKETS
 main_body: statement main_body | refill_main
 
 # --------------------------------------------------------------------------
 # STATEMENTS
 # --------------------------------------------------------------------------
-statement: dec | input_stmt | output_stmt | if_cond | flav_switch | pour_loop | whilehot_loop | tastetill_loop
+statement: dec | input_stmt | output_stmt | if_cond | flav_switch | pour_loop | whilehot_loop | tastetill_loop | intrpt_stmt
 stmt_tail: statement stmt_tail | _empty
 
 # --------------------------------------------------------------------------
@@ -575,7 +629,7 @@ defoam_stmt: DEFOAM COLON statement stmt_tail SNAP | _empty
 # FIX: pour_loop had logic_expressions vs rel_expressions overlap in condition
 # SOLUTION: Use unified expression (hierarchy handles precedence)
 # --------------------------------------------------------------------------
-pour_loop: POUR OP_PAREN pour_init SEMICOLON expression SEMICOLON update CL_PAREN OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES
+pour_loop: POUR OP_PAREN pour_init SEMICOLON expression SEMICOLON update CL_PAREN OP_BRACES statement stmt_tail CL_BRACES
 pour_init: data_type ID EQUALS value var_dec_const_tail
 
 # FIX: update_unit had ID overlap between ID assign_op and unary_expressions
@@ -598,7 +652,7 @@ update_val: expression
 # FIX: logic_expressions vs rel_expressions overlap
 # SOLUTION: Use unified expression
 # --------------------------------------------------------------------------
-whilehot_loop: WHILEHOT OP_PAREN expression CL_PAREN OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES
+whilehot_loop: WHILEHOT OP_PAREN expression CL_PAREN OP_BRACES statement stmt_tail  CL_BRACES
 
 # --------------------------------------------------------------------------
 # DO-WHILE LOOP (taste...till)
@@ -606,9 +660,9 @@ whilehot_loop: WHILEHOT OP_PAREN expression CL_PAREN OP_BRACES statement stmt_ta
 # FIX: Same logic vs rel overlap
 # SOLUTION: Use unified expression
 # --------------------------------------------------------------------------
-tastetill_loop: TASTE OP_BRACES statement stmt_tail intrpt_stmt CL_BRACES TILL COLON OP_PAREN expression CL_PAREN
+tastetill_loop: TASTE OP_BRACES statement stmt_tail CL_BRACES TILL COLON OP_PAREN expression CL_PAREN
 
 # --------------------------------------------------------------------------
 # INTERRUPT STATEMENTS
 # --------------------------------------------------------------------------
-intrpt_stmt: SNAP | SKIP | _empty
+intrpt_stmt: SNAP | SKIP 
