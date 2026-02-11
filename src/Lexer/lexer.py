@@ -165,7 +165,7 @@ def tokenize(code):
             next_ch_la_2 = code[pos + 2] if pos + 2 < len(code) else None
 
             can_go_to_194 = 194 in branches and ch == '-'
-            IGNORED = {"whitespace", "newline"}
+            IGNORED = {"whitespace", "newline", "tab"}
             def last_significant_token(tokens):
                 for tok in reversed(tokens):
                     if tok["type"] not in IGNORED:
@@ -181,18 +181,20 @@ def tokenize(code):
                     push("-", "-", start_col)
                     pos += 1
                     column += 1
-                    continue
+                    handled = True
+                    break
 
             if can_go_to_194 and next_ch_la_2 is not None and next_ch_la_2.isdigit():
                 prev = last_significant_token(tokens)
-                print(f"\n\n\n can go to 194 and next character is minus but next next character is digit?{can_go_to_194}\n\n\n")
-
+                print(f"\n\n\n can go to 194 and next character is minus but next next character is digit? {can_go_to_194}\n\n\n")
+                print(prev)
                 if (prev and (prev["type"] == "beanlit" or prev["type"] == "id") and next_ch_la_1 is not None and next_ch_la_2.isdigit()):
-                    # Force binary minus
                     push("-", "-", start_col)
                     pos += 1
                     column += 1
-                    continue
+                    handled = True
+                    break
+
 
             # Check if '0' can move us to state 253, this is for the bean and drip literal leading zero stuff
             can_go_to_250 = any(
@@ -311,6 +313,9 @@ def tokenize(code):
                 print(f"[INNER] ACCEPTING STATE {curr_state} (buffer='{buffer}')") # debug
 
         print(f"=== INNER LOOP COMPLETE at pos={pos}, curr_state={curr_state} ===\n") # debug
+        
+
+        # Very very important part that ensures both negative literals are handled as well as the actual self-delimiting shit
         if handled:
             continue
 
