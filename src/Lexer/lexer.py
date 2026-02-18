@@ -176,24 +176,26 @@ def tokenize(code):
                 prev = last_significant_token(tokens)
                 print(f"\n\n\n can go to 194 and next character digit? {can_go_to_194}\n\n\n")
 
-                if (prev and (prev["type"] == "beanlit" or prev["type"] == "id") and next_ch_la_1 is not None and next_ch_la_1.isdigit()):
+                if (prev and (prev["type"] == "beanlit" or prev["type"] == "id" or prev["type"] == ")") and next_ch_la_1 is not None and next_ch_la_1.isdigit()):
                     # Force binary minus
                     push("-", "-", start_col)
                     pos += 1
                     column += 1
                     handled = True
                     break
+                    
 
             if can_go_to_194 and next_ch_la_2 is not None and next_ch_la_2.isdigit():
                 prev = last_significant_token(tokens)
                 print(f"\n\n\n can go to 194 and next character is minus but next next character is digit? {can_go_to_194}\n\n\n")
                 print(prev)
-                if (prev and (prev["type"] == "beanlit" or prev["type"] == "id") and next_ch_la_1 is not None and next_ch_la_2.isdigit()):
+                if (prev and (prev["type"] == "beanlit" or prev["type"] == "id" or prev["type"] == ")") and next_ch_la_1 is not None and next_ch_la_2.isdigit()):
                     push("-", "-", start_col)
                     pos += 1
                     column += 1
                     handled = True
                     break
+
 
 
             # Check if '0' can move us to state 253, this is for the bean and drip literal leading zero stuff
@@ -481,8 +483,8 @@ def tokenize(code):
                 print(f"\033[92m[IS A ALPHA CHARACTER]")
                 lexeme, final_pos, err_type = run_identifier_handler(fallback_pos)
 
+
              # can be used to handle errors related to bean and drip literals!
-            
             if code[fallback_pos].isnumeric() == True or code[fallback_pos] == '.':
                 print(f"\033[92m[IS A NUMERIC CHARACTER]")
                 lexeme, final_pos, err_type = run_num_handler(fallback_pos)
