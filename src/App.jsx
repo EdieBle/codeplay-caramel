@@ -248,6 +248,43 @@ export default function App() {
     }
   };
 
+    const handleTokenizeParseAndAnalyzer = async () => {
+    setBusy(true);
+    try {
+      const tokenRes = await axios.post("http://127.0.0.1:5000/tokenize", {
+        code,
+      });
+      const tokenResult = tokenRes.data;
+      const lexerErrors = tokenResult.filter(
+        (t) => t.type === "ERROR" || t.type === "LEXICAL_ERROR",
+      );
+      const validTokens = tokenResult.filter(
+        (t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR",
+      );
+      setTokens(validTokens);
+      setErrors(lexerErrors);
+      setHasRun(true);
+      setShowLineTokens(false);
+      setShowTokens(true);
+
+      if (lexerErrors.length === 0) {
+        const parseRes = await axios.post("http://127.0.0.1:5000/parse", {
+          code,
+        });
+        const parserErrors = parseRes.data.errors || [];
+        setErrors(parserErrors);
+        setHasParsed(true);
+      }
+      //Insert the error handler for analyzer once it's implemented in the backend
+      // start with if (parserErrors.length === 0) (like hiw was lexerErrors where handled before proceeding to syntax)
+    } catch (err) {
+      console.error("Error contacting backend:", err);
+      setErrors([{ type: "CONNECTION_ERROR", lexeme: "Backend not running" }]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const handleClearEditor = () => {
     setCode("");
     setTokens([]);
@@ -367,10 +404,18 @@ export default function App() {
             <div className="tokenize-btn-container">
               <button
                 className="tokenize-btn"
+                onClick={handleTokenizeParseAndAnalyzer}
+                disabled={busy}
+              >
+                {busy ? "Processing..." : "Analyze"}
+              </button>
+
+              <button
+                className="tokenize-btn"
                 onClick={handleTokenizeAndParse}
                 disabled={busy}
               >
-                {busy ? "Processing..." : "Tokenize and Parse"}
+                {busy ? "Processing..." : "Parse"}
               </button>
 
               <button

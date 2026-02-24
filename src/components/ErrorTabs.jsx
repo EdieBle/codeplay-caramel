@@ -2,8 +2,15 @@ import React, { useState, useEffect } from "react";
 import "./ErrorTabs.css";
 import LexerError from "./LexerError";
 import SyntaxErrorPanel from "./SyntaxErrorPanel";
+import SemanticErrorPanel from "./SemanticErrorPanel";
 
-export default function ErrorTabs({ errors, hasParsed, hasRun }) {
+export default function ErrorTabs({
+  errors,
+  hasParsed,
+  hasRun,
+  sourceCode,
+  isParseStale,
+}) {
   const [activeTab, setActiveTab] = useState("lexer");
 
   // Reset to lexer tab when errors change
@@ -19,6 +26,11 @@ export default function ErrorTabs({ errors, hasParsed, hasRun }) {
 
   const syntaxErrorCount = errors
     ? errors.filter((e) => e.type === "SYNTAX_ERROR").length
+    : 0;
+
+  const semanticErrorCount = errors
+    ? errors.filter((e) => e.type === "SEMANTIC_ERROR" || e.type === "SEMANTIC")
+        .length
     : 0;
 
   return (
@@ -39,9 +51,19 @@ export default function ErrorTabs({ errors, hasParsed, hasRun }) {
           className={`error-tab-btn ${activeTab === "parser" ? "active" : ""}`}
           onClick={() => setActiveTab("parser")}
         >
-          <span className="error-tab-label">Parser/Syntax Errors</span>
+          <span className="error-tab-label">Syntax Errors</span>
           {syntaxErrorCount > 0 && (
             <span className="error-tab-badge">{syntaxErrorCount}</span>
+          )}
+        </button>
+
+        <button
+          className={`error-tab-btn ${activeTab === "semantic" ? "active" : ""}`}
+          onClick={() => setActiveTab("semantic")}
+        >
+          <span className="error-tab-label">Semantic Errors</span>
+          {semanticErrorCount > 0 && (
+            <span className="error-tab-badge">{semanticErrorCount}</span>
           )}
         </button>
       </div>
@@ -56,7 +78,18 @@ export default function ErrorTabs({ errors, hasParsed, hasRun }) {
 
         {activeTab === "parser" && (
           <div className="error-tab-pane">
-            <SyntaxErrorPanel errors={errors} hasParsed={hasParsed} />
+            <SyntaxErrorPanel
+              errors={errors}
+              hasParsed={hasParsed}
+              sourceCode={sourceCode}
+              isStale={isParseStale}
+            />
+          </div>
+        )}
+
+        {activeTab === "semantic" && (
+          <div className="error-tab-pane">
+            <SemanticErrorPanel errors={errors} hasParsed={hasParsed} />
           </div>
         )}
       </div>

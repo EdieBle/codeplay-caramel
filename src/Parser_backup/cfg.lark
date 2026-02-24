@@ -193,7 +193,7 @@ blend_term: BLENDLIT | ID blend_term_id_tail | ORDER DOT_ACC ID | OP_PAREN blend
 # After ID in blend_term context:
 #   '.' → mug_call: ID.ID (e.g. blend b = x.y)
 #   else → bare ID variable reference
-blend_term_id_tail: DOT_ACC ID | _empty
+    blend_term_id_tail: DOT_ACC ID | OP_PAREN function_args function_args_tail CL_PAREN | _empty        # Added this 02/25/26
 
 blend_arr_elem: BLENDLIT |  _empty
 blend_ext_arr_elem: COMMA blend_arr_elem blend_ext_arr_elem | _empty

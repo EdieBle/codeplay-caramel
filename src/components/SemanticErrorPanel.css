@@ -1,0 +1,124 @@
+.semantic-error,
+.semantic-success {
+  border: 1px solid #e9d7c4;
+  background: #fffaf6;
+  border-radius: 10px;
+  padding: 0.75rem;
+  color: #4a3f33;
+}
+
+.semantic-error__header,
+.semantic-success__header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.semantic-error__header {
+  justify-content: space-between;
+}
+
+.semantic-error__icon,
+.semantic-success__icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.semantic-error__title,
+.semantic-success__title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.semantic-error__summary,
+.semantic-success__summary {
+  font-size: 0.85rem;
+  color: #7a6a58;
+}
+
+.semantic-error__copy {
+  border: 1px solid #e2c8ac;
+  background: #f7eadf;
+  color: #6a5745;
+  border-radius: 8px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.semantic-error__copy:hover:not(:disabled) {
+  background: #efdcc9;
+}
+
+.semantic-error__copy:disabled {
+  opacity: 0.75;
+  cursor: default;
+}
+
+.semantic-error__list {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.semantic-error__item {
+  border: 1px solid #eedecf;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.5rem 0.65rem;
+}
+
+.semantic-error__type-line {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6f4d3d;
+}
+
+.semantic-error__details-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.semantic-error__lexeme {
+  font-size: 0.82rem;
+  color: #6f5b4b;
+}
+
+.semantic-error__loc {
+  font-size: 0.8rem;
+  color: #8a7968;
+}
+
+[data-theme="dark"] .semantic-error,
+[data-theme="dark"] .semantic-success {
+  border-color: rgba(221, 169, 109, 0.35);
+  background: #333333;
+  color: #f0f0f0;
+}
+
+[data-theme="dark"] .semantic-error__summary,
+[data-theme="dark"] .semantic-success__summary,
+[data-theme="dark"] .semantic-error__loc,
+[data-theme="dark"] .semantic-error__lexeme {
+  color: #c8c8c8;
+}
+
+[data-theme="dark"] .semantic-error__copy {
+  border-color: rgba(221, 169, 109, 0.45);
+  background: rgba(221, 169, 109, 0.12);
+  color: #f2d4b1;
+}
+
+[data-theme="dark"] .semantic-error__copy:hover:not(:disabled) {
+  background: rgba(221, 169, 109, 0.2);
+}
+
+[data-theme="dark"] .semantic-error__item {
+  border-color: rgba(221, 169, 109, 0.25);
+  background: #2a2a2a;
+}

@@ -96,7 +96,9 @@
 /* Ensure error panels inside tabs don't have extra margins */
 .error-tab-pane .lexer-error,
 .error-tab-pane .syntax-error,
-.error-tab-pane .syntax-success {
+.error-tab-pane .syntax-success,
+.error-tab-pane .semantic-error,
+.error-tab-pane .semantic-success {
   margin-top: 0;
 }
 
