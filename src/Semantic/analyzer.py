@@ -13,7 +13,8 @@ Type Compatibility Rules:
 - blend (mixed/generic): accepts any type
 - mug (struct): no implicit conversions
 """
-
+from src.Lexer.lexer import token_final_out
+from src.Parser.parser import Parser
 
 class SemanticError:
     """Represents a semantic error in the code."""
@@ -36,7 +37,6 @@ class SemanticError:
             "severity": self.severity
         }
 
-
 class Symbol:
     """Represents a symbol (variable, function, class) in the program."""
     
@@ -53,7 +53,6 @@ class Symbol:
         self.parameters = parameters or []  # List of (name, type) tuples for functions
         self.return_type = return_type  # For functions
         self.is_initialized = False
-
 
 class SymbolTable:
     """Manages symbol scopes and symbol tracking."""
@@ -103,7 +102,6 @@ class SymbolTable:
                 return True
         return False
 
-
 class SemanticAnalyzer:
     """
     Analyzes CARAMEL AST for semantic correctness.
@@ -152,7 +150,7 @@ class SemanticAnalyzer:
         ("blend", "drip"): "drip",
     }
     
-    def __init__(self, ast=None):
+    def __init__(self, ast):
         self.ast = ast
         self.symbol_table = SymbolTable()
         self.errors = []
@@ -862,7 +860,6 @@ class SemanticAnalyzer:
                         break
         
         self.errors.append(SemanticError(code, message, line, column))
-
 
 def run_semantic_analysis(ast):
     """

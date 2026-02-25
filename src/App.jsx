@@ -251,6 +251,7 @@ export default function App() {
     const handleTokenizeParseAndAnalyzer = async () => {
     setBusy(true);
     try {
+      // step 1: Tokenizing
       const tokenRes = await axios.post("http://127.0.0.1:5000/tokenize", {
         code,
       });
@@ -266,15 +267,29 @@ export default function App() {
       setHasRun(true);
       setShowLineTokens(false);
       setShowTokens(true);
-
-      if (lexerErrors.length === 0) {
-        const parseRes = await axios.post("http://127.0.0.1:5000/parse", {
-          code,
-        });
-        const parserErrors = parseRes.data.errors || [];
-        setErrors(parserErrors);
-        setHasParsed(true);
+      
+      if (lexerErrors.length > 0) {
+        setErrors(lexerErrors);
+        return;
       }
+
+      // step 2: Parsing
+      const parseRes = await axios.post("http://127.0.0.1:5000/parse", {
+        code,
+      });
+      const parserErrors = parseRes.data.errors || [];
+      setHasParsed(true);
+      
+      if (parserErrors > 0) {
+        setErrors(parserErrors);
+        return;
+      }
+  
+      // step 3: Semantically Analyze
+      const analyzeRes = await axios.post("http://127.0.0.1:5000/analyze", { code });
+      const semanticErrors = analyzeRes.data.errors || [];
+      setErrors(semanticErrors);      // empty array = no errors
+
       //Insert the error handler for analyzer once it's implemented in the backend
       // start with if (parserErrors.length === 0) (like hiw was lexerErrors where handled before proceeding to syntax)
     } catch (err) {

@@ -2254,9 +2254,9 @@ class Parser:
                 message_display = token_to_display(e.token.type)
                 message = f"Unexpected token [{message_display}, {e.token.value}]"
 
-            if expected_readable:
-                expected_list = ", ".join(expected_readable)
-                message = f"{message}. Expected one of: {expected_list}"
+            # if expected_readable:
+            #     expected_list = ", ".join(expected_readable)
+            #     message = f"{message}. Expected one of: {expected_list}"
 
             self.errors.append({
                 "type": "SYNTAX_ERROR",
