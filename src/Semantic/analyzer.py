@@ -132,6 +132,39 @@ class SemanticAnalyzer:
         "blend": {"bean", "drip", "churro", "temp", "blend", "mug"},  # blend accepts all
         "mug": {"mug"}
     }
+
+    # (source_type, target_type) -> True if allowed, False if invalid (wip PACHECK PLS)
+    TYPE_CAST_COMPAT = {
+        ("bean",   "bean"):   True,
+        ("bean",   "drip"):   True,   # .0 added
+        ("bean",   "blend"):  False,
+        ("bean",   "temp"):   True,   # non-zero=hot, zero=cold
+        ("bean",   "churro"): True,   # ASCII value
+
+        ("drip",   "bean"):   True,   # decimal truncated
+        ("drip",   "drip"):   True,
+        ("drip",   "blend"):  False,
+        ("drip",   "temp"):   True,   # non-zero=hot, zero=cold
+        ("drip",   "churro"): False,
+
+        ("blend",  "bean"):   False,
+        ("blend",  "drip"):   False,
+        ("blend",  "blend"):  True,
+        ("blend",  "temp"):   False,
+        ("blend",  "churro"): False,
+
+        ("temp",   "bean"):   True,   # hot=1, cold=0
+        ("temp",   "drip"):   True,   # hot=1.0, cold=0.0
+        ("temp",   "blend"):  False,
+        ("temp",   "temp"):   True,
+        ("temp",   "churro"): False,
+
+        ("churro", "bean"):   True,   # ASCII value
+        ("churro", "drip"):   True,   # ASCII + .0
+        ("churro", "blend"):  False,
+        ("churro", "temp"):   True,   # non-zero=hot, zero=cold
+        ("churro", "churro"): True,   # blend (ASCII addition)
+    }
     
     # Binary operator result types: (left_type, right_type) -> result_type
     BINARY_RESULT_TYPES = {
@@ -218,6 +251,30 @@ class SemanticAnalyzer:
         """Check if node is a ParseNode."""
         return hasattr(node, 'name') and hasattr(node, 'children')
     
+    def _is_cast_compatible(self, source_type, target_type):
+        """Check if source can be explicitly cast to target per Table 11."""
+        if not source_type or not target_type:
+            return True  # unknown type, let it pass (wala pa masyadong strict dito haha)
+        return self.TYPE_CAST_COMPAT.get((source_type, target_type), False)
+
+
+    def _visit_cast_expr(self, node):
+        # Step 1: extract target type (the outer type, e.g. bean)
+        target_type = self._extract_type_from_node(node)
+
+        # Step 2: extract the expression being cast and infer its type
+        source_type = self._infer_value_type(node)  # walk children to find type
+
+        # Step 3: check validity
+        if source_type and target_type:
+            if not self._is_cast_compatible(source_type, target_type):
+                self._error(
+                    "E004",
+                    f"Invalid type cast: cannot cast '{source_type}' to '{target_type}'",
+                    node
+                )
+        self._visit_children(node)
+
     def _visit_children(self, node):
         """Visit all children of a node."""
         if hasattr(node, 'children') and node.children:
@@ -438,13 +495,17 @@ class SemanticAnalyzer:
                 elif hasattr(first_child, 'type'):
                     stmt_type = first_child.type
             
-            if stmt_type in ("SNAP", "SKIP"):
-                self.errors.append(SemanticError(
-                    "E006",
-                    f"'{stmt_type.lower()}' statement outside of loop",
-                    line=getattr(node, 'line', None)
-                ))
-    
+
+        if stmt_type in ("SNAP", "SKIP"):
+            err_line = getattr(node, 'line', None) or getattr(first_child, 'line', None)
+            err_col = getattr(node, 'column', None) or getattr(first_child, 'column', None)
+            self.errors.append(SemanticError(
+                "E006",
+                f"'{stmt_type.lower()}' statement outside of loop",
+                line=err_line,
+                column=err_col
+            ))
+
     def _visit_if_cond(self, node):
         """Visit if condition: create block scope"""
         self.symbol_table.push_scope()
@@ -530,9 +591,24 @@ class SemanticAnalyzer:
         self._visit_children(node)
     
     def _visit_opt_assign(self, node):
-        """Visit optional assignment"""
+        # Only check if we're inside a declaration (current_var_type is set)
+        if self.current_var_type:
+            # Infer the type of the RHS value
+            rhs_type = self._infer_value_type(node)
+            print(f"[DEBUG] opt_assign: declared={self.current_var_type}, rhs={rhs_type}")
+
+            if rhs_type and rhs_type != self.current_var_type:
+                # Check if it's a valid implicit cast per TYPE_COMPAT
+                if not self._is_type_compatible(self.current_var_type, rhs_type):
+                    self._error(
+                        "E003",
+                        f"Type mismatch: cannot assign '{rhs_type}' value to "
+                        f"'{self.current_var_type}' variable",
+                        node
+                    )
+
         self._visit_children(node)
-    
+
     def _visit_var_dec_tail(self, node):
         """Visit variable declaration tail"""
         # Collect variable names and track their types

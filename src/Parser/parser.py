@@ -161,7 +161,6 @@ class RDParser:
         PRIMARY_LITERALS: Literal token types
         EXPR_START: Tokens that can start an expression
     """
-
     # Token sets for predictive parsing
     DATA_TYPE = {"BEAN", "DRIP", "CHURRO", "TEMP"}
     LOGIC_OP = {"AND", "OR"}
