@@ -5,13 +5,7 @@ Based on semantic rules from the CARAMEL specification document.
 This module implements semantic analysis completely separate from the parser,
 analyzing the AST for semantic correctness after successful parsing.
 
-Type Compatibility Rules:
-- bean (integer): no implicit conversions
-- drip (float): can accept drip only (no bean -> drip conversion)
-- churro (string): no implicit conversions
-- temp (boolean): no implicit conversions
-- blend (mixed/generic): accepts any type
-- mug (struct): no implicit conversions
+Type Compatibility Rules: refer to rule 11 tinatamad pa aq
 """
 from src.Lexer.lexer import token_final_out
 from src.Parser.parser import Parser
@@ -111,60 +105,63 @@ class SemanticAnalyzer:
     - E002: Undeclared identifier
     - E003: Type mismatch
     - E004: Invalid type conversion
-    - E005: Constant modification
+    - E005: Constant value being modified
     - E006: Invalid operation
     - E007: Missing main function
     - E008: Multiple main functions
-    - E009: Attempted type cast
+    - E009: Attempted type cast (REJECTED)
     - E010: Invalid operator compatibility
+    - E011: Parameter unfulfilled by the arguments passed
+    - E012: Array Overloaded
+    - E013: Array 
+    - E014: 
     """
     
     # Valid data types
     VALID_TYPES = {"bean", "drip", "churro", "temp", "blend", "mug"}
     
-    # Type compatibility for assignments: target_type -> set of compatible source types
+    # Type compatibility for assignments: target_type to set of compatible source types
     # STRICT: bean != drip without explicit cast
     TYPE_COMPAT = {
-        "bean": {"bean"},
-        "drip": {"drip"},
-        "churro": {"churro"},
-        "temp": {"temp"},
-        "blend": {"bean", "drip", "churro", "temp", "blend", "mug"},  # blend accepts all
-        "mug": {"mug"}
+        "bean":   {"bean", "drip", "temp", "churro"},  # bean can go into drip, temp, churro
+        "drip":   {"drip", "bean", "temp"},             # drip can go into bean, temp
+        "churro": {"churro", "bean", "drip", "temp"},   # churro can go into bean, drip, temp
+        "temp":   {"temp", "bean", "drip"},             # temp can go into bean, drip
+        "blend":  {"blend"},                            # blend only into blend
     }
 
-    # (source_type, target_type) -> True if allowed, False if invalid (wip PACHECK PLS)
-    TYPE_CAST_COMPAT = {
-        ("bean",   "bean"):   True,
-        ("bean",   "drip"):   True,   # .0 added
-        ("bean",   "blend"):  False,
-        ("bean",   "temp"):   True,   # non-zero=hot, zero=cold
-        ("bean",   "churro"): True,   # ASCII value
+    # (source_type, target_type) -> True if allowed, False if invalid (REDUNDANT NA SIYA)
+    # TYPE_CAST_COMPAT = {
+    #     ("bean",   "bean"):   True,
+    #     ("bean",   "drip"):   True,   # .0 added
+    #     ("bean",   "blend"):  False,  # syntax error toh
+    #     ("bean",   "temp"):   True,   # non-zero=hot, zero=cold
+    #     ("bean",   "churro"): True,   # ASCII value
 
-        ("drip",   "bean"):   True,   # decimal truncated
-        ("drip",   "drip"):   True,
-        ("drip",   "blend"):  False,
-        ("drip",   "temp"):   True,   # non-zero=hot, zero=cold
-        ("drip",   "churro"): False,
+    #     ("drip",   "bean"):   True,   # decimal truncated
+    #     ("drip",   "drip"):   True,
+    #     ("drip",   "blend"):  False,
+    #     ("drip",   "temp"):   True,   # non-zero=hot, zero=cold
+    #     ("drip",   "churro"): False,
 
-        ("blend",  "bean"):   False,
-        ("blend",  "drip"):   False,
-        ("blend",  "blend"):  True,
-        ("blend",  "temp"):   False,
-        ("blend",  "churro"): False,
+    #     ("blend",  "bean"):   False,
+    #     ("blend",  "drip"):   False,
+    #     ("blend",  "blend"):  True,
+    #     ("blend",  "temp"):   False,
+    #     ("blend",  "churro"): False,
 
-        ("temp",   "bean"):   True,   # hot=1, cold=0
-        ("temp",   "drip"):   True,   # hot=1.0, cold=0.0
-        ("temp",   "blend"):  False,
-        ("temp",   "temp"):   True,
-        ("temp",   "churro"): False,
+    #     ("temp",   "bean"):   True,   # hot=1, cold=0
+    #     ("temp",   "drip"):   True,   # hot=1.0, cold=0.0
+    #     ("temp",   "blend"):  False,
+    #     ("temp",   "temp"):   True,
+    #     ("temp",   "churro"): False,
 
-        ("churro", "bean"):   True,   # ASCII value
-        ("churro", "drip"):   True,   # ASCII + .0
-        ("churro", "blend"):  False,
-        ("churro", "temp"):   True,   # non-zero=hot, zero=cold
-        ("churro", "churro"): True,   # blend (ASCII addition)
-    }
+    #     ("churro", "bean"):   True,   # ASCII value
+    #     ("churro", "drip"):   True,   # ASCII + .0
+    #     ("churro", "blend"):  False,
+    #     ("churro", "temp"):   True,   # non-zero=hot, zero=cold
+    #     ("churro", "churro"): True,   # blend (ASCII addition)
+    # }
     
     # Binary operator result types: (left_type, right_type) -> result_type
     BINARY_RESULT_TYPES = {
@@ -251,29 +248,33 @@ class SemanticAnalyzer:
         """Check if node is a ParseNode."""
         return hasattr(node, 'name') and hasattr(node, 'children')
     
-    def _is_cast_compatible(self, source_type, target_type):
-        """Check if source can be explicitly cast to target per Table 11."""
-        if not source_type or not target_type:
-            return True  # unknown type, let it pass (wala pa masyadong strict dito haha)
-        return self.TYPE_CAST_COMPAT.get((source_type, target_type), False)
+    # redundant
+    # def _is_cast_compatible(self, source_type, target_type):
+    #     """Check if source can be explicitly cast to target per Table 11."""
+    #     print("[IS CAST COMPATIBLE DEBUG] f{self}")
+    #     print("[IS CAST COMPATIBLE DEBUG] f{source_type}")
+    #     print("[IS CAST COMPATIBLE DEBUG] f{target_type}")
+    #     if not source_type or not target_type:
+    #         return True  # unknown type, let it pass (wala pa masyadong strict dito haha)
+    #     return self.TYPE_CAST_COMPAT.get((source_type, target_type), False)
 
-
-    def _visit_cast_expr(self, node):
-        # Step 1: extract target type (the outer type, e.g. bean)
-        target_type = self._extract_type_from_node(node)
-
-        # Step 2: extract the expression being cast and infer its type
-        source_type = self._infer_value_type(node)  # walk children to find type
-
-        # Step 3: check validity
-        if source_type and target_type:
-            if not self._is_cast_compatible(source_type, target_type):
-                self._error(
-                    "E004",
-                    f"Invalid type cast: cannot cast '{source_type}' to '{target_type}'",
-                    node
-                )
-        self._visit_children(node)
+    # def _visit_cast_expr(self, node):
+    #     # Step 1: extract target type (the outer type, e.g. bean)
+    #     target_type = self._extract_type_from_node(node)
+    #     print("[VISIT CAST COMPATIBLE DEBUG] f{self}")
+    #     print("[VISIT CAST COMPATIBLE DEBUG] f{node}")
+    #     # Step 2: extract the expression being cast and infer its type
+    #     source_type = self._infer_value_type(node)  # walk children to find type
+    #     print("[VISIT CAST COMPATIBLE DEBUG] f{source_type}")
+    #     # Step 3: check validity
+    #     if source_type and target_type:
+    #         if not self._is_cast_compatible(source_type, target_type):
+    #             self._error(
+    #                 "E004",
+    #                 f"Invalid type cast: cannot cast '{source_type}' to '{target_type}'",
+    #                 node
+    #             )
+    #     self._visit_children(node)
 
     def _visit_children(self, node):
         """Visit all children of a node."""
@@ -298,6 +299,8 @@ class SemanticAnalyzer:
         """Visit global_dec"""
         self._visit_children(node)
     
+
+    # Main function
     def _visit_main_def(self, node):
         """Visit main_def: bean cup() { body }"""
         self.main_function_count += 1
@@ -311,13 +314,35 @@ class SemanticAnalyzer:
         
         self.current_function = prev_function
         self.symbol_table.pop_scope()
+
+    def _visit_main_body(self, node):
+        self._visit_children(node)
     
+    # Functions
     def _visit_recipe_def(self, node):
         """Visit recipe_def: recipe return_type ID (params) { body refill }"""
         # Extract function name and return type
-        func_name = self._extract_name_from_node(node, depth=3)
+        func_name = None
+
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                func_name = child.value
+                break 
+        
+        # func_name = self._extract_name_from_node(node, depth=3)
         return_type = self._extract_return_type(node)
         
+            # DEBUG
+        print(f"[RECIPE DEBUG] recipe_def: func_name='{func_name}' return_type='{return_type}'")
+        print(f"[RECIPE DEBUG] recipe_def: scope_level before push = {self.symbol_table.scope_level}")
+        print(f"[RECIPE DEBUG] recipe_def: \
+              node children = \
+              {[c.name if hasattr(c, 'name') 
+                else f'{c.type}={c.value}' 
+                for c in node.children]}"
+            )
+        print(f"{return_type}")
+
         if func_name:
             symbol = Symbol(
                 func_name,
@@ -377,6 +402,7 @@ class SemanticAnalyzer:
         else:
             self._visit_children(node)
     
+    # Classes
     def _visit_crema_def(self, node):
         """Visit crema_def: crema ID { body }"""
         class_name = self._extract_name_from_node(node, depth=2)
@@ -404,8 +430,9 @@ class SemanticAnalyzer:
             self.current_class = prev_class
             self.symbol_table.pop_scope()
         else:
-            self._visit_children(node)
-    
+            self._visit_children(node) 
+
+    # Mug/Datatype/Undeclared checks
     def _visit_mug_dec(self, node):
         """Visit mug_dec: mug ID [var_list]"""
         struct_name = self._extract_name_from_node(node, depth=2)
@@ -427,15 +454,31 @@ class SemanticAnalyzer:
         self._visit_children(node)
     
     def _visit_dtype_dec(self, node):
-        """Visit dtype_dec: data type declaration"""
-        # Extract data type from first child
         dtype = self._extract_type_from_node(node)
-        if dtype:
-            self.current_var_type = dtype
-        
+        if not dtype:
+            self._visit_children(node)
+            return
+
+        self.current_var_type = dtype
+
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                # DEBUG
+                print(f"[DEBUG] Declaring '{child.value}' dtype='{dtype}' at scope_level={self.symbol_table.scope_level}")
+                
+                sym = Symbol(
+                    child.value, "variable",
+                    dtype=dtype,
+                    scope_level=self.symbol_table.scope_level,
+                    line=getattr(child, 'line', None)
+                )
+                if not self.symbol_table.declare(child.value, sym):
+                    self._error("E001", f"Redefinition of identifier '{child.value}'", child)
+                break
+
         self._visit_children(node)
         self.current_var_type = None
-    
+
     def _visit_primary(self, node):
         """Visit primary: check for undeclared variables"""
         # Check for identifier usage
@@ -451,6 +494,7 @@ class SemanticAnalyzer:
         
         self._visit_children(node)
     
+    # Statements
     def _visit_pour_loop(self, node):
         """Visit pour_loop: for loop"""
         self.symbol_table.push_scope()
@@ -518,6 +562,7 @@ class SemanticAnalyzer:
         self._visit_children(node)
         self.symbol_table.pop_scope()
     
+    # ID stuff
     def _visit_id_dec_stmt(self, node):
         """Visit id_dec_stmt: ID = value (simple assignment)"""
         var_name = self._extract_name_from_node(node, depth=0)
@@ -563,6 +608,7 @@ class SemanticAnalyzer:
         
         self._visit_children(node)
     
+    # Variables declarations
     def _visit_var_dec_const_init(self, node):
         """Visit variable declaration with initialization"""
         if self.current_var_type:
@@ -595,7 +641,7 @@ class SemanticAnalyzer:
         if self.current_var_type:
             # Infer the type of the RHS value
             rhs_type = self._infer_value_type(node)
-            print(f"[DEBUG] opt_assign: declared={self.current_var_type}, rhs={rhs_type}")
+            print(f"[OPT ASSIGN DEBUG] opt_assign: declared={self.current_var_type}, rhs={rhs_type}")
 
             if rhs_type and rhs_type != self.current_var_type:
                 # Check if it's a valid implicit cast per TYPE_COMPAT
@@ -678,10 +724,7 @@ class SemanticAnalyzer:
         """Visit array declaration"""
         self._visit_children(node)
     
-    # ========================================================================
     # TYPE CHECKING METHODS
-    # ========================================================================
-    
     def _infer_type_from_literal(self, token_type):
         """Infer CARAMEL type from token type."""
         if token_type == "BEANLIT":
@@ -708,6 +751,7 @@ class SemanticAnalyzer:
         if node.name == "primary":
             return self._infer_primary_type(node)
         elif node.name == "expression":
+            print("expression hit")
             return self._infer_expression_type(node)
         elif node.name == "assign_val":
             return self._infer_expression_type(node)
@@ -873,7 +917,7 @@ class SemanticAnalyzer:
         
         return None
     
-    def _extract_name_from_node(self, node, depth=2):
+    def _extract_name_from_node(self, node, depth=3):
         """Extract identifier name from a node at given depth."""
         if not hasattr(node, 'children') or not node.children:
             return None
@@ -940,12 +984,8 @@ class SemanticAnalyzer:
 def run_semantic_analysis(ast):
     """
     Entry point function for semantic analysis.
-    
-    Args:
-        ast: Abstract syntax tree from parser
-        
-    Returns:
-        List of semantic error dictionaries
+    Args: Abstract syntax tree from parser (ast)    
+    Returns: List of semantic error dictionaries
     """
     analyzer = SemanticAnalyzer(ast)
     return analyzer.analyze()
