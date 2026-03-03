@@ -475,18 +475,17 @@ class SemanticAnalyzer:
         self.current_var_type = None
 
     def _visit_primary(self, node):
-        """Visit primary: check for undeclared variables"""
-        # Check for identifier usage
+        """Visit primary: check for undeclared variables.
+        FIX: Check token leaves with type=='ID' directly instead of checking
+        for parse nodes named 'ID'. The old approach caused _extract_token_value
+        to grab the first child of a parse node (e.g. '=') instead of the
+        actual identifier, producing false 'Undeclared identifier' errors.
+        """
         for child in node.children:
-            if self._is_parse_node(child) and child.name == "ID":
-                var_name = self._extract_token_value(child)
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                var_name = child.value
                 if var_name and not self.symbol_table.lookup(var_name):
-                    self.errors.append(SemanticError(
-                        "E002",
-                        f"Undeclared identifier '{var_name}'",
-                        line=getattr(child, 'line', None)
-                    ))
-        
+                    self._error("E002", f"Undeclared identifier '{var_name}'", child)
         self._visit_children(node)
     
     # Statements
@@ -559,24 +558,24 @@ class SemanticAnalyzer:
     
     # ID stuff
     def _visit_id_dec_stmt(self, node):
-        """Visit id_dec_stmt: ID = value (simple assignment)"""
-        var_name = self._extract_name_from_node(node, depth=0)
+        """Visit id_dec_stmt: ID = value
         
+        FIX: Scan for the ID token leaf directly so we get real line/col.
+        """
+        var_name = None
+        id_token = None
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                var_name = child.value
+                id_token = child
+                break
+
         if var_name:
             symbol = self.symbol_table.lookup(var_name)
             if not symbol:
-                self.errors.append(SemanticError(
-                    "E002",
-                    f"Undeclared identifier '{var_name}'",
-                    line=getattr(node, 'line', None)
-                ))
+                self._error("E002", f"Undeclared identifier '{var_name}'", id_token)
             elif symbol.is_constant:
-                self.errors.append(SemanticError(
-                    "E005",
-                    f"Cannot modify constant identifier '{var_name}'",
-                    line=getattr(node, 'line', None)
-                ))
-        
+                self._error("E005", f"Cannot modify constant identifier '{var_name}'", id_token)
         self._visit_children(node)
     
     def _visit_update_id(self, node):
@@ -651,29 +650,19 @@ class SemanticAnalyzer:
         self._visit_children(node)
 
     def _visit_var_dec_tail(self, node):
-        """Visit variable declaration tail"""
-        # Collect variable names and track their types
+        """Visit variable declaration tail.
+        FIX: Only match actual ID token leaves, not parse nodes.
+        """
         if self.current_var_type and hasattr(node, 'children'):
             for child in node.children:
-                if self._is_parse_node(child):
-                    if child.name == "ID" or (hasattr(child, 'value')):
-                        var_name = self._extract_token_value(child)
-                        if var_name:
-                            symbol = Symbol(
-                                var_name,
-                                "variable",
-                                dtype=self.current_var_type,
-                                scope_level=self.symbol_table.scope_level,
-                                line=getattr(child, 'line', None)
-                            )
-                            
-                            if not self.symbol_table.declare(var_name, symbol):
-                                self.errors.append(SemanticError(
-                                    "E001",
-                                    f"Redefinition of identifier '{var_name}'",
-                                    line=getattr(child, 'line', None)
-                                ))
-        
+                if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                    var_name = child.value
+                    if var_name:
+                        symbol = Symbol(var_name, "variable", dtype=self.current_var_type,
+                                        scope_level=self.symbol_table.scope_level,
+                                        line=getattr(child, 'line', None))
+                        if not self.symbol_table.declare(var_name, symbol):
+                            self._error("E001", f"Redefinition of identifier '{var_name}'", child)
         self._visit_children(node)
     
     def _visit_acc_mod_dec_body(self, node):
@@ -817,11 +806,7 @@ class SemanticAnalyzer:
         
         # Check compatibility
         if not self._is_type_compatible(symbol.dtype, rhs_type):
-            self.errors.append(SemanticError(
-                "E003",
-                f"Type mismatch: cannot assign '{rhs_type}' to '{symbol.dtype}' variable '{var_name}'",
-                line=getattr(node, 'line', None)
-            ))
+            self._error("E003", f"Type mismatch: cannot assign '{rhs_type}' to '{symbol.dtype}' variable '{var_name}'", node)
     
     def _extract_rhs_type(self, node):
         """Extract RHS type from assignment node."""
@@ -958,22 +943,40 @@ class SemanticAnalyzer:
         
         return None
     
+    def _find_token_location(self, node, _depth=0):
+        """
+        Recursively walk the node tree to find the first token leaf
+        that carries line/column information.
+        Only token (leaf) nodes have .line/.column — parse nodes never do.
+        Depth-limited to 10 to avoid runaway recursion on malformed trees.
+        """
+        if _depth > 10:
+            return None, None
+        # Leaf token — check directly
+        if not self._is_parse_node(node):
+            line = getattr(node, 'line', None)
+            col  = getattr(node, 'column', None)
+            if line is not None:
+                return line, col
+            return None, None
+        # Parse node — recurse into children
+        if hasattr(node, 'children'):
+            for child in node.children:
+                line, col = self._find_token_location(child, _depth + 1)
+                if line is not None:
+                    return line, col
+        return None, None
+
     def _error(self, code, message, node=None):
-        """Record a semantic error."""
-        line = None
-        column = None
-        
-        if node:
-            if hasattr(node, 'line'):
-                line = node.line
-                column = node.column
-            elif hasattr(node, 'children') and node.children:
-                for child in node.children:
-                    if hasattr(child, 'line'):
-                        line = child.line
-                        column = child.column
-                        break
-        
+        """
+        Record a semantic error.
+        Always routes through _find_token_location so line/column are resolved
+        by walking down to the first token leaf. Parse nodes never carry
+        location info directly — only token leaves do.
+        """
+        line, column = None, None
+        if node is not None:
+            line, column = self._find_token_location(node)
         self.errors.append(SemanticError(code, message, line, column))
 
 def run_semantic_analysis(ast):

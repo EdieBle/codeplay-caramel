@@ -59,7 +59,6 @@ KEYWORD_MAP = {
     "CHURRO": "CHURRO",
     "COLD": "COLD",
     "CUP": "CUP",
-    "DECAF": "DECAF",
     "DEFOAM": "DEFOAM",
     "DRIP": "DRIP",
     "ELIFROTH": "ELIFROTH",
