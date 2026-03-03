@@ -335,12 +335,7 @@ class SemanticAnalyzer:
             # DEBUG
         print(f"[RECIPE DEBUG] recipe_def: func_name='{func_name}' return_type='{return_type}'")
         print(f"[RECIPE DEBUG] recipe_def: scope_level before push = {self.symbol_table.scope_level}")
-        print(f"[RECIPE DEBUG] recipe_def: \
-              node children = \
-              {[c.name if hasattr(c, 'name') 
-                else f'{c.type}={c.value}' 
-                for c in node.children]}"
-            )
+        print(f"[RECIPE DEBUG] recipe_def: \node children = \{[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in node.children]}")
         print(f"{return_type}")
 
         if func_name:
