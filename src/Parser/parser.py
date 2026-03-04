@@ -161,6 +161,7 @@ class RDParser:
         PRIMARY_LITERALS: Literal token types
         EXPR_START: Tokens that can start an expression
     """
+
     # Token sets for predictive parsing
     DATA_TYPE = {"BEAN", "DRIP", "CHURRO", "TEMP"}
     LOGIC_OP = {"AND", "OR"}
@@ -175,10 +176,15 @@ class RDParser:
         "NOT", "INCREMENT", "DECREMENT", "MINUS", "ID", "ORDER",
         "BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD", "OP_PAREN"
     }
+    BLEND_TERM_START = {
+        "BLENDLIT", "ID", "ORDER", "OP_PAREN",
+        "BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD"
+    }
 
     def __init__(self, tokens):
         """Initialize the parser with a token stream."""
         self.stream = TokenStream(tokens)
+        self._allow_function_calls = True
 
     # ========================================================================
     # 1. PROGRAM STRUCTURE & INITIALIZATION
@@ -251,6 +257,19 @@ class RDParser:
             "CAFE", "BACKROOM", "BREWED", "BLEND", "BEAN", "DRIP", "CHURRO", "TEMP",
             "ID", "ORDER", "MUG", "NEW", "CREMA", "RECIPE", "EMPTY"
         }
+
+    def _has_boolean_content(self, node):
+        """Recursively check if a parse tree node contains boolean/relational content.
+
+        Returns True if the node or any descendant contains a relational operator,
+        logical operator, NOT operator, or boolean literal (HOT/COLD).
+        """
+        if isinstance(node, ParseNode):
+            if node.name in ("rel_op", "logic_op", "NOT"):
+                return True
+            return any(self._has_boolean_content(c) for c in node.children)
+        # Token node - check for boolean literals
+        return getattr(node, 'type', None) in ("HOT", "COLD")
 
     def _merge_errors(self, primary, secondary):
         """Merge two parse errors to provide better error messages."""
@@ -583,22 +602,36 @@ class RDParser:
                 self.parse_blend_val(),
                 self._expect("CL_PAREN")
             ])
-        self._error({"BLENDLIT", "ID", "ORDER", "OP_PAREN"})
+        if t in {"BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD"}:
+            return self._node("blend_term", [self._expect(t)])
+        self._error({"BLENDLIT", "ID", "ORDER", "OP_PAREN", "BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD"})
 
     def parse_blend_term_id_tail(self):
-        """Parse rule: blend_term_id_tail -> . ID | λ"""
+        """Parse rule: blend_term_id_tail -> . ID | (args) | λ"""
         if self._accept("DOT_ACC"):
             return self._node("blend_term_id_tail", [
                 self._node("DOT_ACC", []),
                 self._expect("ID")
             ])
+        if self._current().type == "OP_PAREN":
+            return self._node("blend_term_id_tail", [
+                self._expect("OP_PAREN"),
+                self.parse_function_args(),
+                self.parse_function_args_tail(),
+                self._expect("CL_PAREN")
+            ])
+        if self._current().type == "OP_BRACKETS":
+            return self._node("blend_term_id_tail", [
+                self._expect("OP_BRACKETS"),
+                self.parse_array_index(),
+                self._expect("CL_BRACKETS"),
+                self.parse_arr_call_tail()
+            ])
         return self._node("blend_term_id_tail", [self._node("_empty")])
 
     def parse_blend_arr_elem(self):
-        """Parse rule: blend_arr_elem -> BLENDLIT | λ"""
-        if self._accept("BLENDLIT"):
-            return self._node("blend_arr_elem", [self._node("BLENDLIT", [])])
-        return self._node("blend_arr_elem", [self._node("_empty")])
+        """Parse rule: blend_arr_elem -> blend_term"""
+        return self._node("blend_arr_elem", [self.parse_blend_term()])
 
     def parse_blend_ext_arr_elem(self):
         """Parse rule: blend_ext_arr_elem -> (COMMA blend_arr_elem)* | λ"""
@@ -612,24 +645,34 @@ class RDParser:
 
     def parse_blend_arr_cont_1d(self):
         """Parse rule: blend_arr_cont_1d -> blend_arr_elem (, blend_arr_elem)* | λ"""
-        if self._current().type == "BLENDLIT":
+        if self._current().type in self.BLEND_TERM_START:
             return self._node("blend_arr_cont_1d", [
                 self.parse_blend_arr_elem(),
                 self.parse_blend_ext_arr_elem()
             ])
         return self._node("blend_arr_cont_1d", [self._node("_empty")])
 
-    def parse_blend_arr_cont_2d(self):
-        """Parse rule: blend_arr_cont_2d -> ([blend_arr_elem, ...])* | λ"""
-        if self._accept("OP_BRACKETS"):
-            return self._node("blend_arr_cont_2d", [
-                self._node("OP_BRACKETS", []),
+    def parse_opt_blend_arr_elems(self):
+        """Parse rule: opt_blend_arr_elems -> blend_arr_elem ext_blend_arr_elem | λ"""
+        if self._current().type in self.BLEND_TERM_START:
+            return self._node("opt_blend_arr_elems", [
                 self.parse_blend_arr_elem(),
-                self.parse_blend_ext_arr_elem(),
-                self._expect("CL_BRACKETS"),
-                self.parse_blend_arr_cont_2d_tail()
+                self.parse_blend_ext_arr_elem()
             ])
-        return self._node("blend_arr_cont_2d", [self._node("_empty")])
+        return self._node("opt_blend_arr_elems", [self._node("_empty")])
+
+    def parse_blend_arr_cont_2d(self):
+        """Parse rule: blend_arr_cont_2d -> [elems], [elems] (, [elems])*"""
+        return self._node("blend_arr_cont_2d", [
+            self._expect("OP_BRACKETS"),
+            self.parse_opt_blend_arr_elems(),
+            self._expect("CL_BRACKETS"),
+            self._expect("COMMA"),
+            self._expect("OP_BRACKETS"),
+            self.parse_opt_blend_arr_elems(),
+            self._expect("CL_BRACKETS"),
+            self.parse_blend_arr_cont_2d_tail()
+        ])
 
     def parse_blend_arr_cont_2d_tail(self):
         """Parse rule: blend_arr_cont_2d_tail -> (COMMA [blend] ...)* | λ"""
@@ -637,8 +680,7 @@ class RDParser:
         while self._accept("COMMA"):
             children.append(self._node("COMMA", []))
             children.append(self._expect("OP_BRACKETS"))
-            children.append(self.parse_blend_arr_elem())
-            children.append(self.parse_blend_ext_arr_elem())
+            children.append(self.parse_opt_blend_arr_elems())
             children.append(self._expect("CL_BRACKETS"))
         if not children:
             children.append(self._node("_empty"))
@@ -656,7 +698,7 @@ class RDParser:
         ])
 
     def parse_id_dec_tail(self):
-        """Parse rule: id_dec_tail -> = value | . ID tail | (args) | [idx] tail | postfix_op"""
+        """Parse rule: id_dec_tail -> = value | . ID tail | [idx] tail | postfix_op"""
         t = self._current().type
         if t == "EQUALS":
             return self._node("id_dec_tail", [
@@ -669,13 +711,6 @@ class RDParser:
                 self._expect("ID"),
                 self.parse_id_dot_tail()
             ])
-        if t == "OP_PAREN":
-            return self._node("id_dec_tail", [
-                self._expect("OP_PAREN"),
-                self.parse_function_args(),
-                self.parse_function_args_tail(),
-                self._expect("CL_PAREN")
-            ])
         if t == "OP_BRACKETS":
             return self._node("id_dec_tail", [
                 self._expect("OP_BRACKETS"),
@@ -686,7 +721,7 @@ class RDParser:
         if t in self.UNARY_OP:
             return self._node("id_dec_tail", [self.parse_unary_op()])
         self._error({
-            "EQUALS", "DOT_ACC", "OP_PAREN", "OP_BRACKETS",
+            "EQUALS", "DOT_ACC", "OP_BRACKETS",
             "INCREMENT", "DECREMENT"
         })
 
@@ -721,23 +756,14 @@ class RDParser:
                 self.parse_arr_call_tail(),
                 self.parse_id_crema_assign_tail()
             ])
-        if t == "OP_PAREN":
-            return self._node("id_dot_tail", [
-                self._expect("OP_PAREN"),
-                self.parse_function_args(),
-                self.parse_function_args_tail(),
-                self._expect("CL_PAREN")
-            ])
-        return self._node("id_dot_tail", [self._node("_empty")])
+        self._error({"EQUALS", "DOT_ACC", "OP_BRACKETS"})
 
     def parse_id_crema_assign_tail(self):
         """Parse rule: id_crema_assign_tail -> = value | λ"""
-        if self._accept("EQUALS"):
-            return self._node("id_crema_assign_tail", [
-                self._node("EQUALS", []),
-                self.parse_assign_val()
-            ])
-        return self._node("id_crema_assign_tail", [self._node("_empty")])
+        return self._node("id_crema_assign_tail", [
+            self._expect("EQUALS"),
+            self.parse_assign_val()
+        ])
 
     def parse_id_bracket_tail(self):
         """Parse rule: id_bracket_tail -> [idx] = elem | = elem"""
@@ -771,7 +797,7 @@ class RDParser:
                 self._expect("CL_BRACKETS"),
                 self.parse_arr_call_tail()
             ])
-        if t == "OP_PAREN":
+        if t == "OP_PAREN" and self._allow_function_calls:
             return self._node("crema_member_inner_tail", [
                 self._expect("OP_PAREN"),
                 self.parse_function_args(),
@@ -807,16 +833,14 @@ class RDParser:
                 self._expect("ID"),
                 self.parse_order_mug_tail()
             ])
-        return self._node("order_dec_tail", [self._node("_empty")])
+        self._error({"EQUALS", "DOT_ACC"})
 
     def parse_order_mug_tail(self):
         """Parse rule: order_mug_tail -> = value | λ"""
-        if self._accept("EQUALS"):
-            return self._node("order_mug_tail", [
-                self._node("EQUALS", []),
-                self.parse_assign_val()
-            ])
-        return self._node("order_mug_tail", [self._node("_empty")])
+        return self._node("order_mug_tail", [
+            self._expect("EQUALS"),
+            self.parse_assign_val()
+        ])
 
     # ========================================================================
     # 8. UNARY OPERATIONS
@@ -970,6 +994,11 @@ class RDParser:
         """Parse rule: arith_expr_tail -> (arithm_op unary_expr)* | λ"""
         children = []
         while self._current().type in self.ARITHM_OP:
+            # BLENDLIT is not in primary/unary_expr; a PLUS before a BLENDLIT
+            # belongs to concat, not arithmetic.  Stop here so the caller's
+            # concat rule can pick up "+ BLENDLIT".
+            if self._current().type == "PLUS" and self._current(1).type == "BLENDLIT":
+                break
             children.append(self.parse_arithm_op())
             children.append(self.parse_unary_expr())
         if not children:
@@ -989,12 +1018,12 @@ class RDParser:
         if t == "INCREMENT":
             return self._node("unary_expr", [
                 self._expect("INCREMENT"),
-                self.parse_primary()
+                self._expect("ID")
             ])
         if t == "DECREMENT":
             return self._node("unary_expr", [
                 self._expect("DECREMENT"),
-                self.parse_primary()
+                self._expect("ID")
             ])
         if t == "MINUS":
             return self._node("unary_expr", [
@@ -1052,7 +1081,7 @@ class RDParser:
                 self._expect("ID"),
                 self.parse_primary_dot_tail()
             ])
-        if t == "OP_PAREN":
+        if t == "OP_PAREN" and self._allow_function_calls:
             return self._node("primary_id_tail", [
                 self._expect("OP_PAREN"),
                 self.parse_function_args(),
@@ -1085,7 +1114,7 @@ class RDParser:
                 self._expect("CL_BRACKETS"),
                 self.parse_arr_call_tail()
             ])
-        if t == "OP_PAREN":
+        if t == "OP_PAREN" and self._allow_function_calls:
             return self._node("primary_dot_tail", [
                 self._expect("OP_PAREN"),
                 self.parse_function_args(),
@@ -1126,9 +1155,11 @@ class RDParser:
         t = self._current().type
         if t == "BEANLIT":
             return self._node("arr_size_val", [self._expect("BEANLIT")])
+        if t == "ID":
+            return self._node("arr_size_val", [self._expect("ID")])
         if t == "FLEX_ASTERISK":
             return self._node("arr_size_val", [self._expect("FLEX_ASTERISK")])
-        self._error({"BEANLIT", "FLEX_ASTERISK"})
+        self._error({"BEANLIT", "ID", "FLEX_ASTERISK"})
 
     def parse_arr_dec_dim(self):
         """Parse rule: arr_dec_dim -> [size] = [2D content] | = [1D content]"""
@@ -1170,9 +1201,7 @@ class RDParser:
 
     def parse_arr_elem(self):
         """Parse rule: arr_elem -> expression | λ"""
-        if self._is_start_expression():
-            return self._node("arr_elem", [self.parse_expression()])
-        return self._node("arr_elem", [self._node("_empty")])
+        return self._node("arr_elem", [self.parse_expression()])
 
     def parse_ext_arr_elem(self):
         """Parse rule: ext_arr_elem -> (COMMA arr_elem)* | λ"""
@@ -1193,17 +1222,27 @@ class RDParser:
             ])
         return self._node("arr_cont_1d", [self._node("_empty")])
 
-    def parse_arr_cont_2d(self):
-        """Parse rule: arr_cont_2d -> ([...], [...])* | λ"""
-        if self._accept("OP_BRACKETS"):
-            return self._node("arr_cont_2d", [
-                self._node("OP_BRACKETS", []),
+    def parse_opt_arr_elems(self):
+        """Parse rule: opt_arr_elems -> arr_elem ext_arr_elem | λ"""
+        if self._is_start_expression():
+            return self._node("opt_arr_elems", [
                 self.parse_arr_elem(),
-                self.parse_ext_arr_elem(),
-                self._expect("CL_BRACKETS"),
-                self.parse_arr_cont_2d_tail()
+                self.parse_ext_arr_elem()
             ])
-        return self._node("arr_cont_2d", [self._node("_empty")])
+        return self._node("opt_arr_elems", [self._node("_empty")])
+
+    def parse_arr_cont_2d(self):
+        """Parse rule: arr_cont_2d -> [elems], [elems] (, [elems])*"""
+        return self._node("arr_cont_2d", [
+            self._expect("OP_BRACKETS"),
+            self.parse_opt_arr_elems(),
+            self._expect("CL_BRACKETS"),
+            self._expect("COMMA"),
+            self._expect("OP_BRACKETS"),
+            self.parse_opt_arr_elems(),
+            self._expect("CL_BRACKETS"),
+            self.parse_arr_cont_2d_tail()
+        ])
 
     def parse_arr_cont_2d_tail(self):
         """Parse rule: arr_cont_2d_tail -> (COMMA [...])* | λ"""
@@ -1211,8 +1250,7 @@ class RDParser:
         while self._accept("COMMA"):
             children.append(self._node("COMMA", []))
             children.append(self._expect("OP_BRACKETS"))
-            children.append(self.parse_arr_elem())
-            children.append(self.parse_ext_arr_elem())
+            children.append(self.parse_opt_arr_elems())
             children.append(self._expect("CL_BRACKETS"))
         if not children:
             children.append(self._node("_empty"))
@@ -1357,7 +1395,7 @@ class RDParser:
 
     def parse_parameter(self):
         """Parse rule: parameter -> dtype_param add_param | λ"""
-        if self._current().type in {"BREWED", "BLEND"}.union(self.DATA_TYPE):
+        if self._current().type in {"BLEND"}.union(self.DATA_TYPE):
             return self._node("parameter", [
                 self.parse_dtype_param(),
                 self.parse_add_param()
@@ -1365,27 +1403,20 @@ class RDParser:
         return self._node("parameter", [self._node("_empty")])
 
     def parse_dtype_param(self):
-        """Parse rule: dtype_param -> brewed body | data_type var_init | blend ID tail"""
+        """Parse rule: dtype_param -> data_type ID opt_assign | blend ID blend_assign"""
         t = self._current().type
-        if t == "BREWED":
-            return self._node("dtype_param", [
-                self._expect("BREWED"),
-                self.parse_param_brewed_body()
-            ])
         if t in self.DATA_TYPE:
             return self._node("dtype_param", [
                 self.parse_data_type(),
                 self.parse_var_dec_init(),
-                
             ])
         if t == "BLEND":
             return self._node("dtype_param", [
                 self._expect("BLEND"),
                 self._expect("ID"),
                 self.parse_blend_assign(),
-                self.parse_blend_tail()
             ])
-        self._error({"BREWED", "BLEND"}.union(self.DATA_TYPE))
+        self._error({"BLEND"}.union(self.DATA_TYPE))
 
     def parse_param_brewed_body(self):
         """Parse rule: param_brewed_body -> data_type init_list | blend const_list"""
@@ -1467,10 +1498,16 @@ class RDParser:
         return self._node("refill_arg", [self._expect("ZERO")])
 
     def parse_refill_content(self):
-        """Parse rule: refill_content -> BLENDLIT | expression"""
+        """Parse rule: refill_content -> BLENDLIT | expression (no function calls)"""
         if self._current().type == "BLENDLIT":
             return self._node("refill_content", [self._expect("BLENDLIT")])
-        return self._node("refill_content", [self.parse_expression()])
+        saved = self._allow_function_calls
+        self._allow_function_calls = False
+        try:
+            result = self._node("refill_content", [self.parse_expression()])
+        finally:
+            self._allow_function_calls = saved
+        return result
 
     def parse_extra_refill_val(self):
         """Parse rule: extra_refill_val -> (COMMA refill_content)* | λ"""
@@ -1728,7 +1765,9 @@ class RDParser:
             return self._node("refill_main_tail", [
                 self._expect("CL_BRACKETS")
             ])
-        return self._node("refill_main_tail", [self.parse_main_body()])
+        if self._is_start_statement() or self._current().type == "REFILL":
+            return self._node("refill_main_tail", [self.parse_main_body()])
+        self._error({"CL_BRACKETS"})
 
     def parse_main_body(self):
         """Parse rule: main_body -> statement main_body | refill_main"""
@@ -1782,6 +1821,15 @@ class RDParser:
         if not children:
             children.append(self._node("_empty"))
         return self._node("stmt_tail", children)
+
+    def parse_stmt_tail_until_snap(self):
+        """Parse rule: stmt_tail_until_snap -> (statement except snap)* | λ"""
+        children = []
+        while self._is_start_statement() and self._current().type != "SNAP":
+            children.append(self.parse_statement())
+        if not children:
+            children.append(self._node("_empty"))
+        return self._node("stmt_tail_until_snap", children)
 
     # ========================================================================
     # 20. INPUT/OUTPUT
@@ -1974,7 +2022,7 @@ class RDParser:
             self.parse_case_lit(),
             self._expect("COLON"),
             self.parse_statement(),
-            self.parse_stmt_tail(),
+            self.parse_stmt_tail_until_snap(),
             self._expect("SNAP"),
             self.parse_defoam_stmt(),
             self.parse_syrup_switch_tail()
@@ -2000,10 +2048,27 @@ class RDParser:
                 self._node("DEFOAM", []),
                 self._expect("COLON"),
                 self.parse_statement(),
-                self.parse_stmt_tail(),
+                self.parse_stmt_tail_until_snap(),
                 self._expect("SNAP")
             ])
         return self._node("defoam_stmt", [self._node("_empty")])
+
+    def parse_pour_condition(self):
+        """Parse pour loop condition: must be a boolean/relational expression.
+
+        Rejects bare identifiers or arithmetic-only expressions that lack
+        relational operators (>, <, ==, !=, >=, <=), logical operators
+        (&&, ||), NOT (!), or boolean literals (hot, cold).
+        """
+        expr = self.parse_expression()
+        if not self._has_boolean_content(expr):
+            tok = self._current()
+            raise UnexpectedToken(
+                tok,
+                self.REL_OP | self.LOGIC_OP | {"NOT"},
+                index=self.stream.index
+            )
+        return expr
 
     def parse_pour_loop(self):
         """Parse rule: pour_loop -> pour (init; cond; update) { body }"""
@@ -2012,7 +2077,7 @@ class RDParser:
             self._expect("OP_PAREN"),
             self.parse_pour_init(),
             self._expect("SEMICOLON"),
-            self.parse_expression(),
+            self.parse_pour_condition(),
             self._expect("SEMICOLON"),
             self.parse_update(),
             self._expect("CL_PAREN"),
@@ -2225,14 +2290,14 @@ class Parser:
 
             # Preferred order for displaying expected tokens
             DISPLAY_ORDER = [
-                "cafe", "backroom", "brewed", "id", "=", "[", "]", ".", "(", ")",
-                "order", "bean", "drip", "blend", "churro", "temp", ",", "&&", "||",
-                "!", "==", "!=", "+", "-", "*", "/", "%", "++", "--", "beanlit",
-                "driplit", "blendlit", "churrolit", "hot", "cold", "***", "mug", "new",
-                "recipe", "refill?", "0", "empty", "crema", "cup", "batter@", "glaze",
-                "ifbrew", "{", "}", "elifroth", "elspress", "flavour", "syrup", ":",
-                "snap", "defoam", "pour", ";", "+=", "-=", "*=", "/=", "whilehot",
-                "taste", "till", "skip"
+                "cafe", "backroom", "brewed", "blend", "id", "[", "]", "=", ",", "+",
+                "blendlit", "order", ".", "(", ")", "beanlit", "driplit", "churrolit", "hot",
+                "cold", "++", "--", "bean", "drip", "churro", "temp", "&&", "||", "!",
+                "<", ">", "==", "!=", "<=", ">=", "-", "*", "/", "%", "***", "mug",
+                "new", "recipe", "refill?", "0", "empty", "crema", "cup", "}", "batter@",
+                "glaze", "ifbrew", "{", "elifroth", "elspress", "flavour", "syrup", ":", "snap",
+                "defoam", "pour", ";", "+=", "-=", "*=", "/=", "whilehot", "taste", "till",
+                "skip"
             ]
 
             expected_readable = [token_to_display(tok) for tok in expected]
@@ -2247,15 +2312,18 @@ class Parser:
             expected_readable = sorted(expected_readable, key=sort_key)
 
             # Construct error message
-            if isinstance(e, UnexpectedEOF):
-                message = "Unexpected end of input"
+            if isinstance(e, UnexpectedEOF) and set(expected) == {"CL_BRACKETS"}:
+                message = "missing ]"
             else:
-                message_display = token_to_display(e.token.type)
-                message = f"Unexpected token [{message_display}, {e.token.value}]"
+                if isinstance(e, UnexpectedEOF):
+                    message = "Unexpected end of input"
+                else:
+                    message_display = token_to_display(e.token.type)
+                    message = f"Unexpected token [{message_display}, {e.token.value}]"
 
-            # if expected_readable:
-            #     expected_list = ", ".join(expected_readable)
-            #     message = f"{message}. Expected one of: {expected_list}"
+                if expected_readable:
+                    expected_list = ", ".join(expected_readable)
+                    message = f"{message}. Expected one of: {expected_list}"
 
             self.errors.append({
                 "type": "SYNTAX_ERROR",
