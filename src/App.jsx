@@ -104,6 +104,10 @@ export default function App() {
   const [hasRun, setHasRun] = useState(false);
   const [hasParsed, setHasParsed] = useState(false);
 
+  // Execution state
+  const [executionResult, setExecutionResult] = useState(null);
+  const [hasExecuted, setHasExecuted] = useState(false);
+
   // Layout & UI States
   const [showTokens, setShowTokens] = useState(true);
   const [lineTokens, setLineTokens] = useState([]);
@@ -120,8 +124,19 @@ export default function App() {
   const highlightRef = useRef(null);
   const lineNumbersRef = useRef(null);
   const fileInputRef = useRef(null);
+  const executionSessionRef = useRef(null);
+  const pollTimerRef = useRef(null);
   const [currentLine, setCurrentLine] = useState(1);
   const [currentColumn, setCurrentColumn] = useState(1);
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+      }
+    };
+  }, []);
 
   // === Handlers ===
 
@@ -182,6 +197,8 @@ export default function App() {
         setShowLineTokens(false);
         setShowTokens(true);
         setCurrentLine(1);
+        setExecutionResult(null);
+        setHasExecuted(false);
       }
     };
     reader.onerror = () => alert("Error reading file");
@@ -248,7 +265,7 @@ export default function App() {
     }
   };
 
-    const handleTokenizeParseAndAnalyzer = async () => {
+  const handleTokenizeParseAndAnalyzer = async () => {
     setBusy(true);
     try {
       // step 1: Tokenizing
@@ -267,7 +284,7 @@ export default function App() {
       setHasRun(true);
       setShowLineTokens(false);
       setShowTokens(true);
-      
+
       if (lexerErrors.length > 0) {
         setErrors(lexerErrors);
         return;
@@ -279,16 +296,18 @@ export default function App() {
       });
       const parserErrors = parseRes.data.errors || [];
       setHasParsed(true);
-      
-      if (parserErrors > 0) {
+
+      if (parserErrors.length > 0) {
         setErrors(parserErrors);
         return;
       }
-  
+
       // step 3: Semantically Analyze
-      const analyzeRes = await axios.post("http://127.0.0.1:5000/analyze", { code });
+      const analyzeRes = await axios.post("http://127.0.0.1:5000/analyze", {
+        code,
+      });
       const semanticErrors = analyzeRes.data.errors || [];
-      setErrors(semanticErrors);      // empty array = no errors
+      setErrors(semanticErrors); // empty array = no errors
 
       //Insert the error handler for analyzer once it's implemented in the backend
       // start with if (parserErrors.length === 0) (like hiw was lexerErrors where handled before proceeding to syntax)
@@ -300,7 +319,103 @@ export default function App() {
     }
   };
 
+  const handleSendInput = async (value) => {
+    const sessionId = executionSessionRef.current;
+    if (!sessionId) return;
+    try {
+      await axios.post(`http://127.0.0.1:5000/execute/input/${sessionId}`, { value });
+    } catch (err) {
+      console.error("Error sending input:", err);
+    }
+  };
+
+  const handleExecute = async () => {
+    setBusy(true);
+    setHasExecuted(false);
+    setExecutionResult(null);
+
+    // Clear any previous polling
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+
+    try {
+      // Tokenize for the lexeme table
+      const tokenRes = await axios.post("http://127.0.0.1:5000/tokenize", { code });
+      const tokenResult = tokenRes.data;
+      const validTokens = tokenResult.filter(
+        (t) => t.type !== "ERROR" && t.type !== "LEXICAL_ERROR",
+      );
+      setTokens(validTokens);
+      setErrors([]);
+      setHasRun(true);
+      setHasParsed(true);
+      setShowLineTokens(false);
+      setShowTokens(true);
+
+      // Start interactive execution session
+      const startRes = await axios.post("http://127.0.0.1:5000/execute/start", { code });
+      const sessionId = startRes.data.session_id;
+      executionSessionRef.current = sessionId;
+
+      // Set initial state - show output tab immediately
+      setExecutionResult({ output: "", generated_code: "", status: "running" });
+      setHasExecuted(true);
+
+      // Poll for status
+      const poll = async () => {
+        try {
+          const statusRes = await axios.get(
+            `http://127.0.0.1:5000/execute/status/${sessionId}`
+          );
+          const data = statusRes.data;
+
+          setExecutionResult({
+            output: data.output || "",
+            generated_code: data.generated_code || "",
+            runtime_error: data.runtime_error || null,
+            errors: data.errors && data.errors.length > 0 ? data.errors : null,
+            status: data.status,
+            input_prompt: data.input_prompt || "",
+          });
+
+          if (data.errors && data.errors.length > 0) {
+            setErrors(data.errors);
+          }
+
+          if (data.status === "completed") {
+            clearInterval(pollTimerRef.current);
+            pollTimerRef.current = null;
+            executionSessionRef.current = null;
+            setBusy(false);
+          }
+        } catch (err) {
+          console.error("Polling error:", err);
+          clearInterval(pollTimerRef.current);
+          pollTimerRef.current = null;
+          setBusy(false);
+        }
+      };
+
+      pollTimerRef.current = setInterval(poll, 500);
+      // Also do an immediate poll
+      poll();
+    } catch (err) {
+      console.error("Error contacting backend:", err);
+      setErrors([{ type: "CONNECTION_ERROR", lexeme: "Backend not running" }]);
+      setBusy(false);
+    }
+  };
+
   const handleClearEditor = () => {
+    // Stop any running execution polling
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    executionSessionRef.current = null;
+
     setCode("");
     setTokens([]);
     setErrors([]);
@@ -310,6 +425,8 @@ export default function App() {
     setShowLineTokens(false);
     setShowTokens(true);
     setCurrentLine(1);
+    setExecutionResult(null);
+    setHasExecuted(false);
   };
 
   const updateCursorPosition = () => {
@@ -419,6 +536,14 @@ export default function App() {
             <div className="tokenize-btn-container">
               <button
                 className="tokenize-btn"
+                onClick={handleExecute}
+                disabled={busy}
+              >
+                {busy ? "Compiling..." : "Compile"}
+              </button>
+
+              <button
+                className="tokenize-btn"
                 onClick={handleTokenizeParseAndAnalyzer}
                 disabled={busy}
               >
@@ -479,7 +604,15 @@ export default function App() {
         </div>
 
         <div className="layout-panel-bottom">
-          <ErrorTabs errors={errors} hasParsed={hasParsed} hasRun={hasRun} />
+          <ErrorTabs
+            errors={errors}
+            hasParsed={hasParsed}
+            hasRun={hasRun}
+            executionResult={executionResult}
+            hasExecuted={hasExecuted}
+            sourceCode={code}
+            onSendInput={handleSendInput}
+          />
         </div>
       </div>
 

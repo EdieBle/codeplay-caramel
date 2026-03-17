@@ -72,6 +72,15 @@
   background: #9b2c2c;
 }
 
+.error-tab-badge--success {
+  background: #38a169 !important;
+  font-size: 0.7rem;
+}
+
+.error-tab-btn.active .error-tab-badge--success {
+  background: #2f855a !important;
+}
+
 /* Tab Content */
 .error-tabs-content {
   padding: 0.75rem 1rem;
@@ -98,7 +107,9 @@
 .error-tab-pane .syntax-error,
 .error-tab-pane .syntax-success,
 .error-tab-pane .semantic-error,
-.error-tab-pane .semantic-success {
+.error-tab-pane .semantic-success,
+.error-tab-pane .output-panel,
+.error-tab-pane .output-panel--empty {
   margin-top: 0;
 }
 

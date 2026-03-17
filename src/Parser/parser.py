@@ -325,7 +325,26 @@ class RDParser:
         if attempt2_err is None:
             return attempt2
 
-        raise self._merge_errors(attempt1_err, attempt2_err)
+        merged = self._merge_errors(attempt1_err, attempt2_err)
+
+        # If no progress was made from the starting position, the error
+        # only reflects what parse_main_def expects ("BEAN").  Enrich it
+        # with the full FIRST(<program>) set so the message lists every
+        # token that can validly begin a program.
+        if merged.index is not None and merged.index == checkpoint:
+            PROGRAM_FIRST = {
+                "CAFE", "BACKROOM", "BREWED", "BLEND", "ID", "ORDER",
+                "BEAN", "DRIP", "CHURRO", "TEMP", "MUG", "NEW",
+                "RECIPE", "EMPTY", "CREMA"
+            }
+            enriched = set(merged.expected).union(PROGRAM_FIRST)
+            if isinstance(merged, UnexpectedEOF):
+                raise UnexpectedEOF(enriched, last_token=merged.token,
+                                    index=merged.index)
+            raise UnexpectedToken(merged.token, enriched,
+                                  index=merged.index)
+
+        raise merged
 
     def parse_global_def(self):
         """Parse rule: global_def -> global_dec global_def | λ"""

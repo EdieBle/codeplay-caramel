@@ -3,6 +3,7 @@ import "./ErrorTabs.css";
 import LexerError from "./LexerError";
 import SyntaxErrorPanel from "./SyntaxErrorPanel";
 import SemanticErrorPanel from "./SemanticErrorPanel";
+import OutputPanel from "./OutputPanel";
 
 export default function ErrorTabs({
   errors,
@@ -10,12 +11,24 @@ export default function ErrorTabs({
   hasRun,
   sourceCode,
   isParseStale,
+  executionResult,
+  hasExecuted,
+  onSendInput,
 }) {
   const [activeTab, setActiveTab] = useState("lexer");
 
-  // Reset to lexer tab when errors change
+  // When execution completes, auto-switch to output tab
   useEffect(() => {
-    setActiveTab("lexer");
+    if (hasExecuted && executionResult) {
+      setActiveTab("output");
+    }
+  }, [hasExecuted, executionResult]);
+
+  // Reset to lexer tab when errors change (but not on execution)
+  useEffect(() => {
+    if (!hasExecuted) {
+      setActiveTab("lexer");
+    }
   }, [errors]);
 
   // Count errors by type
@@ -66,6 +79,22 @@ export default function ErrorTabs({
             <span className="error-tab-badge">{semanticErrorCount}</span>
           )}
         </button>
+
+        <button
+          className={`error-tab-btn ${activeTab === "output" ? "active" : ""}`}
+          onClick={() => setActiveTab("output")}
+        >
+          <span className="error-tab-label">Output</span>
+          {hasExecuted && executionResult && !executionResult.runtime_error &&
+            executionResult.output && executionResult.status === "completed" && (
+            <span className="error-tab-badge error-tab-badge--success">
+              &#x2713;
+            </span>
+          )}
+          {hasExecuted && executionResult && executionResult.runtime_error && (
+            <span className="error-tab-badge">!</span>
+          )}
+        </button>
       </div>
 
       {/* Tab Content */}
@@ -90,6 +119,16 @@ export default function ErrorTabs({
         {activeTab === "semantic" && (
           <div className="error-tab-pane">
             <SemanticErrorPanel errors={errors} hasParsed={hasParsed} />
+          </div>
+        )}
+
+        {activeTab === "output" && (
+          <div className="error-tab-pane">
+            <OutputPanel
+              executionResult={executionResult}
+              hasExecuted={hasExecuted}
+              onSendInput={onSendInput}
+            />
           </div>
         )}
       </div>

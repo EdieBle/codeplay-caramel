@@ -1,0 +1,285 @@
+/* === Output Panel Styles === */
+
+.output-panel,
+.output-panel--empty {
+  border: 1px solid #e9d7c4;
+  background: #fffaf6;
+  border-radius: 10px;
+  padding: 0.75rem;
+  color: #4a3f33;
+}
+
+.output-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  justify-content: space-between;
+}
+
+.output-panel__header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.output-panel__icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.output-panel__title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.output-panel__summary {
+  font-size: 0.85rem;
+  color: #7a6a58;
+}
+
+/* Action buttons */
+.output-panel__actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.output-panel__copy,
+.output-panel__toggle {
+  border: 1px solid #e2c8ac;
+  background: #f7eadf;
+  color: #6a5745;
+  border-radius: 8px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.output-panel__copy:hover:not(:disabled),
+.output-panel__toggle:hover:not(:disabled) {
+  background: #efdcc9;
+}
+
+.output-panel__copy:disabled,
+.output-panel__toggle:disabled {
+  opacity: 0.75;
+  cursor: default;
+}
+
+/* Output Display Area */
+.output-panel__output {
+  margin-top: 0.75rem;
+  border: 1px solid #eedecf;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  padding: 0.75rem 1rem;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+  min-height: 40px;
+}
+
+.output-panel__output--empty {
+  color: #888;
+  font-style: italic;
+}
+
+/* Blinking cursor for running state */
+.output-panel__cursor {
+  animation: blink 1s step-end infinite;
+  color: #dda96d;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Interactive Input Row */
+.output-panel__input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #2a2a2a;
+  border: 1px solid #dda96d;
+  border-radius: 8px;
+}
+
+.output-panel__input-prompt {
+  color: #dda96d;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.output-panel__input-field {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e0e0e0;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.9rem;
+  padding: 0.25rem 0;
+  caret-color: #dda96d;
+}
+
+.output-panel__input-field::placeholder {
+  color: #666;
+  font-style: italic;
+}
+
+.output-panel__input-submit {
+  flex-shrink: 0;
+  border: 1px solid #dda96d;
+  background: rgba(221, 169, 109, 0.15);
+  color: #dda96d;
+  border-radius: 6px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.output-panel__input-submit:hover {
+  background: rgba(221, 169, 109, 0.3);
+}
+
+/* Generated Code Display */
+.output-panel__code-section {
+  margin-top: 0.75rem;
+}
+
+.output-panel__code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  margin-bottom: 0.35rem;
+}
+
+.output-panel__code-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #6f5b4b;
+}
+
+.output-panel__code {
+  border: 1px solid #eedecf;
+  border-radius: 8px;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  padding: 0.75rem 1rem;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  white-space: pre;
+  overflow-x: auto;
+  max-height: 350px;
+  overflow-y: auto;
+  tab-size: 4;
+}
+
+/* Runtime Error */
+.output-panel__error {
+  margin-top: 0.75rem;
+  border: 1px solid #e8b4b4;
+  border-radius: 8px;
+  background: #fff0f0;
+  color: #8b3333;
+  padding: 0.5rem 0.75rem;
+  font-family: "Consolas", "Monaco", "Courier New", monospace;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* Scrollbar for output areas */
+.output-panel__output::-webkit-scrollbar,
+.output-panel__code::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.output-panel__output::-webkit-scrollbar-track,
+.output-panel__code::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+
+.output-panel__output::-webkit-scrollbar-thumb,
+.output-panel__code::-webkit-scrollbar-thumb {
+  background: rgba(221, 169, 109, 0.4);
+  border-radius: 4px;
+}
+
+.output-panel__output::-webkit-scrollbar-thumb:hover,
+.output-panel__code::-webkit-scrollbar-thumb:hover {
+  background: rgba(221, 169, 109, 0.6);
+}
+
+/* ==================== DARK MODE ==================== */
+
+[data-theme="dark"] .output-panel,
+[data-theme="dark"] .output-panel--empty {
+  border-color: rgba(221, 169, 109, 0.35);
+  background: #333333;
+  color: #f0f0f0;
+}
+
+[data-theme="dark"] .output-panel__summary {
+  color: #c8c8c8;
+}
+
+[data-theme="dark"] .output-panel__copy,
+[data-theme="dark"] .output-panel__toggle {
+  border-color: rgba(221, 169, 109, 0.45);
+  background: rgba(221, 169, 109, 0.12);
+  color: #f2d4b1;
+}
+
+[data-theme="dark"] .output-panel__copy:hover:not(:disabled),
+[data-theme="dark"] .output-panel__toggle:hover:not(:disabled) {
+  background: rgba(221, 169, 109, 0.2);
+}
+
+[data-theme="dark"] .output-panel__output {
+  border-color: rgba(221, 169, 109, 0.25);
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .output-panel__code {
+  border-color: rgba(221, 169, 109, 0.25);
+  background: #1e1e2e;
+  color: #cdd6f4;
+}
+
+[data-theme="dark"] .output-panel__error {
+  border-color: #7a3333;
+  background: #3a2020;
+  color: #f0aaaa;
+}
+
+[data-theme="dark"] .output-panel__code-title {
+  color: #d0c0a8;
+}
+
+[data-theme="dark"] .output-panel__input-row {
+  background: #1a1a1a;
+  border-color: #dda96d;
+}
+
+[data-theme="dark"] .output-panel__input-field {
+  color: #e0e0e0;
+}
