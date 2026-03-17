@@ -538,6 +538,14 @@ class IRGenerator:
                     val = self._visit(c)
                     break
             if val is not None:
+                # Coerce based on declared type vs value type
+                dest_type = self._var_types.get(var_name)
+                if dest_type == "bean" and isinstance(val, bool):
+                    val = 1 if val else 0
+                elif dest_type == "drip" and isinstance(val, bool):
+                    val = 1.0 if val else 0.0
+                elif dest_type == "temp" and isinstance(val, (int, float)) and not isinstance(val, bool):
+                    val = True if val != 0 else False
                 self._emit("ASSIGN", dest=var_name, arg1=val)
             return
 
