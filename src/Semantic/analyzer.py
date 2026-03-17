@@ -9,6 +9,7 @@ Type Compatibility Rules: refer to rule 11 tinatamad pa aq
 """
 from src.Lexer.lexer import token_final_out
 from src.Parser.parser import Parser
+# import traceback
 
 class SemanticError:
     """Represents a semantic error in the code."""
@@ -236,6 +237,8 @@ class SemanticAnalyzer:
         
         except Exception as e:
             # Silently skip analysis errors
+            # print(f"[ANALYSIS CRASH] {e}")
+            # traceback.print_exc()
             pass
         
         return [err.to_dict() for err in self.errors]
@@ -254,6 +257,7 @@ class SemanticAnalyzer:
             return getattr(self, method_name)(node)
         
         # Default: visit all children
+        print(f"[NO HANDLER] {node.name} has no visitor — falling through to children")
         self._visit_children(node)
         return None
     
@@ -329,6 +333,7 @@ class SemanticAnalyzer:
         self.symbol_table.pop_scope()
 
     def _visit_main_body(self, node):
+        print(f"[MAIN BODY DEBUG] children: {[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in node.children]}")
         self._visit_children(node)
     
     # Functions
@@ -464,7 +469,6 @@ class SemanticAnalyzer:
     def _visit_dtype_dec(self, node):
         dtype = self._extract_type_from_node(node)
 
-        # for debugging purposes only.
         print(f"[_visit_dtype_dec] dtype={dtype}, node={node.name}") 
         if not dtype:
             self._visit_children(node)
@@ -472,14 +476,26 @@ class SemanticAnalyzer:
 
         self.current_var_type = dtype
 
+        # Pass 1: check if brewed appears anywhere in children BEFORE finding the ID
+        is_constant = False
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "BREWED":
+                print(f"[DEBUG] brewed spotted")
+                is_constant = True
+                break
+            if self._is_parse_node(child) and child.name in ("dtype_brewed_body", "acc_brewed_body"):
+                is_constant = True
+                break
+
+        # Pass 2: find the ID and declare it with the correct is_constant value
         for child in node.children:
             if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
-                # DEBUG
-                print(f"[DEBUG] Declaring '{child.value}' dtype='{dtype}' at scope_level={self.symbol_table.scope_level}")
+                print(f"[DEBUG] Declaring '{child.value}' dtype='{dtype}' is_constant={is_constant} at scope_level={self.symbol_table.scope_level}")
                 
                 sym = Symbol(
                     child.value, "variable",
                     dtype=dtype,
+                    is_constant=is_constant,
                     scope_level=self.symbol_table.scope_level,
                     line=getattr(child, 'line', None)
                 )
@@ -617,6 +633,7 @@ class SemanticAnalyzer:
 
         if var_name:
             symbol = self.symbol_table.lookup(var_name)
+            # print(f"[ID_DEC_STMT DEBUG] var={var_name} symbol={symbol} is_constant={getattr(symbol, 'is_constant', None)}")
             if not symbol:
                 self._error("E002", f"Undeclared identifier '{var_name}'", id_token)
             elif symbol.is_constant:
@@ -674,6 +691,8 @@ class SemanticAnalyzer:
         """Visit variable declaration with initialization"""
         if self.current_var_type:
             var_name = self._extract_var_name(node)
+            print(f"[CONST INIT DEBUG] var={var_name} dtype={self.current_var_type} is_constant=True")
+
             if var_name:
                 symbol = Symbol(
                     var_name,
@@ -682,7 +701,7 @@ class SemanticAnalyzer:
                     is_constant=True,  # BREWED = constant
                     scope_level=self.symbol_table.scope_level,
                     line=getattr(node, 'line', None),
-                    is_initialized=True
+                    # is_initialized=True
                 )
                 
                 if not self.symbol_table.declare(var_name, symbol):
@@ -695,7 +714,9 @@ class SemanticAnalyzer:
                     # Check initialization type
                     self._check_assignment_type(var_name, symbol, node)
         
+        print(f"[CONST INIT DEBUG] children: {[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in node.children]}")
         self._visit_children(node)
+        print(f"[CONST INIT DEBUG] done visiting children")
     
     def _visit_opt_assign(self, node):
         # Only check if we're inside a declaration (current_var_type is set)
