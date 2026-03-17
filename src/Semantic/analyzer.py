@@ -72,6 +72,9 @@ class SymbolTable:
         Declare a symbol in current scope.
         Returns True if successful, False if already declared in this scope.
         """
+        # for debugging purposes only.
+        print(f"[DECLARE] '{name}' at scope depth {len(self.scopes)}")
+        print(f"[DECLARE] Current scopes: {[list(s.keys()) for s in self.scopes]}")
         if name in self.scopes[-1]:
             return False
         self.scopes[-1][name] = symbol
@@ -79,9 +82,15 @@ class SymbolTable:
     
     def lookup(self, name):
         """Look up a symbol in current and parent scopes."""
-        for scope in reversed(self.scopes):
+
+        # for debugging purposes only.
+        print(f"[LOOKUP] '{name}' - Searching {len(self.scopes)} scopes")
+        for i, scope in enumerate(reversed(self.scopes)):
+            print(f"  Scope {len(self.scopes)-i-1}: {list(scope.keys())}")
             if name in scope:
+                print(f"  → FOUND in scope {len(self.scopes)-i-1}")
                 return scope[name]
+        print(f"  → NOT FOUND!")
         return None
     
     def lookup_current(self, name):
@@ -236,6 +245,10 @@ class SemanticAnalyzer:
         if not self._is_parse_node(node):
             return None
         
+        # for debugging purposes only.
+        print(f"[VISIT] {node.name} at scope depth {self.symbol_table.scope_level}") 
+
+
         method_name = f"_visit_{node.name}"
         if hasattr(self, method_name):
             return getattr(self, method_name)(node)
@@ -450,6 +463,9 @@ class SemanticAnalyzer:
     
     def _visit_dtype_dec(self, node):
         dtype = self._extract_type_from_node(node)
+
+        # for debugging purposes only.
+        print(f"[_visit_dtype_dec] dtype={dtype}, node={node.name}") 
         if not dtype:
             self._visit_children(node)
             return
@@ -495,10 +511,39 @@ class SemanticAnalyzer:
         prev_loop = self.in_loop
         self.in_loop = True
         
-        self._visit_children(node)
-        
+        # self._visit_children(node) 
+
+        if hasattr(node, 'children'): 
+            for child in node.children: 
+                if self._is_parse_node(child): 
+                    self._visit(child)
+
         self.in_loop = prev_loop
         self.symbol_table.pop_scope()
+
+    def _visit_pour_init(self, node):
+        """Visit pour_init: bean m = 1"""
+        # Extract the data type
+        dtype = None
+        var_name = None
+        
+        for child in node.children:
+            if self._is_parse_node(child) and child.name == "data_type":
+                dtype = self._extract_type_from_node(child)
+            elif not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                var_name = child.value
+        
+        if dtype and var_name:
+            print(f"[_visit_pour_init] DECLARING '{var_name}' as {dtype}")
+            sym = Symbol(
+                var_name, "variable",
+                dtype=dtype,
+                scope_level=self.symbol_table.scope_level
+            )
+            if not self.symbol_table.declare(var_name, sym):
+                self._error("E001", f"Redefinition of identifier '{var_name}'", node)
+        
+        self._visit_children(node)
     
     def _visit_whilehot_loop(self, node):
         """Visit whilehot_loop: while loop"""
@@ -603,6 +648,29 @@ class SemanticAnalyzer:
         self._visit_children(node)
     
     # Variables declarations
+    def _visit_var_dec_init(self, node):
+        """Visit var_dec_init: ID opt_assign in a comma-separated list"""
+        # Extract the ID from this node
+        var_name = None
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                var_name = child.value
+                break
+        
+        if var_name and self.current_var_type:
+            print(f"[_visit_var_dec_init] DECLARING '{var_name}' as {self.current_var_type}")
+            sym = Symbol(
+                var_name, "variable",
+                dtype=self.current_var_type,
+                scope_level=self.symbol_table.scope_level,
+                line=getattr(child, 'line', None) if child else None
+            )
+            if not self.symbol_table.declare(var_name, sym):
+                self._error("E001", f"Redefinition of identifier '{var_name}'", child)
+        
+        self._visit_children(node)
+
+
     def _visit_var_dec_const_init(self, node):
         """Visit variable declaration with initialization"""
         if self.current_var_type:

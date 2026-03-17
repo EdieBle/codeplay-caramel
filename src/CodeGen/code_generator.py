@@ -74,6 +74,12 @@ class CodeGenerator:
         """
         code = self.generate()
 
+        # print("=== GENERATED CODE ===") On server na siya
+        # with open("debug_generated.py", "w") as f:
+        #     f.write(code)
+        # print("=== END GENERATED CODE ===")
+    
+
         # Prepare sandboxed execution
         captured_out = io.StringIO()
         captured_err = io.StringIO()
@@ -177,7 +183,7 @@ class CodeGenerator:
         self._emit_raw("def _caramel_input(prompt=''):")
         self._emit_raw("    return input(prompt)")
         self._emit_raw("")
-        self._emit_raw("def _caramel_print(*args):")
+        self._emit_raw("def _caramel_print(*args, end='\\n'):")
         self._emit_raw("    parts = []")
         self._emit_raw("    for a in args:")
         self._emit_raw("        if isinstance(a, bool):")
@@ -188,7 +194,7 @@ class CodeGenerator:
         self._emit_raw("            parts.append(a[1:-1])")
         self._emit_raw("        else:")
         self._emit_raw("            parts.append(str(a))")
-        self._emit_raw('    print("".join(parts))')
+        self._emit_raw('    print("".join(parts), end="")')
         self._emit_raw("")
         # Global variable storage for order. access
         self._emit_raw("_order = {}")
@@ -801,7 +807,7 @@ class StructuredCodeGenerator:
 
         # Only detect loop patterns (WHILE_START, POUR_START, DOWHILE_START)
         is_loop_label = any(prefix in start_label for prefix in
-                           ("WHILE_START", "POUR_START", "POUR_UPDATE",
+                           ("WHILE_START", "POUR_START",
                             "DOWHILE_START"))
         if not is_loop_label:
             return None
@@ -811,13 +817,12 @@ class StructuredCodeGenerator:
             if self.ir[j].op == "GOTO" and self.ir[j].dest == start_label:
                 # The LABEL after the GOTO is the end
                 if j + 1 < len(self.ir) and self.ir[j + 1].op == "LABEL":
-                    return j + 1
+                    return j + 1  # ← returns the END label index
                 return j
         return None
 
     def _gen_while_loop(self, start, end):
-        """Generate a while loop from IR pattern."""
-        # Find the IF_FALSE condition (the loop test)
+        # Find the IF_FALSE condition
         cond_idx = None
         cond_val = None
         for j in range(start + 1, end):
@@ -826,34 +831,37 @@ class StructuredCodeGenerator:
                 cond_val = self._py_val(self.ir[j].arg1)
                 break
 
+        # Find the back-GOTO (GOTO that points back to our start label)
+        start_label_name = self.ir[start].dest
+        back_goto_idx = None
+        for j in range(start + 1, end + 1):
+            if j < len(self.ir) and self.ir[j].op == "GOTO" and self.ir[j].dest == start_label_name:
+                back_goto_idx = j
+                break
+
+        # Emit condition computation before the while header
+        if cond_idx:
+            for j in range(start + 1, cond_idx):
+                if self.ir[j].op not in ("LABEL", "GOTO", "IF_FALSE", "IF_TRUE"):
+                    self._gen_simple(self.ir[j], j)
+
         if cond_val:
             self._emit(f"while _caramel_to_bool({cond_val}):")
         else:
-            # do-while or infinite loop
             self._emit("while True:")
 
         self._push()
 
-        # Emit body between condition and GOTO (or between start and end)
+        # Body runs from after IF_FALSE up to (but not including) the back-GOTO
         body_start = (cond_idx + 1) if cond_idx else start + 1
-        # Find the GOTO that loops back
-        goto_idx = end
-        for j in range(body_start, end + 1):
-            if j < len(self.ir) and self.ir[j].op == "GOTO":
-                goto_idx = j
-                break
+        body_end = back_goto_idx if back_goto_idx is not None else end
 
         has_body = False
         bi = body_start
-        while bi < goto_idx and bi < len(self.ir):
+        while bi < body_end and bi < len(self.ir):
             instr_i = self.ir[bi]
 
-            # Handle nested control flow
             if instr_i.op == "LABEL":
-                # Check for POUR_UPDATE label - skip it, it's the update section
-                if instr_i.dest and "POUR_UPDATE" in instr_i.dest:
-                    bi += 1
-                    continue
                 inner_loop = self._detect_while_loop(bi)
                 if inner_loop is not None:
                     bi = self._gen_while_loop(bi, inner_loop)
@@ -862,11 +870,10 @@ class StructuredCodeGenerator:
                 bi += 1
                 continue
             if instr_i.op == "IF_FALSE":
-                bi = self._gen_if_block(bi, goto_idx)
+                bi = self._gen_if_block(bi, body_end)
                 has_body = True
                 continue
             if instr_i.op == "IF_TRUE":
-                # do-while condition - emit break
                 cond = self._py_val(instr_i.arg1)
                 self._emit(f"if not _caramel_to_bool({cond}):")
                 self._push()
@@ -875,9 +882,8 @@ class StructuredCodeGenerator:
                 has_body = True
                 bi += 1
                 continue
-            if instr_i.op in ("GOTO",):
-                # Check if this is a break
-                if self.ir[bi].dest and "END" in self.ir[bi].dest:
+            if instr_i.op == "GOTO":
+                if instr_i.dest and "END" in instr_i.dest:
                     self._emit("break")
                     has_body = True
                 bi += 1
@@ -890,10 +896,15 @@ class StructuredCodeGenerator:
         if not has_body:
             self._emit("pass")
 
+        # Re-emit condition computation at end of body so while sees fresh _t
+        if cond_idx:
+            for j in range(start + 1, cond_idx):
+                if self.ir[j].op not in ("LABEL", "GOTO", "IF_FALSE", "IF_TRUE"):
+                    self._gen_simple(self.ir[j], j)
+
         self._pop()
-
         return end + 1
-
+    
     def _gen_if_block(self, start, boundary):
         """Generate an if/else block from IR pattern."""
         instr = self.ir[start]

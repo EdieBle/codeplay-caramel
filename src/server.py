@@ -88,6 +88,10 @@ def _run_session(session):
         session.errors = [{"type": "CODEGEN_ERROR", "message": f"Code generation failed: {e}"}]
         session.status = "completed"
         return
+    
+    # Uncomment when needed to store the generated code
+    # with open(r"C:\Users\Jed\Downloads\codeplay-caramel\src\debug_generated.py", "w") as f:
+    #     f.write(generated_code)
 
     # Step 6: Execute with interactive I.O
     session.status = "running"
@@ -109,6 +113,7 @@ def _run_session(session):
     def mock_print(*args, **kwargs):
         """Capture print output."""
         buf = _io.StringIO()
+        kwargs.setdefault("end", "")
         print(*args, file=buf, **kwargs)
         text = buf.getvalue()
         session.output_buffer.append(text)
