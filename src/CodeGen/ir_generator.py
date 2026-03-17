@@ -330,31 +330,44 @@ class IRGenerator:
                             and children[0].name == "_empty"):
             return None
 
-        # Find the DECLARE target before evaluating the expression,
-        # since expression evaluation may emit additional instructions
-        # (e.g. BINOP for x+y) that push DECLARE out of last position.
         declare_dest = None
         for instr in reversed(self.instructions):
             if instr.op == "DECLARE":
                 declare_dest = instr.dest
                 break
 
-        # Find the value child and evaluate it
         for child in children:
             if self._is_node(child) and child.name in ("value", "assign_val",
-                                                         "expression", "blend_val"):
+                                                        "expression", "blend_val"):
                 val = self._visit(child)
                 if val is not None:
                     if declare_dest is not None:
+                        # Coerce based on declared type vs value type
+                        dest_type = self._var_types.get(declare_dest)
+                        if dest_type == "bean" and isinstance(val, bool):
+                            val = 1 if val else 0
+                        elif dest_type == "drip" and isinstance(val, bool):
+                            val = 1.0 if val else 0.0
+                        elif dest_type == "temp" and isinstance(val, (int, float)) and not isinstance(val, bool):
+                            val = True if val != 0 else False
                         self._emit("ASSIGN", dest=declare_dest, arg1=val)
                     return val
             if self._is_token(child) and child.type in self.LITERAL_TYPES:
                 val = self._token_to_literal(child)
                 if declare_dest is not None:
+                    # Same coercion for token literals
+                    dest_type = self._var_types.get(declare_dest)
+                    if dest_type == "bean" and isinstance(val, bool):
+                        val = 1 if val else 0
+                    elif dest_type == "drip" and isinstance(val, bool):
+                        val = 1.0 if val else 0.0
+                    elif dest_type == "temp" and isinstance(val, (int, float)) and not isinstance(val, bool):
+                        val = True if val != 0 else False
                     self._emit("ASSIGN", dest=declare_dest, arg1=val)
                 return val
+        
         return None
-
+    
     def _visit_var_dec_const_init(self, node):
         """Handle constant variable initialization: ID = value"""
         id_tok = self._find_child_token(node, "ID")

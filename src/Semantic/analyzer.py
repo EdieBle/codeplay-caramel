@@ -670,7 +670,6 @@ class SemanticAnalyzer:
         
         self._visit_children(node)
 
-
     def _visit_var_dec_const_init(self, node):
         """Visit variable declaration with initialization"""
         if self.current_var_type:
