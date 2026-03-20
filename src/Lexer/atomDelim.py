@@ -87,7 +87,7 @@ DELIM_VAL = {
     "spacebraces_delim": list(set(space_delim + ['{'])),
     "spaceparen_delim": list(set(space_delim + ['('])),
     "string_delim": list(set(spacenew_delim + [')', ']', '+', ','])),
-    "temp_delim": list(set(spacenew_delim + relational_op + [',', '&', '|', ':',')',']'])),
+    "temp_delim": list(set(spacenew_delim + relational_op + [',', '&', '|', ':', ';', ')',']'])),
     "unary_delim": list(set(spacenew_delim + alpha_small + [')'])) # + ['1','2','3','4','5','6','7','8','9'] (removed these for now cuz a unary being delimited by a num makes no sense 4:17am)
 }
 KEYWORDS_TABLE = {
