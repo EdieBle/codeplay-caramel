@@ -665,7 +665,7 @@ class StructuredCodeGenerator:
         self._emit_raw("            parts.append(a[1:-1])")
         self._emit_raw("        else:")
         self._emit_raw("            parts.append(str(a))")
-        self._emit_raw('    print("".join(parts)), end="")')
+        self._emit_raw('    print("".join(parts), end="")')
         self._emit_raw("")
         self._emit_raw("_order = {}")
         self._emit_raw("_functions = {}")
