@@ -7,6 +7,12 @@ import "./components/NavBar.css";
 import ErrorTabs from "./components/ErrorTabs";
 import Modal from "./components/Modal";
 
+// === Input Sanitization Helper ===
+const sanitizeQuotes = (text) =>
+  text
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/[\u2018\u2019]/g, "'");
+
 // === Syntax Highlighting Helper ===
 const highlightCode = (code) => {
   if (!code) return "";
@@ -506,7 +512,7 @@ export default function App() {
                   ref={textareaRef}
                   className="code-layer real-textarea"
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
+                  onChange={(e) => setCode(sanitizeQuotes(e.target.value))}
                   onClick={updateCursorPosition}
                   onKeyUp={updateCursorPosition}
                   onScroll={handleScroll}

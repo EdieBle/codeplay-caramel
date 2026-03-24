@@ -257,7 +257,7 @@ class SemanticAnalyzer:
             return getattr(self, method_name)(node)
         
         # Default: visit all children
-        print(f"[NO HANDLER] {node.name} has no visitor — falling through to children")
+        # print(f"[NO HANDLER] {node.name} has no visitor — falling through to children")
         self._visit_children(node)
         return None
     

@@ -163,7 +163,7 @@ class RDParser:
     """
 
     # Token sets for predictive parsing
-    DATA_TYPE = {"BEAN", "DRIP", "CHURRO", "TEMP"}
+    DATA_TYPE = {"BEAN", "DRIP", "CHURRO", "TEMP", "BLEND"}
     LOGIC_OP = {"AND", "OR"}
     REL_OP = {
         "GREATER_THAN", "LESSER_THAN", "EQ_EQUALS", "NOT_EQUAL",
@@ -171,10 +171,10 @@ class RDParser:
     }
     ARITHM_OP = {"PLUS", "MINUS", "MULTIPLY", "DIVIDE", "MODULO"}
     UNARY_OP = {"INCREMENT", "DECREMENT"}
-    PRIMARY_LITERALS = {"BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD"}
+    PRIMARY_LITERALS = {"BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD", "BLENDLIT"}
     EXPR_START = {
         "NOT", "INCREMENT", "DECREMENT", "MINUS", "ID", "ORDER",
-        "BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD", "OP_PAREN"
+        "BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD", "BLENDLIT", "OP_PAREN"
     }
     BLEND_TERM_START = {
         "BLENDLIT", "ID", "ORDER", "OP_PAREN",
@@ -185,6 +185,7 @@ class RDParser:
         """Initialize the parser with a token stream."""
         self.stream = TokenStream(tokens)
         self._allow_function_calls = True
+        self._allow_unary_ops = True
 
     # ========================================================================
     # 1. PROGRAM STRUCTURE & INITIALIZATION
@@ -241,7 +242,7 @@ class RDParser:
             "CAFE", "BACKROOM", "BREWED", "BLEND", "BEAN", "DRIP", "CHURRO", "TEMP",
             "ID", "ORDER", "INCREMENT", "DECREMENT", "MUG", "NEW",
             "BATTER", "GLAZE", "IFBREW", "FLAVOUR", "POUR", "WHILEHOT", "TASTE",
-            "SNAP", "SKIP"
+            "SNAP", "SKIP", "REFILL"
         }
 
     def _is_start_expression(self):
@@ -419,18 +420,12 @@ class RDParser:
         return self._node("acc_mod_dec", [self.parse_dtype_dec()])
 
     def parse_acc_mod_dec_body(self):
-        """Parse rule: acc_mod_dec_body -> BREWED body | BLEND ID tail | data_type ID tail"""
+        """Parse rule: acc_mod_dec_body -> BREWED body | data_type ID tail"""
         t = self._current().type
         if t == "BREWED":
             return self._node("acc_mod_dec_body", [
                 self._expect("BREWED"),
                 self.parse_acc_brewed_body()
-            ])
-        if t == "BLEND":
-            return self._node("acc_mod_dec_body", [
-                self._expect("BLEND"),
-                self._expect("ID"),
-                self.parse_blend_id_tail()
             ])
         if t in self.DATA_TYPE:
             return self._node("acc_mod_dec_body", [
@@ -438,10 +433,10 @@ class RDParser:
                 self._expect("ID"),
                 self.parse_acc_dtype_tail()
             ])
-        self._error({"BREWED", "BLEND"}.union(self.DATA_TYPE))
+        self._error({"BREWED"}.union(self.DATA_TYPE))
 
     def parse_acc_brewed_body(self):
-        """Parse rule: acc_brewed_body -> data_type init_list | BLEND const_init_list"""
+        """Parse rule: acc_brewed_body -> data_type const_init_list"""
         t = self._current().type
         if t in self.DATA_TYPE:
             return self._node("acc_brewed_body", [
@@ -449,13 +444,7 @@ class RDParser:
                 self.parse_var_dec_const_init(),
                 self.parse_var_dec_const_tail()
             ])
-        if t == "BLEND":
-            return self._node("acc_brewed_body", [
-                self._expect("BLEND"),
-                self.parse_blend_const_init(),
-                self.parse_blend_const_init_tail()
-            ])
-        self._error({"BLEND"}.union(self.DATA_TYPE))
+        self._error(self.DATA_TYPE)
 
     def parse_acc_dtype_tail(self):
         """Parse rule: acc_dtype_tail -> [size] array_decl | opt_assign var_list"""
@@ -472,18 +461,12 @@ class RDParser:
         ])
 
     def parse_dtype_dec(self):
-        """Parse rule: dtype_dec -> BREWED body | BLEND ID tail | data_type ID tail"""
+        """Parse rule: dtype_dec -> BREWED body | data_type ID tail"""
         t = self._current().type
         if t == "BREWED":
             return self._node("dtype_dec", [
                 self._expect("BREWED"),
                 self.parse_dtype_brewed_body()
-            ])
-        if t == "BLEND":
-            return self._node("dtype_dec", [
-                self._expect("BLEND"),
-                self._expect("ID"),
-                self.parse_blend_id_tail()
             ])
         if t in self.DATA_TYPE:
             return self._node("dtype_dec", [
@@ -491,10 +474,10 @@ class RDParser:
                 self._expect("ID"),
                 self.parse_dtype_id_tail()
             ])
-        self._error({"BREWED", "BLEND"}.union(self.DATA_TYPE))
+        self._error({"BREWED"}.union(self.DATA_TYPE))
 
     def parse_dtype_brewed_body(self):
-        """Parse rule: dtype_brewed_body -> data_type init_list | BLEND const_init_list"""
+        """Parse rule: dtype_brewed_body -> data_type const_init_list"""
         t = self._current().type
         if t in self.DATA_TYPE:
             return self._node("dtype_brewed_body", [
@@ -502,13 +485,7 @@ class RDParser:
                 self.parse_var_dec_const_init(),
                 self.parse_var_dec_const_tail()
             ])
-        if t == "BLEND":
-            return self._node("dtype_brewed_body", [
-                self._expect("BLEND"),
-                self.parse_blend_const_init(),
-                self.parse_blend_const_init_tail()
-            ])
-        self._error({"BLEND"}.union(self.DATA_TYPE))
+        self._error(self.DATA_TYPE)
 
     def parse_dtype_id_tail(self):
         """Parse rule: dtype_id_tail -> [size] array_decl | opt_assign var_list"""
@@ -618,7 +595,7 @@ class RDParser:
         if t == "OP_PAREN":
             return self._node("blend_term", [
                 self._expect("OP_PAREN"),
-                self.parse_blend_val(),
+                self.parse_expression(),
                 self._expect("CL_PAREN")
             ])
         if t in {"BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD"}:
@@ -785,7 +762,7 @@ class RDParser:
         ])
 
     def parse_id_bracket_tail(self):
-        """Parse rule: id_bracket_tail -> [idx] = elem | = elem"""
+        """Parse rule: id_bracket_tail -> [idx] = elem | = elem | = [arr_cont_1d]"""
         if self._accept("OP_BRACKETS"):
             return self._node("id_bracket_tail", [
                 self._node("OP_BRACKETS", []),
@@ -794,8 +771,18 @@ class RDParser:
                 self._expect("EQUALS"),
                 self.parse_arr_elem()
             ])
+        equals_node = self._expect("EQUALS")
+        # Full array reassignment: arr[size] = [elem, elem, ...]
+        if self._current().type == "OP_BRACKETS":
+            return self._node("id_bracket_tail", [
+                equals_node,
+                self._expect("OP_BRACKETS"),
+                self.parse_arr_cont_1d(),
+                self._expect("CL_BRACKETS")
+            ])
+        # Single element assignment: arr[idx] = value
         return self._node("id_bracket_tail", [
-            self._expect("EQUALS"),
+            equals_node,
             self.parse_arr_elem()
         ])
 
@@ -1013,11 +1000,6 @@ class RDParser:
         """Parse rule: arith_expr_tail -> (arithm_op unary_expr)* | λ"""
         children = []
         while self._current().type in self.ARITHM_OP:
-            # BLENDLIT is not in primary/unary_expr; a PLUS before a BLENDLIT
-            # belongs to concat, not arithmetic.  Stop here so the caller's
-            # concat rule can pick up "+ BLENDLIT".
-            if self._current().type == "PLUS" and self._current(1).type == "BLENDLIT":
-                break
             children.append(self.parse_arithm_op())
             children.append(self.parse_unary_expr())
         if not children:
@@ -1034,12 +1016,12 @@ class RDParser:
     def parse_unary_expr(self):
         """Parse rule: unary_expr -> ++ primary | -- primary | - neg_operand | primary"""
         t = self._current().type
-        if t == "INCREMENT":
+        if t == "INCREMENT" and self._allow_unary_ops:
             return self._node("unary_expr", [
                 self._expect("INCREMENT"),
                 self._expect("ID")
             ])
-        if t == "DECREMENT":
+        if t == "DECREMENT" and self._allow_unary_ops:
             return self._node("unary_expr", [
                 self._expect("DECREMENT"),
                 self._expect("ID")
@@ -1088,7 +1070,7 @@ class RDParser:
             ])
         self._error({
             "ID", "ORDER", "BEANLIT", "DRIPLIT", "CHURROLIT",
-            "HOT", "COLD", "OP_PAREN"
+            "HOT", "COLD", "BLENDLIT", "OP_PAREN"
         })
 
     def parse_primary_id_tail(self):
@@ -1114,7 +1096,7 @@ class RDParser:
                 self._expect("CL_BRACKETS"),
                 self.parse_arr_call_tail()
             ])
-        if t in self.UNARY_OP:
+        if t in self.UNARY_OP and self._allow_unary_ops:
             return self._node("primary_id_tail", [self.parse_unary_op()])
         return self._node("primary_id_tail", [self._node("_empty")])
 
@@ -1181,7 +1163,7 @@ class RDParser:
         self._error({"BEANLIT", "ID", "FLEX_ASTERISK"})
 
     def parse_arr_dec_dim(self):
-        """Parse rule: arr_dec_dim -> [size] = [2D content] | = [1D content]"""
+        """Parse rule: arr_dec_dim -> [size] = [2D content] | = [1D content] | λ"""
         if self._accept("OP_BRACKETS"):
             return self._node("arr_dec_dim", [
                 self._node("OP_BRACKETS", []),
@@ -1192,12 +1174,16 @@ class RDParser:
                 self.parse_arr_cont_2d(),
                 self._expect("CL_BRACKETS")
             ])
-        return self._node("arr_dec_dim", [
-            self._expect("EQUALS"),
-            self._expect("OP_BRACKETS"),
-            self.parse_arr_cont_1d(),
-            self._expect("CL_BRACKETS")
-        ])
+        if self._current().type == "EQUALS":
+            return self._node("arr_dec_dim", [
+                self._expect("EQUALS"),
+                self._expect("OP_BRACKETS"),
+                self.parse_arr_cont_1d(),
+                self._expect("CL_BRACKETS")
+            ])
+        
+        # λ — standalone array declaration without initializer
+        return self._node("arr_dec_dim", [self._node("_empty")])
 
     def parse_blend_arr_dec_dim(self):
         """Parse rule: blend_arr_dec_dim -> [size] = [2D] | = [1D] (for blend arrays)"""
@@ -1219,8 +1205,14 @@ class RDParser:
         ])
 
     def parse_arr_elem(self):
-        """Parse rule: arr_elem -> expression | λ"""
-        return self._node("arr_elem", [self.parse_expression()])
+        """Parse rule: arr_elem -> expression (no standalone ++/-- allowed)"""
+        saved = self._allow_unary_ops
+        self._allow_unary_ops = False
+        try:
+            result = self._node("arr_elem", [self.parse_expression()])
+        finally:
+            self._allow_unary_ops = saved
+        return result
 
     def parse_ext_arr_elem(self):
         """Parse rule: ext_arr_elem -> (COMMA arr_elem)* | λ"""
@@ -1324,7 +1316,7 @@ class RDParser:
         ])
 
     def parse_dtype_mug_var(self):
-        """Parse rule: dtype_mug_var -> brewed body | data_type var_init | blend ID tail"""
+        """Parse rule: dtype_mug_var -> brewed body | data_type var_init"""
         t = self._current().type
         if t == "BREWED":
             return self._node("dtype_mug_var", [
@@ -1337,16 +1329,10 @@ class RDParser:
                 self.parse_var_dec_init(),
                 self.parse_var_dec_tail()
             ])
-        if t == "BLEND":
-            return self._node("dtype_mug_var", [
-                self._expect("BLEND"),
-                self._expect("ID"),
-                self.parse_blend_id_tail()
-            ])
-        self._error({"BREWED", "BLEND"}.union(self.DATA_TYPE))
+        self._error({"BREWED"}.union(self.DATA_TYPE))
 
     def parse_mug_brewed_body(self):
-        """Parse rule: mug_brewed_body -> data_type init_list | blend const_list"""
+        """Parse rule: mug_brewed_body -> data_type const_init_list"""
         t = self._current().type
         if t in self.DATA_TYPE:
             return self._node("mug_brewed_body", [
@@ -1354,18 +1340,12 @@ class RDParser:
                 self.parse_var_dec_const_init(),
                 self.parse_var_dec_const_tail()
             ])
-        if t == "BLEND":
-            return self._node("mug_brewed_body", [
-                self._expect("BLEND"),
-                self.parse_blend_const_init(),
-                self.parse_blend_const_init_tail()
-            ])
-        self._error({"BLEND"}.union(self.DATA_TYPE))
+        self._error(self.DATA_TYPE)
 
     def parse_mug_var_dec_cont(self):
         """Parse rule: mug_var_dec_cont -> (dtype_mug_var)* | λ"""
         children = []
-        while self._current().type in {"BREWED", "BLEND"}.union(self.DATA_TYPE):
+        while self._current().type in {"BREWED"}.union(self.DATA_TYPE):
             children.append(self.parse_dtype_mug_var())
         if not children:
             children.append(self._node("_empty"))
@@ -1404,17 +1384,14 @@ class RDParser:
         ])
 
     def parse_recipe_ret_type(self):
-        """Parse rule: recipe_ret_type -> blend | data_type"""
-        t = self._current().type
-        if t == "BLEND":
-            return self._node("recipe_ret_type", [self._expect("BLEND")])
-        if t in self.DATA_TYPE:
+        """Parse rule: recipe_ret_type -> data_type"""
+        if self._current().type in self.DATA_TYPE:
             return self._node("recipe_ret_type", [self.parse_data_type()])
-        self._error({"BLEND"}.union(self.DATA_TYPE))
+        self._error(self.DATA_TYPE)
 
     def parse_parameter(self):
         """Parse rule: parameter -> dtype_param add_param | λ"""
-        if self._current().type in {"BLEND"}.union(self.DATA_TYPE):
+        if self._current().type in self.DATA_TYPE:
             return self._node("parameter", [
                 self.parse_dtype_param(),
                 self.parse_add_param()
@@ -1422,35 +1399,23 @@ class RDParser:
         return self._node("parameter", [self._node("_empty")])
 
     def parse_dtype_param(self):
-        """Parse rule: dtype_param -> data_type ID opt_assign | blend ID blend_assign"""
+        """Parse rule: dtype_param -> data_type ID opt_assign"""
         t = self._current().type
         if t in self.DATA_TYPE:
             return self._node("dtype_param", [
                 self.parse_data_type(),
                 self.parse_var_dec_init(),
             ])
-        if t == "BLEND":
-            return self._node("dtype_param", [
-                self._expect("BLEND"),
-                self._expect("ID"),
-                self.parse_blend_assign(),
-            ])
         self._error({"BLEND"}.union(self.DATA_TYPE))
 
     def parse_param_brewed_body(self):
-        """Parse rule: param_brewed_body -> data_type init_list | blend const_list"""
+        """Parse rule: param_brewed_body -> data_type const_init_list"""
         t = self._current().type
         if t in self.DATA_TYPE:
             return self._node("param_brewed_body", [
                 self.parse_data_type(),
                 self.parse_var_dec_const_init(),
                 self.parse_var_dec_const_tail()
-            ])
-        if t == "BLEND":
-            return self._node("param_brewed_body", [
-                self._expect("BLEND"),
-                self.parse_blend_const_init(),
-                self.parse_blend_const_init_tail()
             ])
         self._error({"BLEND"}.union(self.DATA_TYPE))
 
@@ -1490,9 +1455,14 @@ class RDParser:
         return self._node("add_param", children)
 
     def parse_recipe_body(self):
-        """Parse rule: recipe_body -> (statement)* | λ"""
+        """Parse rule: recipe_body -> (statement)* | λ
+
+        Stops before REFILL so that the mandatory refill_final can parse it.
+        Any refill? inside control flow blocks (ifbrew/elspress) is handled
+        by parse_statement, which is called from those blocks' own contexts.
+        """
         children = []
-        while self._is_start_statement():
+        while self._is_start_statement() and self._current().type != "REFILL":
             children.append(self.parse_statement())
         if not children:
             children.append(self._node("_empty"))
@@ -1517,16 +1487,10 @@ class RDParser:
         return self._node("refill_arg", [self._expect("ZERO")])
 
     def parse_refill_content(self):
-        """Parse rule: refill_content -> BLENDLIT | expression (no function calls)"""
+        """Parse rule: refill_content -> BLENDLIT | expression"""
         if self._current().type == "BLENDLIT":
             return self._node("refill_content", [self._expect("BLENDLIT")])
-        saved = self._allow_function_calls
-        self._allow_function_calls = False
-        try:
-            result = self._node("refill_content", [self.parse_expression()])
-        finally:
-            self._allow_function_calls = saved
-        return result
+        return self._node("refill_content", [self.parse_expression()])
 
     def parse_extra_refill_val(self):
         """Parse rule: extra_refill_val -> (COMMA refill_content)* | λ"""
@@ -1557,9 +1521,12 @@ class RDParser:
         ])
 
     def parse_empty_body(self):
-        """Parse rule: empty_body -> (statement)* | λ"""
+        """Parse rule: empty_body -> (statement)* | λ
+
+        Stops before REFILL so the mandatory refill? can be parsed separately.
+        """
         children = []
-        while self._is_start_statement():
+        while self._is_start_statement() and self._current().type != "REFILL":
             children.append(self.parse_statement())
         if not children:
             children.append(self._node("_empty"))
@@ -1644,16 +1611,10 @@ class RDParser:
                 self._expect("ID"),
                 self.parse_crema_dtype_id_tail()
             ])
-        if t == "BLEND":
-            return self._node("crema_acc_body", [
-                self._expect("BLEND"),
-                self._expect("ID"),
-                self.parse_blend_id_tail()
-            ])
-        self._error({"RECIPE", "EMPTY", "BREWED", "BLEND"}.union(self.DATA_TYPE))
+        self._error({"RECIPE", "EMPTY", "BREWED"}.union(self.DATA_TYPE))
 
     def parse_crema_acc_brewed_body(self):
-        """Parse rule: crema_acc_brewed_body -> data_type init | blend const"""
+        """Parse rule: crema_acc_brewed_body -> data_type const_init_list"""
         t = self._current().type
         if t in self.DATA_TYPE:
             return self._node("crema_acc_brewed_body", [
@@ -1661,13 +1622,7 @@ class RDParser:
                 self.parse_var_dec_const_init(),
                 self.parse_var_dec_const_tail()
             ])
-        if t == "BLEND":
-            return self._node("crema_acc_brewed_body", [
-                self._expect("BLEND"),
-                self.parse_blend_const_init(),
-                self.parse_blend_const_init_tail()
-            ])
-        self._error({"BLEND"}.union(self.DATA_TYPE))
+        self._error(self.DATA_TYPE)
 
     def parse_crema_dtype_body(self):
         """Parse rule: crema_dtype_body -> recipe | empty | brewed | data_type | blend"""
@@ -1708,24 +1663,16 @@ class RDParser:
                 self._expect("ID"),
                 self.parse_crema_dtype_id_tail()
             ])
-        if t == "BLEND":
-            return self._node("crema_dtype_body", [
-                self._expect("BLEND"),
-                self._expect("ID"),
-                self.parse_blend_id_tail()
-            ])
-        self._error({"RECIPE", "EMPTY", "BREWED", "BLEND"}.union(self.DATA_TYPE))
+        self._error({"RECIPE", "EMPTY", "BREWED"}.union(self.DATA_TYPE))
 
     def parse_crema_recipe_type(self):
-        """Parse rule: crema_recipe_type -> blend | data_type"""
-        if self._current().type == "BLEND":
-            return self._node("crema_recipe_type", [self._expect("BLEND")])
+        """Parse rule: crema_recipe_type -> data_type"""
         if self._current().type in self.DATA_TYPE:
             return self._node("crema_recipe_type", [self.parse_data_type()])
-        self._error({"BLEND"}.union(self.DATA_TYPE))
+        self._error(self.DATA_TYPE)
 
     def parse_crema_dtype_brewed_body(self):
-        """Parse rule: crema_dtype_brewed_body -> data_type init | blend const"""
+        """Parse rule: crema_dtype_brewed_body -> data_type const_init_list"""
         t = self._current().type
         if t in self.DATA_TYPE:
             return self._node("crema_dtype_brewed_body", [
@@ -1733,13 +1680,7 @@ class RDParser:
                 self.parse_var_dec_const_init(),
                 self.parse_var_dec_const_tail()
             ])
-        if t == "BLEND":
-            return self._node("crema_dtype_brewed_body", [
-                self._expect("BLEND"),
-                self.parse_blend_const_init(),
-                self.parse_blend_const_init_tail()
-            ])
-        self._error({"BLEND"}.union(self.DATA_TYPE))
+        self._error(self.DATA_TYPE)
 
     def parse_crema_dtype_id_tail(self):
         """Parse rule: crema_dtype_id_tail -> [size] array_decl | opt_assign var_list"""
@@ -1790,7 +1731,7 @@ class RDParser:
 
     def parse_main_body(self):
         """Parse rule: main_body -> statement main_body | refill_main"""
-        if self._is_start_statement():
+        if self._is_start_statement() and self._current().type != "REFILL":
             return self._node("main_body", [
                 self.parse_statement(),
                 self.parse_main_body()
@@ -1802,7 +1743,7 @@ class RDParser:
     # ========================================================================
 
     def parse_statement(self):
-        """Parse rule: statement -> dec | input | output | if | switch | loops | interrupt"""
+        """Parse rule: statement -> dec | input | output | if | switch | loops | interrupt | refill_stmt"""
         t = self._current().type
         if t in {
             "CAFE", "BACKROOM", "BREWED", "BLEND", "BEAN", "DRIP", "CHURRO", "TEMP",
@@ -1825,11 +1766,13 @@ class RDParser:
             return self._node("statement", [self.parse_tastetill_loop()])
         if t in {"SNAP", "SKIP"}:
             return self._node("statement", [self.parse_intrpt_stmt()])
+        if t == "REFILL":
+            return self._node("statement", [self.parse_refill_stmt()])
         self._error({
             "CAFE", "BACKROOM", "BREWED", "BLEND", "BEAN", "DRIP", "CHURRO", "TEMP",
             "ID", "ORDER", "INCREMENT", "DECREMENT", "MUG", "NEW",
             "BATTER", "GLAZE", "IFBREW", "FLAVOUR", "POUR", "WHILEHOT", "TASTE",
-            "SNAP", "SKIP"
+            "SNAP", "SKIP", "REFILL"
         })
 
     def parse_stmt_tail(self):
@@ -1849,6 +1792,17 @@ class RDParser:
         if not children:
             children.append(self._node("_empty"))
         return self._node("stmt_tail_until_snap", children)
+    
+    def parse_refill_stmt(self):
+        """Parse rule: refill_stmt -> refill? refill_arg
+
+        Allows refill? to appear as a statement inside control flow blocks
+        (e.g., ifbrew/elspress), enabling early returns for recursive functions.
+        """
+        return self._node("refill_stmt", [
+            self._expect("REFILL"),
+            self.parse_refill_arg()
+        ])
 
     # ========================================================================
     # 20. INPUT/OUTPUT
