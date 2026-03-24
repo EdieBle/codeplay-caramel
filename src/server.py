@@ -76,7 +76,14 @@ def _run_session(session):
     # Step 4: Optimization
     try:
         optimized_ir = optimize_ir(ir_instructions)
+        print("=== BEFORE OPTIMIZE ===")
         print(f"[DEBUG] before optimize: {len(ir_instructions)} instrs")
+        for i, instr in enumerate(ir_instructions):
+            if hasattr(instr, 'dest') and instr.dest in ('m', '_t1') or \
+            (hasattr(instr, 'arg1') and instr.arg1 == 'm'):
+                print(f"[{i:03}] {instr}")
+
+        print("=== AFTER OPTIMIZE ===")   
         print(f"[DEBUG] after optimize:  {len(optimized_ir)} instrs")
     except Exception:
         optimized_ir = ir_instructions

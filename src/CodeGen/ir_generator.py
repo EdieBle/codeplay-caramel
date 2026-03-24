@@ -104,8 +104,11 @@ class IRGenerator:
     }
 
     ASSIGN_OP_MAP = {
-        "EQUALS": "=", "PLUS_EQUALS": "+=", "MINUS_EQUALS": "-=",
-        "MULTIPLY_EQUALS": "*=", "DIVIDE_EQUALS": "/=",
+        "EQUALS": "=",
+        "PLUS_EQUALS": "+=",
+        "EQUAL_MINUS": "-=",      
+        "MULTIPLY_EQUALS": "*=",
+        "DIVIDE_EQUALS": "/=",
     }
 
     LITERAL_TYPES = {
@@ -564,7 +567,7 @@ class IRGenerator:
                     break
             if val is not None:
                 t = self._new_temp()
-                base_op = op[0]  # '+' from '+='
+                base_op = op[0]  # '+' from '+=' [seems bugged??]
                 self._emit("BINOP", dest=t, arg1=var_name, arg2=val, binop=base_op)
                 self._emit("ASSIGN", dest=var_name, arg1=t)
             return
@@ -1295,6 +1298,12 @@ class IRGenerator:
     def _visit_update_unit(self, node):
         """Handle update unit: ID++ / ID-- / ++ID / --ID / ID op= val"""
         children = self._get_children(node)
+
+        #debug 
+        print(f"[UPDATE_UNIT] children:")
+        for child in self._get_children(node):
+            print(f"  is_node={self._is_node(child)}, name={getattr(child,'name',None)}, type={getattr(child,'type',None)}, value={getattr(child,'value',None)}")
+
         for i, child in enumerate(children):
             if self._is_token(child) and child.type == "ID":
                 var_name = child.value
@@ -1320,6 +1329,12 @@ class IRGenerator:
     def _visit_update_id_tail(self, var_name, node):
         """Handle update tail: assign_op value / ++ / --"""
         children = self._get_children(node)
+
+        # debug
+        print(f"[UPDATE_ID_TAIL] children:")
+        for child in self._get_children(node):
+            print(f"  is_node={self._is_node(child)}, name={getattr(child,'name',None)}, type={getattr(child,'type',None)}, value={getattr(child,'value',None)}")
+
         for i, child in enumerate(children):
             # Post ++/--
             if self._is_node(child) and child.name in ("INCREMENT",):
@@ -1342,21 +1357,38 @@ class IRGenerator:
             # Assignment operators
             if self._is_node(child) and child.name == "assign_op":
                 op = self._extract_assign_op(child)
+
+                # debug
+                print(f"[ASSIGN_OP] extracted op='{op}' from node children:")
+                for c in self._get_children(child):
+                    print(f"  is_node={self._is_node(c)}, name={getattr(c,'name',None)}, type={getattr(c,'type',None)}, value={getattr(c,'value',None)}")
+                
                 val = None
                 for c2 in children[i + 1:]:
-                    if self._is_node(c2):
+                    if self._is_node(c2) and c2.name == "update_val":
+                        # debug
+                        print(f"[UPDATE_VAL] children:")
+                        for c in self._get_children(c2):
+                            print(f"  is_node={self._is_node(c)}, name={getattr(c,'name',None)}, type={getattr(c,'type',None)}, value={getattr(c,'value',None)}")
+                        val = self._visit(c2)
+
+                        # debug
+                        print(f"[UPDATE_VAL] visited result: {val}")
+                        break
+                    elif self._is_node(c2):
                         val = self._visit(c2)
                         break
+                
                 if val is not None:
                     if op == "=":
                         self._emit("ASSIGN", dest=var_name, arg1=val)
                     else:
                         t = self._new_temp()
                         self._emit("BINOP", dest=t, arg1=var_name, arg2=val,
-                                   binop=op[0])
+                                binop=op[0])
                         self._emit("ASSIGN", dest=var_name, arg1=t)
                 return
-
+            
             if self._is_token(child) and child.type in self.ASSIGN_OP_MAP:
                 op = self.ASSIGN_OP_MAP[child.type]
                 val = None
