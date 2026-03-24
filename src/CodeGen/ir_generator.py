@@ -1524,6 +1524,10 @@ class IRGenerator:
         id_tok = self._find_child_token(node, "ID")
         func_name = id_tok.value if id_tok else "_anon_void"
 
+        # debug
+        for child in self._get_children(node):
+            print(f"[EMPTY_DEF child] is_node={self._is_node(child)}, name={getattr(child, 'name', None)}, type={getattr(child, 'type', None)}")
+
         self._emit("FUNC_BEGIN", dest=func_name)
         prev_func = self._current_func
         self._current_func = func_name
@@ -1555,22 +1559,43 @@ class IRGenerator:
         """Process function parameters and emit DECLARE for each."""
         children = self._get_children(node)
         dtype = None
+
+        print(f"[PARAM DEBUG] children:")
         for child in children:
-            if self._is_node(child) and child.name == "data_type":
-                dtype = self._extract_dtype(child)
-            elif self._is_token(child) and child.type in self.DTYPE_MAP:
-                dtype = self.DTYPE_MAP[child.type]
-            elif self._is_token(child) and child.type == "BLEND":
-                dtype = "blend"
-            elif self._is_token(child) and child.type == "ID":
-                var_name = child.value
-                if dtype:
-                    self._var_types[var_name] = dtype
-                self._emit("DECLARE", dest=var_name, type=dtype, param=True)
-            elif self._is_node(child) and child.name in ("parameter",
-                                                           "param_tail",
-                                                           "param_list"):
-                self._visit_parameter(child)
+            print(f"  is_node={self._is_node(child)}, name={getattr(child, 'name', None)}, type={getattr(child, 'type', None)}, value={getattr(child, 'value', None)}")
+            
+        for child in children:
+                if self._is_node(child) and child.name == "dtype_param":
+                    dtype = self._extract_dtype(child)
+                    # ID is inside var_dec_init inside dtype_param
+                    var_dec = self._find_child_node(child, "var_dec_init")
+                    if var_dec:
+                        id_tok = self._find_child_token(var_dec, "ID")
+                    else:
+                        id_tok = self._find_child_token(child, "ID")
+                    if id_tok:
+                        var_name = id_tok.value
+                        if dtype:
+                            self._var_types[var_name] = dtype
+                        self._emit("DECLARE", dest=var_name, type=dtype, param=True)
+
+                elif self._is_node(child) and child.name == "add_param":
+                    # recurse for comma-separated additional params (skips _empty)
+                    self._visit_parameter(child)
+
+                elif self._is_node(child) and child.name in ("parameter", "param_tail", "param_list"):
+                    self._visit_parameter(child)
+
+                # fallback: flat structure (original handling)
+                elif self._is_node(child) and child.name == "data_type":
+                    dtype = self._extract_dtype(child)
+                elif self._is_token(child) and child.type in self.DTYPE_MAP:
+                    dtype = self.DTYPE_MAP[child.type]
+                elif self._is_token(child) and child.type == "ID":
+                    var_name = child.value
+                    if dtype:
+                        self._var_types[var_name] = dtype
+                    self._emit("DECLARE", dest=var_name, type=dtype, param=True)
 
     # ------------------------------------------------------------------
     # Return (refill?)
