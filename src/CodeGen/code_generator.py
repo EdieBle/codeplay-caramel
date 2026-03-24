@@ -40,6 +40,7 @@ class CodeGenerator:
         "blend": "str",
     }
 
+    
     def __init__(self, ir_instructions):
         self.ir = ir_instructions
         self._lines = []
@@ -235,15 +236,17 @@ class CodeGenerator:
         self._func_stack.append(func_name)
         self._in_func = True
 
-        # Collect parameters (scan ahead for DECLARE with param=True)
+        # FIX: find our index first, then scan FORWARD only
+        start_idx = self.ir.index(instr)
         params = []
-        for future_instr in self.ir:
-            if future_instr is instr:
-                continue
-            if future_instr.op == "FUNC_END" and future_instr.dest == func_name:
+        for j in range(start_idx + 1, len(self.ir)):
+            fi = self.ir[j]
+            if fi.op == "FUNC_END" and fi.dest == func_name:
                 break
-            if future_instr.op == "DECLARE" and future_instr.extra.get("param"):
-                params.append(future_instr.dest)
+            if fi.op == "FUNC_BEGIN":  # don't steal params from nested/sibling funcs
+                break
+            if fi.op == "DECLARE" and fi.extra.get("param"):
+                params.append(fi.dest)
 
         param_str = ", ".join(params) if params else ""
         self._emit(f"def {py_name}({param_str}):")
@@ -524,6 +527,10 @@ class StructuredCodeGenerator:
         self._indent = 0
         self._declared = set()
         self._in_func = False
+
+        
+        # for i, instr in enumerate(ir_instructions):
+        #     print(f"[{i:03}] {instr}")
 
     def generate(self):
         self._emit_header()

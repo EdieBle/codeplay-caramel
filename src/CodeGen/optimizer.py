@@ -318,13 +318,12 @@ class IROptimizer:
     # ------------------------------------------------------------------
 
     def _pass_dead_code_elimination(self):
-        """Remove unreachable instructions after unconditional GOTOs."""
         new_instrs = []
         skip = False
 
         for instr in self.instructions:
-            if instr.op == "LABEL":
-                skip = False  # labels are always reachable
+            if instr.op in ("LABEL", "FUNC_BEGIN", "FUNC_END"):  # ← add FUNC_BEGIN, FUNC_END
+                skip = False
             if not skip:
                 new_instrs.append(instr)
             if instr.op == "GOTO" and not skip:
@@ -333,7 +332,6 @@ class IROptimizer:
                 skip = True
 
         self.instructions = new_instrs
-
     # ------------------------------------------------------------------
     # Pass 5: Redundant Label Removal
     # ------------------------------------------------------------------

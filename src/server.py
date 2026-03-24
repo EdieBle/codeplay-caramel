@@ -76,6 +76,8 @@ def _run_session(session):
     # Step 4: Optimization
     try:
         optimized_ir = optimize_ir(ir_instructions)
+        print(f"[DEBUG] before optimize: {len(ir_instructions)} instrs")
+        print(f"[DEBUG] after optimize:  {len(optimized_ir)} instrs")
     except Exception:
         optimized_ir = ir_instructions
 

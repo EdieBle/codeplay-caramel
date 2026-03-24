@@ -134,7 +134,7 @@ class IRGenerator:
             return []
         self._visit(self.ast)
         return self.instructions
-
+    
     def get_ir_dicts(self):
         """Return IR as a list of plain dictionaries (for JSON serialization)."""
         return [instr.to_dict() for instr in self.instructions]
@@ -228,6 +228,11 @@ class IRGenerator:
         # skip empty productions
         if node.name == "_empty":
             return None
+        
+        # if node.name.isupper():   # token type names are all-caps
+        #     return None
+        
+        # print(f"[IR] visiting node: {node.name}")
 
         method = getattr(self, f"_visit_{node.name}", None)
         if method:
@@ -1516,7 +1521,6 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_empty_def(self, node):
-        """Generate IR for void function definition."""
         id_tok = self._find_child_token(node, "ID")
         func_name = id_tok.value if id_tok else "_anon_void"
 
@@ -1531,10 +1535,14 @@ class IRGenerator:
         for child in self._get_children(node):
             if self._is_node(child) and child.name == "empty_body":
                 self._visit(child)
+            # FIX: handle refill_final in void functions too
+            elif self._is_node(child) and child.name == "refill_final":
+                self._visit_refill_final(child)
 
         self._emit("RETURN", arg1=None)
         self._current_func = prev_func
         self._emit("FUNC_END", dest=func_name)
+        # print(f"[DEBUG] emitted FUNC_END for {func_name}, total instrs={len(self.instructions)}")  # debug, pls check if the optimizer is messing with it again
 
     def _visit_empty_body(self, node):
         self._visit_children_all(node)

@@ -249,7 +249,7 @@ class SemanticAnalyzer:
             return None
         
         # for debugging purposes only.
-        print(f"[VISIT] {node.name} at scope depth {self.symbol_table.scope_level}") 
+        # print(f"[VISIT] {node.name} at scope depth {self.symbol_table.scope_level}") 
 
 
         method_name = f"_visit_{node.name}"
