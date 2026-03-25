@@ -194,7 +194,16 @@ export default function App() {
     reader.onload = (event) => {
       const content = event.target?.result;
       if (typeof content === "string") {
-        setCode(content);
+        // ADD SANITIZATION HERE
+        const cleaned = content
+          .replace(/^\uFEFF/, '')          
+          .replace(/[\u2018\u2019]/g, "'")
+          .replace(/[\u201C\u201D]/g, '"')  
+          .replace(/\u00A0/g, ' ')        
+          .replace(/\r\n/g, '\n')          
+          .replace(/\r/g, '\n');            
+        
+        setCode(cleaned); 
         setTokens([]);
         setErrors([]);
         setLineTokens([]);
@@ -208,7 +217,7 @@ export default function App() {
       }
     };
     reader.onerror = () => alert("Error reading file");
-    reader.readAsText(file);
+    reader.readAsText(file, 'UTF-8'); 
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
