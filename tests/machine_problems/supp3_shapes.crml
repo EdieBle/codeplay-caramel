@@ -9,6 +9,9 @@ bean cup() [
 
     glaze("Triangle:\n")
     pour (bean i = 1; i <= n; i++) {
+        pour (bean k = 1; k <= n - i; k++) {
+            glaze(" ")
+        }
         pour (bean j = 1; j <= i; j++) {
             glaze("* ")
         }
@@ -17,15 +20,10 @@ bean cup() [
 
     glaze("\nInverted Triangle:\n")
     pour (bean i = n; i >= 1; i -= 1) {
-        pour (bean j = 1; j <= i; j++) {
-            glaze("* ")
+        pour (bean k = 1; k <= n - i; k++) {
+            glaze(" ")
         }
-        glaze("\n")
-    }
-
-    glaze("\nRectangle:\n")
-    pour (bean i = 1; i <= n; i++) {
-        pour (bean j = 1; j <= n + 2; j++) {
+        pour (bean j = 1; j <= i; j++) {
             glaze("* ")
         }
         glaze("\n")
@@ -33,10 +31,19 @@ bean cup() [
 
     glaze("\nSquare:\n")
     pour (bean i = 1; i <= n; i++) {
+        pour (bean j = 1; j <= n + 2; j++) {
+            glaze("* ")
+        }
+        glaze("\n")
+    }
+
+    glaze("\nRectangle:\n")
+    pour (bean i = 1; i <= n; i++) {
         pour (bean j = 1; j <= n; j++) {
             glaze("* ")
         }
         glaze("\n")
     }
+    
     refill? 0
 ]
