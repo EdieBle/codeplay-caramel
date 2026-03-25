@@ -1,0 +1,42 @@
+bean cup() [
+    bean n = 0
+    glaze("Enter number of rows: ")
+    batter@ n
+    ifbrew (n <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+
+    glaze("Triangle:\n")
+    pour (bean i = 1; i <= n; i++) {
+        pour (bean j = 1; j <= i; j++) {
+            glaze("* ")
+        }
+        glaze("\n")
+    }
+
+    glaze("\nInverted Triangle:\n")
+    pour (bean i = n; i >= 1; i -= 1) {
+        pour (bean j = 1; j <= i; j++) {
+            glaze("* ")
+        }
+        glaze("\n")
+    }
+
+    glaze("\nRectangle:\n")
+    pour (bean i = 1; i <= n; i++) {
+        pour (bean j = 1; j <= n + 2; j++) {
+            glaze("* ")
+        }
+        glaze("\n")
+    }
+
+    glaze("\nSquare:\n")
+    pour (bean i = 1; i <= n; i++) {
+        pour (bean j = 1; j <= n; j++) {
+            glaze("* ")
+        }
+        glaze("\n")
+    }
+    refill? 0
+]

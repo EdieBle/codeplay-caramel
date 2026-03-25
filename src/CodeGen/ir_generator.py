@@ -329,7 +329,38 @@ class IRGenerator:
         self._visit_children_all(node)
 
     def _visit_dtype_id_tail(self, node):
-        self._visit_children_all(node)
+        """Handle dtype ID tail: opt_assign, array decl, etc."""
+        children = self._get_children(node)
+        # Check if this is an array declaration (has OP_BRACKETS)
+        has_brackets = False
+        for child in children:
+            if (self._is_node(child) and child.name == "OP_BRACKETS") or \
+               (self._is_token(child) and child.type == "OP_BRACKETS"):
+                has_brackets = True
+                break
+
+        if has_brackets:
+            # Array declaration: find size and init values
+            arr_size = None
+            init_vals = []
+            for child in children:
+                if self._is_node(child) and child.name == "arr_size_val":
+                    for c2 in self._get_children(child):
+                        if self._is_token(c2) and c2.type == "BEANLIT":
+                            arr_size = int(c2.value)
+                if self._is_node(child) and child.name == "arr_dec_dim":
+                    init_vals = self._collect_arr_init_values(child)
+
+            # Convert preceding DECLARE to ARR_DECLARE
+            for instr in reversed(self.instructions):
+                if instr.op == "DECLARE":
+                    instr.op = "ARR_DECLARE"
+                    instr.extra["dims"] = [arr_size] if arr_size else []
+                    if init_vals:
+                        instr.extra["init"] = init_vals
+                    break
+        else:
+            self._visit_children_all(node)
 
     def _visit_opt_assign(self, node):
         """Handle optional assignment: = value"""
@@ -618,9 +649,42 @@ class IRGenerator:
 
     def _visit_order_dec_stmt(self, node):
         """Handle order. statements (global access)."""
+        children = self._get_children(node)
+        id_tok = self._find_child_token(node, "ID")
+        arr_name = f"order.{id_tok.value}" if id_tok else "order"
+        for child in children:
+            if self._is_node(child) and child.name == "order_dec_tail":
+                self._visit_order_dec_tail_with_context(child, arr_name)
+                return
         self._visit_children_all(node)
 
     def _visit_order_dec_tail(self, node):
+        self._visit_children_all(node)
+
+    def _visit_order_dec_tail_with_context(self, node, arr_name):
+        """Handle order.field[index] = value or order.field = value."""
+        children = self._get_children(node)
+        if not children:
+            return
+        first = children[0]
+        # Array store: OP_BRACKETS index CL_BRACKETS EQUALS assign_val
+        if (self._is_token(first) and first.type == "OP_BRACKETS") or \
+           (self._is_node(first) and first.name == "OP_BRACKETS"):
+            idx = self._extract_array_index_expr(node)
+            val = None
+            for child in children:
+                if self._is_node(child) and child.name in ("assign_val", "value", "expression"):
+                    val = self._visit(child)
+                    break
+            self._emit("ARR_STORE", dest=arr_name, arg1=idx, arg2=val)
+            return
+        # Simple assignment: EQUALS assign_val
+        if self._is_token(first) and first.type == "EQUALS":
+            for child in children:
+                if self._is_node(child) and child.name in ("assign_val", "value", "expression"):
+                    val = self._visit(child)
+                    self._emit("ASSIGN", dest=arr_name, arg1=val)
+                    return
         self._visit_children_all(node)
 
     # ------------------------------------------------------------------
@@ -847,10 +911,17 @@ class IRGenerator:
             # ORDER (global access)
             if self._is_token(child) and child.type == "ORDER":
                 # Find the ID after DOT_ACC
+                order_field = None
+                order_tail = None
                 for c2 in children[i + 1:]:
                     if self._is_token(c2) and c2.type == "ID":
-                        return f"order.{c2.value}"
-                return "order"
+                        order_field = c2.value
+                    if self._is_node(c2) and c2.name == "primary_order_tail":
+                        order_tail = c2
+                var_name = f"order.{order_field}" if order_field else "order"
+                if order_tail:
+                    return self._visit_primary_order_tail_with_context(order_tail, var_name)
+                return var_name
 
             # Parenthesized expression
             if (self._is_node(child) and child.name == "OP_PAREN") or \
@@ -931,6 +1002,24 @@ class IRGenerator:
 
     def _visit_primary_order_tail(self, node):
         self._visit_children_all(node)
+
+    def _visit_primary_order_tail_with_context(self, node, var_name):
+        """Handle order.field[index] array access in expressions."""
+        children = self._get_children(node)
+        if not children:
+            return var_name
+        first = children[0]
+        # Empty tail
+        if self._is_node(first) and first.name == "_empty":
+            return var_name
+        # Array access: OP_BRACKETS index CL_BRACKETS
+        if (self._is_token(first) and first.type == "OP_BRACKETS") or \
+           (self._is_node(first) and first.name == "OP_BRACKETS"):
+            idx = self._extract_array_index_expr(node)
+            t = self._new_temp()
+            self._emit("ARR_LOAD", dest=t, arg1=var_name, arg2=idx)
+            return t
+        return var_name
 
     # ------------------------------------------------------------------
     # Value / Assign
@@ -1633,6 +1722,18 @@ class IRGenerator:
     # Return (refill?)
     # ------------------------------------------------------------------
 
+    def _visit_refill_stmt(self, node):
+        """Handle refill? statement inside control flow blocks."""
+        val = None
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name == "refill_arg":
+                val = self._visit_refill_arg(child)
+            elif self._is_node(child) and child.name not in ("_empty",):
+                r = self._visit(child)
+                if r is not None:
+                    val = r
+        self._emit("RETURN", arg1=val)
+
     def _visit_refill_final(self, node):
         """Handle refill? statement in recipe functions."""
         val = None
@@ -1649,7 +1750,7 @@ class IRGenerator:
         for child in self._get_children(node):
             if self._is_node(child) and child.name == "refill_content":
                 return self._visit(child)
-            if self._is_node(child) and child.name not in ("_empty",):
+            if self._is_node(child) and child.name not in ("_empty", "OP_PAREN", "CL_PAREN"):
                 return self._visit(child)
             if self._is_token(child) and child.type in self.LITERAL_TYPES:
                 return self._token_to_literal(child)
@@ -1713,7 +1814,26 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_arr_dec_dim(self, node):
-        self._visit_children_all(node)
+        # Handled by _visit_dtype_id_tail
+        pass
+
+    def _collect_arr_init_values(self, node):
+        """Collect initial values from arr_dec_dim → arr_cont_1d → arr_elem."""
+        values = []
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name == "arr_cont_1d":
+                values.extend(self._collect_arr_init_values(child))
+            elif self._is_node(child) and child.name == "ext_arr_elem":
+                values.extend(self._collect_arr_init_values(child))
+            elif self._is_node(child) and child.name == "arr_elem":
+                val = self._visit_arr_elem(child)
+                if val is not None:
+                    values.append(val)
+            elif self._is_node(child) and child.name not in (
+                "_empty", "OP_BRACKETS", "CL_BRACKETS", "COMMA", "EQUALS"
+            ) and child.name not in ("arr_dec_dim",):
+                values.extend(self._collect_arr_init_values(child))
+        return values
 
     def _visit_arr_cont_1d(self, node):
         self._visit_children_all(node)
@@ -1722,7 +1842,15 @@ class IRGenerator:
         self._visit_children_all(node)
 
     def _visit_arr_elem(self, node):
-        return self._visit_value(node)
+        """Extract a single array element value."""
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name == "expression":
+                return self._visit(child)
+            if self._is_node(child) and child.name not in ("_empty",):
+                return self._visit(child)
+            if self._is_token(child) and child.type in self.LITERAL_TYPES:
+                return self._token_to_literal(child)
+        return None
 
     # ------------------------------------------------------------------
     # Helpers for function args & array indices
@@ -1750,12 +1878,31 @@ class IRGenerator:
                 return self._visit(child)
         return None
 
+    def _extract_array_index_expr(self, node):
+        """Extract array index by evaluating expressions (supports variables and arithmetic)."""
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name == "array_index":
+                for c2 in self._get_children(child):
+                    if self._is_token(c2) and c2.type == "BEANLIT":
+                        return int(c2.value)
+                    if self._is_token(c2) and c2.type == "ID":
+                        return c2.value
+                    if self._is_node(c2) and c2.name == "expression":
+                        return self._visit(c2)
+                    if self._is_node(c2) and c2.name not in ("_empty",):
+                        return self._visit(c2)
+        return 0
+
     def _extract_array_index(self, node):
         for child in self._get_children(node):
             if self._is_node(child) and child.name == "array_index":
                 for c2 in self._get_children(child):
                     if self._is_token(c2) and c2.type == "BEANLIT":
                         return int(c2.value)
+                    if self._is_token(c2) and c2.type == "ID":
+                        return c2.value
+                    if self._is_node(c2) and c2.name == "expression":
+                        return self._visit(c2)
             if self._is_token(child) and child.type == "BEANLIT":
                 return int(child.value)
             if self._is_node(child) and child.name not in ("_empty", "OP_BRACKETS",

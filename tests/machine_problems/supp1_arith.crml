@@ -1,0 +1,29 @@
+bean cup() [
+    bean a = 0
+    bean b = 0
+    glaze("Enter first number: ")
+    batter@ a
+    glaze("Enter second number: ")
+    batter@ b
+    ifbrew (b == 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    bean sum = a + b
+    bean diff = a - b
+    bean prod = a * b
+    bean quot = a / b
+    glaze("Sum: ")
+    glaze(sum)
+    glaze("\n")
+    glaze("Difference: ")
+    glaze(diff)
+    glaze("\n")
+    glaze("Product: ")
+    glaze(prod)
+    glaze("\n")
+    glaze("Quotient: ")
+    glaze(quot)
+    glaze("\n")
+    refill? 0
+]

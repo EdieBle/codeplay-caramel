@@ -1,0 +1,15 @@
+recipe bean printnums(bean n, bean curr) [
+    ifbrew (curr <= n) {
+        glaze(curr)
+        glaze(" ")
+        bean dummy = printnums(n, curr + 1)
+    }
+    refill? (0)
+]
+
+bean cup() [
+    glaze("The natural numbers are:\n")
+    bean dummy = printnums(50, 1)
+    glaze("\n")
+    refill? 0
+]

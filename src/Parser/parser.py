@@ -826,8 +826,16 @@ class RDParser:
         ])
 
     def parse_order_dec_tail(self):
-        """Parse rule: order_dec_tail -> = value | . ID tail | λ"""
+        """Parse rule: order_dec_tail -> [index] = value | = value | . ID tail | λ"""
         t = self._current().type
+        if t == "OP_BRACKETS":
+            return self._node("order_dec_tail", [
+                self._expect("OP_BRACKETS"),
+                self.parse_array_index(),
+                self._expect("CL_BRACKETS"),
+                self._expect("EQUALS"),
+                self.parse_assign_val()
+            ])
         if t == "EQUALS":
             return self._node("order_dec_tail", [
                 self._expect("EQUALS"),
@@ -839,7 +847,7 @@ class RDParser:
                 self._expect("ID"),
                 self.parse_order_mug_tail()
             ])
-        self._error({"EQUALS", "DOT_ACC"})
+        self._error({"OP_BRACKETS", "EQUALS", "DOT_ACC"})
 
     def parse_order_mug_tail(self):
         """Parse rule: order_mug_tail -> = value | λ"""
@@ -1125,7 +1133,13 @@ class RDParser:
         return self._node("primary_dot_tail", [self._node("_empty")])
 
     def parse_primary_order_tail(self):
-        """Parse rule: primary_order_tail -> . ID | λ"""
+        """Parse rule: primary_order_tail -> [index] | . ID | λ"""
+        if self._current().type == "OP_BRACKETS":
+            return self._node("primary_order_tail", [
+                self._expect("OP_BRACKETS"),
+                self.parse_array_index(),
+                self._expect("CL_BRACKETS")
+            ])
         if self._accept("DOT_ACC"):
             return self._node("primary_order_tail", [
                 self._node("DOT_ACC", []),
@@ -1148,8 +1162,8 @@ class RDParser:
         return self._node("arr_call_tail", [self._node("_empty")])
 
     def parse_array_index(self):
-        """Parse rule: array_index -> BEANLIT"""
-        return self._node("array_index", [self._expect("BEANLIT")])
+        """Parse rule: array_index -> expression"""
+        return self._node("array_index", [self.parse_expression()])
 
     def parse_arr_size_val(self):
         """Parse rule: arr_size_val -> BEANLIT | *** (flexible size)"""

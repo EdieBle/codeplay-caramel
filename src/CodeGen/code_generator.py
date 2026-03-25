@@ -912,27 +912,38 @@ class StructuredCodeGenerator:
         self._pop()
         return end + 1
     
-    def _gen_if_block(self, start, boundary):
+    def _gen_if_block(self, start, boundary, is_elif=False):
         """Generate an if/else block from IR pattern."""
         instr = self.ir[start]
         cond = self._py_val(instr.arg1)
         else_label = instr.dest
 
-        self._emit(f"if _caramel_to_bool({cond}):")
+        keyword = "elif" if is_elif else "if"
+        # Check if condition was pre-computed by a BINOP that we can inline
+        elif_binops = getattr(self, '_elif_binops', {})
+        if is_elif and cond in elif_binops:
+            self._emit(f"{keyword} _caramel_to_bool({elif_binops.pop(cond)}):")
+        else:
+            self._emit(f"{keyword} _caramel_to_bool({cond}):")
         self._push()
 
-        # Find the GOTO end_label and LABEL else_label
+        # Find the LABEL else_label first, then find the GOTO just before it
         goto_end_idx = None
         else_label_idx = None
         end_label = None
 
         for j in range(start + 1, boundary):
-            if self.ir[j].op == "GOTO" and goto_end_idx is None:
-                goto_end_idx = j
-                end_label = self.ir[j].dest
             if self.ir[j].op == "LABEL" and self.ir[j].dest == else_label:
                 else_label_idx = j
                 break
+
+        # Find the GOTO immediately preceding the else label (skip nested if GOTOs)
+        if else_label_idx is not None:
+            for j in range(else_label_idx - 1, start, -1):
+                if self.ir[j].op == "GOTO":
+                    goto_end_idx = j
+                    end_label = self.ir[j].dest
+                    break
 
         # Emit if-body (between IF_FALSE and GOTO/else_label)
         body_end = goto_end_idx if goto_end_idx else (else_label_idx or boundary)
@@ -969,29 +980,73 @@ class StructuredCodeGenerator:
                     break
 
             if end_label_idx and end_label_idx > else_label_idx + 1:
-                # Check if else block is another if (elifroth)
-                first_else_instr = None
+                # Check if else block is an elif chain (elifroth)
+                # Pattern: [BINOPs...] IF_FALSE → elif
+                elif_if_false = None
                 for j in range(else_label_idx + 1, end_label_idx):
-                    if self.ir[j].op not in ("LABEL", "GOTO", "NOP"):
-                        first_else_instr = j
-                        break
+                    op_j = self.ir[j].op
+                    if op_j in ("LABEL", "GOTO", "NOP"):
+                        continue
+                    if op_j == "BINOP":
+                        continue  # condition computation before elif
+                    if op_j == "IF_FALSE":
+                        elif_if_false = j
+                    break
 
-                if first_else_instr and self.ir[first_else_instr].op == "IF_FALSE":
-                    self._emit("else:")
-                    self._push()
-                    # Recurse for elif chain
-                    bi = first_else_instr
+                if elif_if_false is not None:
+                    # Build a map of temp vars from BINOPs before elif
+                    # so we can inline them into the elif condition
+                    self._elif_binops = getattr(self, '_elif_binops', {})
+                    for j in range(else_label_idx + 1, elif_if_false):
+                        if self.ir[j].op == "BINOP":
+                            b_instr = self.ir[j]
+                            a = self._py_val(b_instr.arg1)
+                            b = self._py_val(b_instr.arg2)
+                            binop = b_instr.extra.get("binop", "+")
+                            if binop == "&&":
+                                expr = f"_caramel_to_bool({a}) and _caramel_to_bool({b})"
+                            elif binop == "||":
+                                expr = f"_caramel_to_bool({a}) or _caramel_to_bool({b})"
+                            else:
+                                expr = f"{a} {binop} {b}"
+                            self._elif_binops[self._py_var(b_instr.dest)] = expr
+                    # Generate elif chain
+                    bi = elif_if_false
                     while bi < end_label_idx:
                         instr_i = self.ir[bi]
                         if instr_i.op == "IF_FALSE":
-                            bi = self._gen_if_block(bi, end_label_idx)
+                            bi = self._gen_if_block(bi, end_label_idx, is_elif=True)
                             continue
                         if instr_i.op in ("LABEL", "GOTO"):
                             bi += 1
                             continue
-                        self._gen_simple(instr_i, bi)
-                        bi += 1
-                    self._pop()
+                        if instr_i.op == "BINOP":
+                            # Capture BINOP for next elif condition inline
+                            b_instr = instr_i
+                            a = self._py_val(b_instr.arg1)
+                            b = self._py_val(b_instr.arg2)
+                            binop = b_instr.extra.get("binop", "+")
+                            if binop == "&&":
+                                expr = f"_caramel_to_bool({a}) and _caramel_to_bool({b})"
+                            elif binop == "||":
+                                expr = f"_caramel_to_bool({a}) or _caramel_to_bool({b})"
+                            else:
+                                expr = f"{a} {binop} {b}"
+                            self._elif_binops[self._py_var(b_instr.dest)] = expr
+                            bi += 1
+                            continue
+                        # Non-elif content after last elif → else block
+                        self._emit("else:")
+                        self._push()
+                        while bi < end_label_idx:
+                            instr_k = self.ir[bi]
+                            if instr_k.op in ("LABEL", "GOTO"):
+                                bi += 1
+                                continue
+                            self._gen_simple(instr_k, bi)
+                            bi += 1
+                        self._pop()
+                        break
                 else:
                     self._emit("else:")
                     self._push()
@@ -1102,6 +1157,21 @@ class StructuredCodeGenerator:
             a = self._py_val(instr.arg1)
             b = self._py_val(instr.arg2)
             self._emit(f"{dest} = str({a}) + str({b})")
+
+        elif op == "ARR_DECLARE":
+            name = instr.dest
+            dims = instr.extra.get("dims", [])
+            init_vals = instr.extra.get("init", [])
+            # Global arrays are stored in _order
+            var = f'_order["{name}"]'
+            if init_vals:
+                self._emit(f"{var} = {init_vals}")
+            elif len(dims) == 1:
+                self._emit(f"{var} = [0] * {dims[0]}")
+            elif len(dims) == 2:
+                self._emit(f"{var} = [[0] * {dims[1]} for _ in range({dims[0]})]")
+            else:
+                self._emit(f"{var} = []")
 
         elif op == "ARR_LOAD":
             dest = self._py_var(instr.dest)
