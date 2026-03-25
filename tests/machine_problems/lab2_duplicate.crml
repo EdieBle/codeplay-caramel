@@ -1,0 +1,49 @@
+bean arr[20] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+bean cup() [
+    bean num = 0
+    bean count = 0
+    bean found = 0
+    bean val = 0
+    bean dupcount = 0
+    glaze("Enter numbers (duplicate stops input):\n")
+    whilehot (found == 0) {
+        glaze("Enter a number: ")
+        batter@ num
+        ifbrew (num <= 0) {
+            glaze("Error: Invalid Input\n")
+            refill? 0
+        }
+        dupcount = 0
+        pour (bean i = 0; i < count; i++) {
+            val = order.arr[i]
+            ifbrew (val == num) {
+                dupcount = dupcount + 1
+            }
+        }
+        ifbrew (dupcount >= 2) {
+            glaze("Triplicate found: ")
+            glaze(num)
+            glaze("\n")
+            found = 1
+        }
+        ifbrew (dupcount == 1) {
+            glaze("Duplicate found: ")
+            glaze(num)
+            glaze("\n")
+            found = 1
+        }
+        ifbrew (found == 0) {
+            order.arr[count] = num
+            count = count + 1
+            ifbrew (count >= 20) {
+                glaze("Maximum entries reached\n")
+                found = 1
+            }
+        }
+    }
+    glaze("Total numbers entered: ")
+    glaze(count)
+    glaze("\n")
+    refill? 0
+]

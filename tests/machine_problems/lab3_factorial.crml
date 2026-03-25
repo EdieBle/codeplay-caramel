@@ -1,0 +1,22 @@
+bean cup() [
+    bean n = 0
+    bean fact = 1
+    bean i = 0
+    glaze("Enter a positive integer: ")
+    batter@ n
+    ifbrew (n < 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    i = n
+    whilehot (i > 1) {
+        fact = fact * i
+        i = i - 1
+    }
+    glaze("Factorial of ")
+    glaze(n)
+    glaze(" is ")
+    glaze(fact)
+    glaze("\n")
+    refill? 0
+]
