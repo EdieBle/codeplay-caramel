@@ -1,0 +1,20 @@
+bean cup() [
+    bean sum = 0
+    bean num = 0
+    bean running = 1
+    glaze("Enter integers (0 to stop):\n")
+    whilehot (running > 0) {
+        glaze("Enter a number: ")
+        batter@ num
+        ifbrew (num == 0) {
+            running = 0
+        }
+        ifbrew (num > 0) {
+            sum = sum + num
+        }
+    }
+    glaze("Sum of positive integers: ")
+    glaze(sum)
+    glaze("\n")
+    refill? 0
+]

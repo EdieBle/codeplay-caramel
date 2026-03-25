@@ -1,0 +1,63 @@
+bean arr[20] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+bean cup() [
+    bean n = 0
+    bean val = 0
+    bean left = 0
+    bean right = 0
+    bean is_palin = 1
+    bean a = 0
+    bean b = 0
+    bean nsub = 0
+    glaze("=== Word Palindrome Checker ===\n")
+    glaze("Enter each letter as a number (a=1, b=2, ... z=26)\n")
+    glaze("Enter number of letters: ")
+    batter@ n
+    ifbrew (n <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    ifbrew (n > 20) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    pour (bean i = 0; i < n; i++) {
+        glaze("Letter ")
+        glaze(i + 1)
+        glaze(": ")
+        batter@ val
+        ifbrew (val < 1) {
+            glaze("Error: Invalid Input\n")
+            refill? 0
+        }
+        ifbrew (val > 26) {
+            glaze("Error: Invalid Input\n")
+            refill? 0
+        }
+        order.arr[i] = val
+    }
+    left = 0
+    right = n - 1
+    whilehot (left < right) {
+        a = order.arr[left]
+        b = order.arr[right]
+        ifbrew (a != b) {
+            is_palin = 0
+        }
+        left = left + 1
+        right = right - 1
+    }
+    glaze("Word: ")
+    pour (bean i = 0; i < n; i++) {
+        glaze(order.arr[i])
+        glaze(" ")
+    }
+    glaze("\n")
+    ifbrew (is_palin == 1) {
+        glaze("The word is a palindrome\n")
+    }
+    ifbrew (is_palin == 0) {
+        glaze("The word is not a palindrome\n")
+    }
+    refill? 0
+]
