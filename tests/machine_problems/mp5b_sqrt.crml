@@ -10,8 +10,15 @@ bean cup() [
     pour (bean i = 0; i < 20; i++) {
         guess = (guess + n / guess) / 2.0
     }
+    bean result = guess
+    drip check = result
     glaze("Square root: ")
-    glaze(guess)
+    ifbrew (check == guess) {
+        glaze(result)
+    }
+    ifbrew (check != guess) {
+        glaze(guess)
+    }
     glaze("\n")
     refill? 0
 ]
