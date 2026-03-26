@@ -73,25 +73,16 @@ class SymbolTable:
         Declare a symbol in current scope.
         Returns True if successful, False if already declared in this scope.
         """
-        # for debugging purposes only.
-        print(f"[DECLARE] '{name}' at scope depth {len(self.scopes)}")
-        print(f"[DECLARE] Current scopes: {[list(s.keys()) for s in self.scopes]}")
         if name in self.scopes[-1]:
             return False
         self.scopes[-1][name] = symbol
         return True
-    
+
     def lookup(self, name):
         """Look up a symbol in current and parent scopes."""
-
-        # for debugging purposes only.
-        print(f"[LOOKUP] '{name}' - Searching {len(self.scopes)} scopes")
-        for i, scope in enumerate(reversed(self.scopes)):
-            print(f"  Scope {len(self.scopes)-i-1}: {list(scope.keys())}")
+        for scope in reversed(self.scopes):
             if name in scope:
-                print(f"  → FOUND in scope {len(self.scopes)-i-1}")
                 return scope[name]
-        print(f"  → NOT FOUND!")
         return None
     
     def lookup_current(self, name):
@@ -339,22 +330,13 @@ class SemanticAnalyzer:
     # Functions
     def _visit_recipe_def(self, node):
         """Visit recipe_def: recipe return_type ID (params) { body refill }"""
-        # Extract function name and return type
         func_name = None
-
         for child in node.children:
             if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
                 func_name = child.value
-                break 
-        
-        # func_name = self._extract_name_from_node(node, depth=3)
+                break
+
         return_type = self._extract_return_type(node)
-        
-            # DEBUG
-        print(f"[RECIPE DEBUG] recipe_def: func_name='{func_name}' return_type='{return_type}'")
-        print(f"[RECIPE DEBUG] recipe_def: scope_level before push = {self.symbol_table.scope_level}")
-        print(f"[RECIPE DEBUG] recipe_def: \node children = \{[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in node.children]}")
-        print(f"{return_type}")
 
         if func_name:
             symbol = Symbol(
@@ -364,25 +346,75 @@ class SemanticAnalyzer:
                 scope_level=self.symbol_table.scope_level,
                 return_type=return_type
             )
-            
+
             if not self.symbol_table.declare(func_name, symbol):
                 self.errors.append(SemanticError(
                     "E001",
                     f"Redefinition of function '{func_name}'",
                     line=getattr(node, 'line', None)
                 ))
-            
-            # Enter function scope
+
+            # Enter function scope and register parameters before visiting body
             self.symbol_table.push_scope()
             prev_function = self.current_function
             self.current_function = func_name
-            
+
+            for child in node.children:
+                if self._is_parse_node(child) and child.name == "parameter":
+                    for param_name, param_type in self._extract_parameters(child):
+                        param_symbol = Symbol(
+                            param_name,
+                            "variable",
+                            dtype=param_type,
+                            scope_level=self.symbol_table.scope_level,
+                        )
+                        param_symbol.is_initialized = True
+                        self.symbol_table.declare(param_name, param_symbol)
+                    break
+
             self._visit_children(node)
-            
+
             self.current_function = prev_function
             self.symbol_table.pop_scope()
         else:
             self._visit_children(node)
+
+    def _extract_parameters(self, param_node):
+        """Extract list of (name, type) tuples from a parameter AST node."""
+        params = []
+        for child in (param_node.children or []):
+            if not self._is_parse_node(child):
+                continue
+            if child.name == "dtype_param":
+                p = self._extract_one_param(child)
+                if p:
+                    params.append(p)
+            elif child.name == "add_param":
+                for c in (child.children or []):
+                    if self._is_parse_node(c) and c.name == "dtype_param":
+                        p = self._extract_one_param(c)
+                        if p:
+                            params.append(p)
+        return params
+
+    def _extract_one_param(self, dtype_param_node):
+        """Extract (name, type) from a single dtype_param node."""
+        param_type = None
+        param_name = None
+        for child in (dtype_param_node.children or []):
+            if self._is_parse_node(child) and child.name == "data_type":
+                for tc in (child.children or []):
+                    if not self._is_parse_node(tc) and hasattr(tc, 'type'):
+                        param_type = tc.type.lower()
+                        break
+            elif self._is_parse_node(child) and child.name == "var_dec_init":
+                for tc in (child.children or []):
+                    if not self._is_parse_node(tc) and hasattr(tc, 'type') and tc.type == "ID":
+                        param_name = tc.value
+                        break
+        if param_name and param_type:
+            return (param_name, param_type)
+        return None
     
     def _visit_empty_def(self, node):
         """Visit empty_def: empty ID (params) { body refill }"""

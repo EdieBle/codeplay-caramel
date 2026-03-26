@@ -2,7 +2,7 @@ bean arr[20] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 bean cup() [
     bean n = 0
-    bean val = 0
+    churro val = "a"
     bean left = 0
     bean right = 0
     bean is_palin = 1
@@ -10,7 +10,6 @@ bean cup() [
     bean b = 0
     bean nsub = 0
     glaze("=== Word Palindrome Checker ===\n")
-    glaze("Enter each letter as a number (a=1, b=2, ... z=26)\n")
     glaze("Enter number of letters: ")
     batter@ n
     ifbrew (n <= 0) {

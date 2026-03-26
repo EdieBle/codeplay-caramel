@@ -6,7 +6,7 @@ bean cup() [
     bean found = 0
     bean val = 0
     bean dupcount = 0
-    glaze("Enter numbers (duplicate stops input):\n")
+    glaze("Enter numbers (triplicate stops input):\n")
     whilehot (found == 0) {
         glaze("Enter a number: ")
         batter@ num
@@ -23,12 +23,6 @@ bean cup() [
         }
         ifbrew (dupcount >= 2) {
             glaze("Triplicate found: ")
-            glaze(num)
-            glaze("\n")
-            found = 1
-        }
-        ifbrew (dupcount == 1) {
-            glaze("Duplicate found: ")
             glaze(num)
             glaze("\n")
             found = 1

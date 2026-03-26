@@ -1,49 +1,94 @@
 bean cup() [
+    bean choice = 0
     bean n = 0
-    glaze("Enter number of rows: ")
-    batter@ n
-    ifbrew (n <= 0) {
-        glaze("Error: Invalid Input\n")
-        refill? 0
+    bean length = 0
+    bean width = 0
+
+    glaze("Shape Drawer\n")
+    glaze("1. Triangle\n")
+    glaze("2. Inverted Triangle\n")
+    glaze("3. Square\n")
+    glaze("4. Rectangle\n")
+    glaze("Enter choice: ")
+    batter@ choice
+
+    flavour (choice) {
+        syrup 1:
+            glaze("Enter number of rows: ")
+            batter@ n
+            ifbrew (n <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            glaze("Triangle:\n")
+            pour (bean i = 1; i <= n; i++) {
+                pour (bean k = 1; k <= n - i; k++) {
+                    glaze(" ")
+                }
+                pour (bean j = 1; j <= i; j++) {
+                    glaze("* ")
+                }
+                glaze("\n")
+            }
+        snap
+        syrup 2:
+            glaze("Enter number of rows: ")
+            batter@ n
+            ifbrew (n <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            glaze("Inverted Triangle:\n")
+            pour (bean i = n; i >= 1; i -= 1) {
+                pour (bean k = 1; k <= n - i; k++) {
+                    glaze(" ")
+                }
+                pour (bean j = 1; j <= i; j++) {
+                    glaze("* ")
+                }
+                glaze("\n")
+            }
+        snap
+        syrup 3:
+            glaze("Enter number of rows: ")
+            batter@ n
+            ifbrew (n <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            glaze("Square:\n")
+            pour (bean i = 1; i <= n; i++) {
+                pour (bean j = 1; j <= n + 2; j++) {
+                    glaze("* ")
+                }
+                glaze("\n")
+            }
+        snap
+        syrup 4:
+            glaze("Enter length: ")
+            batter@ length
+            ifbrew (length <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            glaze("Enter width: ")
+            batter@ width
+            ifbrew (width <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            glaze("Rectangle:\n")
+            pour (bean i = 1; i <= length; i++) {
+                pour (bean j = 1; j <= width; j++) {
+                    glaze("* ")
+                }
+                glaze("\n")
+            }
+        snap
+        defoam:
+            glaze("Invalid choice\n")
+        snap
     }
 
-    glaze("Triangle:\n")
-    pour (bean i = 1; i <= n; i++) {
-        pour (bean k = 1; k <= n - i; k++) {
-            glaze(" ")
-        }
-        pour (bean j = 1; j <= i; j++) {
-            glaze("* ")
-        }
-        glaze("\n")
-    }
-
-    glaze("\nInverted Triangle:\n")
-    pour (bean i = n; i >= 1; i -= 1) {
-        pour (bean k = 1; k <= n - i; k++) {
-            glaze(" ")
-        }
-        pour (bean j = 1; j <= i; j++) {
-            glaze("* ")
-        }
-        glaze("\n")
-    }
-
-    glaze("\nSquare:\n")
-    pour (bean i = 1; i <= n; i++) {
-        pour (bean j = 1; j <= n + 2; j++) {
-            glaze("* ")
-        }
-        glaze("\n")
-    }
-
-    glaze("\nRectangle:\n")
-    pour (bean i = 1; i <= n; i++) {
-        pour (bean j = 1; j <= n; j++) {
-            glaze("* ")
-        }
-        glaze("\n")
-    }
-    
     refill? 0
 ]

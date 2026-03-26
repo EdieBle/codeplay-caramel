@@ -952,6 +952,11 @@ class StructuredCodeGenerator:
         while bi < body_end and bi < len(self.ir):
             instr_i = self.ir[bi]
             if instr_i.op == "LABEL":
+                inner_loop = self._detect_while_loop(bi)
+                if inner_loop is not None:
+                    bi = self._gen_while_loop(bi, inner_loop)
+                    has_body = True
+                    continue
                 bi += 1
                 continue
             if instr_i.op in ("GOTO",):
@@ -1040,7 +1045,14 @@ class StructuredCodeGenerator:
                         self._push()
                         while bi < end_label_idx:
                             instr_k = self.ir[bi]
-                            if instr_k.op in ("LABEL", "GOTO"):
+                            if instr_k.op == "LABEL":
+                                inner_loop = self._detect_while_loop(bi)
+                                if inner_loop is not None:
+                                    bi = self._gen_while_loop(bi, inner_loop)
+                                    continue
+                                bi += 1
+                                continue
+                            if instr_k.op == "GOTO":
                                 bi += 1
                                 continue
                             self._gen_simple(instr_k, bi)
@@ -1054,7 +1066,15 @@ class StructuredCodeGenerator:
                     bi = else_label_idx + 1
                     while bi < end_label_idx:
                         instr_i = self.ir[bi]
-                        if instr_i.op in ("LABEL", "GOTO"):
+                        if instr_i.op == "LABEL":
+                            inner_loop = self._detect_while_loop(bi)
+                            if inner_loop is not None:
+                                bi = self._gen_while_loop(bi, inner_loop)
+                                has_else = True
+                                continue
+                            bi += 1
+                            continue
+                        if instr_i.op == "GOTO":
                             bi += 1
                             continue
                         if instr_i.op == "IF_FALSE":
@@ -1092,7 +1112,11 @@ class StructuredCodeGenerator:
         elif op == "ASSIGN":
             dest = self._py_var(instr.dest)
             val = self._py_val(instr.arg1)
-            self._emit(f"{dest} = {val}")
+            var_type = self._get_var_type(instr.dest)
+            if var_type == "bean":
+                self._emit(f"{dest} = int({val})")
+            else:
+                self._emit(f"{dest} = {val}")
 
         elif op == "BINOP":
             dest = self._py_var(instr.dest)
