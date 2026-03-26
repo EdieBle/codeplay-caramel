@@ -1,17 +1,24 @@
 bean cup() [
     drip n = 0.0
+    drip guess = 0.0
+    drip div = 0.0
+    drip sum = 0.0
+    bean result = 0
+    drip check = 0.0
     glaze("Enter a number: ")
     batter@ n
     ifbrew (n <= 0) {
         glaze("Error: Invalid Input\n")
         refill? 0
     }
-    drip guess = n / 2.0
+    guess = n / 2.0
     pour (bean i = 0; i < 20; i++) {
-        guess = (guess + n / guess) / 2.0
+        div = n / guess
+        sum = guess + div
+        guess = sum / 2.0
     }
-    bean result = guess
-    drip check = result
+    result = guess
+    check = result
     glaze("Square root: ")
     ifbrew (check == guess) {
         glaze(result)
