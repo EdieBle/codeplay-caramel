@@ -6,8 +6,8 @@ bean cup() [
     bean left = 0
     bean right = 0
     bean is_palin = 1
-    bean a = 0
-    bean b = 0
+    churro a = "a"
+    churro b = "a"
     bean nsub = 0
     glaze("=== Word Palindrome Checker ===\n")
     glaze("Enter number of letters: ")
@@ -25,14 +25,6 @@ bean cup() [
         glaze(i + 1)
         glaze(": ")
         batter@ val
-        ifbrew (val < 1) {
-            glaze("Error: Invalid Input\n")
-            refill? 0
-        }
-        ifbrew (val > 26) {
-            glaze("Error: Invalid Input\n")
-            refill? 0
-        }
         order.arr[i] = val
     }
     left = 0

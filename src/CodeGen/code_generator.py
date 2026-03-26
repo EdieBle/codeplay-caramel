@@ -612,7 +612,7 @@ class StructuredCodeGenerator:
         if s.startswith("_t"):
             return s
         if s.startswith("order."):
-            return f'_order["{s[6:]}"]'
+            return s[6:]  # global array: order.arr -> arr
         safe = s.replace(".", "_").replace("?", "_q").replace("@", "_at")
         if safe in ("class", "def", "return", "if", "else", "elif", "for",
                      "while", "break", "continue", "pass", "import", "from",
@@ -636,7 +636,7 @@ class StructuredCodeGenerator:
         if s.startswith("_t"):
             return s
         if s.startswith("order."):
-            return f'_order["{s[6:]}"]'
+            return s[6:]  # global array: order.arr -> arr
         return self._py_var(s)
 
     def _get_var_type(self, var_name):
@@ -1187,10 +1187,10 @@ class StructuredCodeGenerator:
             dims = instr.extra.get("dims", [])
             init_vals = instr.extra.get("init", [])
             if name.startswith("order."):
-                var = f'_order["{name[6:]}"]'
+                var = name[6:]
             else:
-                var = self._py_var(name) 
-                
+                var = name
+
             if init_vals:
                 self._emit(f"{var} = {init_vals}")
             elif len(dims) == 1:

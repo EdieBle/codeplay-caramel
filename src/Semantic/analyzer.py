@@ -126,7 +126,7 @@ class SemanticAnalyzer:
     TYPE_COMPAT = {
         "bean":   {"bean", "drip", "temp", "churro"},  # bean can go into drip, temp, churro
         "drip":   {"drip", "bean", "temp"},             # drip can go into bean, temp
-        "churro": {"churro", "bean", "drip", "temp"},   # churro can go into bean, drip, temp
+        "churro": {"churro", "bean", "drip", "temp", "blend"},  # churro accepts string literals (blend)
         "temp":   {"temp", "bean", "drip"},             # temp can go into bean, drip
         "blend":  {"blend"},                            # blend only into blend
     }
@@ -755,7 +755,6 @@ class SemanticAnalyzer:
         if self.current_var_type:
             # Infer the type of the RHS value
             rhs_type = self._infer_value_type(node)
-            print(f"[OPT ASSIGN DEBUG] opt_assign: declared={self.current_var_type}, rhs={rhs_type}")
 
             if rhs_type and rhs_type != self.current_var_type:
                 # Check if it's a valid implicit cast per TYPE_COMPAT
