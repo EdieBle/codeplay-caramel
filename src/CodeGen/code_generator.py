@@ -1162,8 +1162,11 @@ class StructuredCodeGenerator:
             name = instr.dest
             dims = instr.extra.get("dims", [])
             init_vals = instr.extra.get("init", [])
-            # Global arrays are stored in _order
-            var = f'_order["{name}"]'
+            if name.startswith("order."):
+                var = f'_order["{name[6:]}"]'
+            else:
+                var = self._py_var(name) 
+                
             if init_vals:
                 self._emit(f"{var} = {init_vals}")
             elif len(dims) == 1:
