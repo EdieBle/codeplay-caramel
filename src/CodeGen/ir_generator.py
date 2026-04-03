@@ -498,15 +498,59 @@ class IRGenerator:
         return result
 
     def _visit_blend_term(self, node):
-        for child in self._get_children(node):
-            if self._is_token(child):
-                if child.type == "BLENDLIT":
-                    return child.value
-                if child.type == "ID":
-                    return child.value
+        children = self._get_children(node)
+
+        print(f"\n[DEBUG blend_term] children:")
+        for i, child in enumerate(children):
+            print(f"  [{i}] is_node={self._is_node(child)}, is_token={self._is_token(child)}, "
+                f"name={getattr(child, 'name', None)}, type={getattr(child, 'type', None)}, "
+                f"value={getattr(child, 'value', None)}")
+        for i, child in enumerate(children):
+            if self._is_token(child) and child.type == "ID":
+                var_name = child.value
+                # Check if there's an array access tail following
+                for c2 in children[i + 1:]:
+                    if self._is_node(c2) and c2.name == "blend_term_id_tail":
+                        return self._visit_blend_term_id_tail(var_name, c2)
+                return var_name
+            if self._is_token(child) and child.type == "BLENDLIT":
+                return child.value
             if self._is_node(child):
                 return self._visit(child)
         return None
+
+    def _visit_blend_term_id_tail(self, var_name, tail_node):
+        #"""Process blend_term ID tail: array access or function call in string concat context."""
+        children = self._get_children(tail_node)
+        if not children:
+            return var_name
+
+        first = children[0]
+
+        # Empty tail — just the variable itself
+        if self._is_node(first) and first.name == "_empty":
+            return var_name
+
+        # Array access: [index]
+        if (self._is_token(first) and first.type == "OP_BRACKETS") or \
+        (self._is_node(first) and first.name == "OP_BRACKETS"):
+            idx = self._extract_array_index(tail_node)
+            t = self._new_temp()
+            self._emit("ARR_LOAD", dest=t, arg1=var_name, arg2=idx)
+            return t
+
+        # Function call: (args)
+        if (self._is_token(first) and first.type == "OP_PAREN") or \
+        (self._is_node(first) and first.name == "OP_PAREN"):
+            args = self._collect_function_args(tail_node)
+            for a in args:
+                self._emit("PARAM", arg1=a)
+            t = self._new_temp()
+            self._emit("CALL", dest=t, arg1=var_name, arg_count=len(args))
+            return t
+
+        # Default: just return the variable name
+        return var_name
 
     def _visit_blend_val_tail(self, node):
         parts = []
@@ -553,8 +597,18 @@ class IRGenerator:
             return
 
         var_name = id_tok.value
+        print(f"\n[DEBUG id_dec_stmt] var_name={var_name}")
+        for child in self._get_children(node):
+            print(f"  child: is_node={self._is_node(child)}, is_token={self._is_token(child)}, "
+                f"name={getattr(child, 'name', None)}, type={getattr(child, 'type', None)}, "
+                f"value={getattr(child, 'value', None)}")
+            if self._is_node(child) and child.name == "id_dec_tail":
+                for gc in self._get_children(child):
+                    print(f"    tail_child: is_node={self._is_node(gc)}, is_token={self._is_token(gc)}, "
+                        f"name={getattr(gc, 'name', None)}, type={getattr(gc, 'type', None)}, "
+                        f"value={getattr(gc, 'value', None)}")
 
-        # Visit the tail to determine what kind of statement this is
+    # Visit the tail to determine what kind of statement this is
         for child in self._get_children(node):
             if self._is_node(child) and child.name == "id_dec_tail":
                 self._visit_id_dec_tail(node, var_name, child)
@@ -586,6 +640,19 @@ class IRGenerator:
                 elif dest_type == "temp" and isinstance(val, (int, float)) and not isinstance(val, bool):
                     val = True if val != 0 else False
                 self._emit("ASSIGN", dest=var_name, arg1=val)
+            return
+
+        # Array element assignment: [index] = value  (via id_bracket_tail)
+        if (self._is_token(first) and first.type == "OP_BRACKETS") or (self._is_node(first) and first.name == "OP_BRACKETS"):
+            idx = self._extract_array_index_expr(tail_node)
+            val = None
+            # The assignment is inside id_bracket_tail
+            for c in children:
+                if self._is_node(c) and c.name == "id_bracket_tail":
+                    val = self._visit_id_bracket_tail_rhs(c)
+                    break
+            if val is not None:
+                self._emit("ARR_STORE", dest=var_name, arg1=idx, arg2=val)
             return
 
         # Compound assignment: +=, -=, *=, /=
@@ -635,6 +702,20 @@ class IRGenerator:
            (self._is_token(first) and first.type == "DOT_ACC"):
             self._visit_children_all(tail_node)
             return
+
+        # Array element assignment: [index] = value
+        if (self._is_token(first) and first.type == "OP_BRACKETS") or \
+        (self._is_node(first) and first.name == "OP_BRACKETS"):
+            idx = self._extract_array_index_expr(tail_node)
+            val = None
+            for c in children:
+                if self._is_node(c) and c.name in ("assign_val", "value", "expression"):
+                    val = self._visit(c)
+                    break
+            if val is not None:
+                self._emit("ARR_STORE", dest=var_name, arg1=idx, arg2=val)
+            return
+        
 
         # Default: visit all
         self._visit_children_all(tail_node)
@@ -1114,11 +1195,45 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_input_stmt(self, node):
-        """Handle batter@ input statement."""
-        targets = self._collect_input_targets(node)
-        for target in targets:
-            self._emit("INPUT", dest=target)
+        # Handle batter@ input statement
+        # Check if any child subtree contains an array access (OP_BRACKETS)
+        # If so, treat as array element input: ARR_STORE dest=arr, arg1=idx, arg2=INPUT
+        arr_name, arr_idx = self._find_array_input_target(node)
+        if arr_name is not None:
+            t = self._new_temp()
+            dtype = self._var_types.get(arr_name)
+            # emit a temp to hold the input value
+            self._emit("INPUT", dest=t, array_elem_type=dtype)
+            self._emit("ARR_STORE", dest=arr_name, arg1=arr_idx, arg2=t)
+        else:
+            targets = self._collect_input_targets(node)
+            for target in targets:
+                self._emit("INPUT", dest=target)
 
+    def _find_array_input_target(self, node):
+        ids = []
+        has_brackets = False
+        idx = None
+
+        def walk(n):
+            nonlocal has_brackets, idx
+            for child in self._get_children(n):
+                if self._is_token(child) and child.type == "ID":
+                    ids.append(child.value)
+                elif self._is_token(child) and child.type == "OP_BRACKETS":
+                    has_brackets = True
+                elif self._is_node(child) and child.name == "array_index":
+                    # Pass the parent node (n), not the array_index child itself
+                    idx = self._extract_array_index_expr(n)  # ← was: child
+                elif self._is_node(child) and child.name != "_empty":
+                    walk(child)
+
+        walk(node)
+
+        if has_brackets and len(ids) >= 1:
+            return ids[0], idx if idx is not None else 0
+        return None, None
+    
     def _collect_input_targets(self, node):
         targets = []
         for child in self._get_children(node):
@@ -1852,6 +1967,17 @@ class IRGenerator:
                 return self._token_to_literal(child)
         return None
 
+    def _visit_id_bracket_tail_rhs(self, node):
+    # """Extract RHS value from id_bracket_tail (the = expr part after array[idx])."""
+        children = self._get_children(node)
+        for i, child in enumerate(children):
+            if self._is_token(child) and child.type == "EQUALS":
+                for c in children[i + 1:]:
+                    if self._is_node(c):
+                        return self._visit(c)
+            # compound: +=, -=, etc. — extend here later if needed
+        return None
+    
     # ------------------------------------------------------------------
     # Helpers for function args & array indices
     # ------------------------------------------------------------------

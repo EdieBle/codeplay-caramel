@@ -1149,7 +1149,7 @@ class StructuredCodeGenerator:
 
         elif op == "INPUT":
             dest = self._py_var(instr.dest)
-            dtype = self._get_var_type(instr.dest)
+            dtype = self._get_var_type(instr.dest) or instr.extra.get("array_elem_type")
             if dtype == "bean":
                 self._emit(f"{dest} = int(_caramel_input())")
             elif dtype == "drip":
