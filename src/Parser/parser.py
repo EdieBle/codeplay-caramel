@@ -1879,10 +1879,19 @@ class RDParser:
         return self._node("input_dot_tail", [self._node("_empty")])
 
     def parse_input_order_tail(self):
-        """Parse rule: input_order_tail -> . ID | λ"""
-        if self._accept("DOT_ACC"):
+        """Parse rule: input_order_tail -> [idx] | . ID | λ"""
+        t = self._current().type
+        if t == "OP_BRACKETS":
+            return self._node("input_order_tail", [
+                self._expect("OP_BRACKETS"),
+                self.parse_array_index(),
+                self._expect("CL_BRACKETS"),
+                self.parse_arr_call_tail()
+            ])
+        if t == "DOT_ACC":
             return self._node("input_order_tail", [
                 self._node("DOT_ACC", []),
+                self._expect("DOT_ACC"),
                 self._expect("ID")
             ])
         return self._node("input_order_tail", [self._node("_empty")])

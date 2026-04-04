@@ -136,6 +136,10 @@ class IRGenerator:
         if not self.ast:
             return []
         self._visit(self.ast)
+
+        # debug
+        for i, instr in enumerate(self.instructions):
+            print(f"[{i:03}] {instr}")
         return self.instructions
     
     def get_ir_dicts(self):
@@ -670,7 +674,7 @@ class IRGenerator:
                 self._emit("ASSIGN", dest=var_name, arg1=t)
             return
 
-        # Post-increment/decrement
+        # Post-increment/decrement (might functionally be useless lmao but the post increment handles stuff pag nag unary_op node muna as first child)
         if self._is_node(first) and first.name in ("INCREMENT", "DECREMENT"):
             op = "++" if first.name == "INCREMENT" else "--"
             t = self._new_temp()
@@ -687,6 +691,17 @@ class IRGenerator:
             self._emit("ASSIGN", dest=var_name, arg1=t)
             return
 
+        # Post-increment/decrement wrapped in unary_op node
+        if self._is_node(first) and first.name == "unary_op":
+            for uc in self._get_children(first):
+                if self._is_token(uc) and uc.type in ("INCREMENT", "DECREMENT"):
+                    t = self._new_temp()
+                    inc_val = 1 if uc.type == "INCREMENT" else -1
+                    self._emit("BINOP", dest=t, arg1=var_name, arg2=inc_val, binop="+")
+                    self._emit("ASSIGN", dest=var_name, arg1=t)
+                    return
+            return
+         
         # Function call: (args)
         if (self._is_node(first) and first.name == "OP_PAREN") or \
            (self._is_token(first) and first.type == "OP_PAREN"):
@@ -1129,6 +1144,12 @@ class IRGenerator:
         self._visit_children_all(node)
 
     def _visit_stmt_tail(self, node):
+        # debug
+        # for child in self._get_children(node):
+        #     print(f"  [STMT_TAIL child] name={getattr(child, 'name', None)}, type={getattr(child, 'type', None)}")
+        #     if self._is_node(child):
+        #         for gc in self._get_children(child):
+        #             print(f"    [STMT_TAIL grandchild] name={getattr(gc, 'name', None)}, type={getattr(gc, 'type', None)}")
         self._visit_children_all(node)
 
     def _visit_stmt_tail_until_snap(self, node):
@@ -1323,6 +1344,10 @@ class IRGenerator:
             for child in children:
                 if self._is_node(child) and child.name in ("statement", "stmt_tail"):
                     self._visit(child)
+
+            # debug
+            # for child in children:
+            #     print(f"  [ELSPRESS child] is_node={self._is_node(child)}, name={getattr(child, 'name', None)}, type={getattr(child, 'type', None)}")
             return
 
         # Fallback
@@ -1708,14 +1733,13 @@ class IRGenerator:
         """Handle break (snap) and continue (skip)."""
         for child in self._get_children(node):
             if self._is_token(child):
-                if child.type == "SNAP" and self._loop_stack:
-                    _, break_label = self._loop_stack[-1]
-                    self._emit("GOTO", dest=break_label)
+                if child.type == "SNAP":
+                    if self._loop_stack:
+                        self._emit("SNAP")
                     return
-                if child.type == "SKIP" and self._loop_stack:
-                    cont_label, _ = self._loop_stack[-1]
-                    if cont_label:
-                        self._emit("GOTO", dest=cont_label)
+                if child.type == "SKIP":
+                    if self._loop_stack:
+                        self._emit("SKIP")
                     return
 
     # ------------------------------------------------------------------

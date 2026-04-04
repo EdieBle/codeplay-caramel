@@ -1218,8 +1218,15 @@ class StructuredCodeGenerator:
             member = instr.arg2
             self._emit(f"{dest} = {obj}.get('{member}', None) if isinstance({obj}, dict) else getattr({obj}, '{member}', None)")
 
+        elif op == "SNAP":
+            self._emit("break")
+
+        elif op == "SKIP":
+            self._emit("continue")
+
+            
         elif op in ("FUNC_BEGIN", "FUNC_END", "LABEL", "GOTO",
-                     "IF_FALSE", "IF_TRUE", "NOP"):
+                    "IF_FALSE", "IF_TRUE", "NOP", "PARAM"):
             pass  # handled elsewhere
 
         return idx + 1
