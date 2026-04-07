@@ -1,0 +1,32 @@
+recipe bean find_1st_cap(churro str, bean index, bean length) [
+    ifbrew (index >= length) {
+        refill? (-1)  ~~ Not found
+    }
+    
+    ~~ Check if character is uppercase (ASCII 65-90)
+    ifbrew (str[index] >= 65 && str[index] <= 90) {
+        refill? (index)
+    }
+    
+    refill? (find_1st_cap(str, index + 1, length))
+]
+
+bean cup() [
+    churro text
+    bean length, result, i
+    
+    batter@text("Enter a string: ")
+    length = sift(text)
+    
+    result = find_1st_cap(text, 0, length)
+    
+    ifbrew (result != -1) {
+        glaze("First capital letter: ")
+        glaze(text[result])
+        glaze("\n")
+    } elspress {
+        glaze("No capital letter found\n")
+    }
+    
+    refill? 0
+]

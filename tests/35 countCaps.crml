@@ -1,0 +1,25 @@
+recipe bean count_caps(churro str, bean index, bean length) [
+    ifbrew (index >= length) {
+        refill? (0)
+    }
+    
+    ifbrew (str[index] >= 65 && str[index] <= 90) {
+        refill? (count_caps(str, index + 1, length) + 1)
+    }
+    
+    refill? (count_caps(str, index + 1, length))
+]
+
+bean cup() [
+    churro text
+    bean length, result, i
+    
+    batter@text("Enter a string: ")
+    length = sift(text)
+    
+	result = count_caps(text, 0, length)
+	glaze("Number of capital letters: ")
+	glaze(result)
+	
+    refill? 0
+]
