@@ -1,0 +1,32 @@
+bean cup() [
+    bean n = 0
+    bean num = 0
+    bean decimal = 0
+    bean bit = 0
+    bean place = 1
+    bean prod = 0
+    bean even = 0
+    glaze("Enter a binary number: ")
+    batter@ n
+    ifbrew (n <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    num = n
+    whilehot (num > 0) {
+        bit = num % 10
+        ifbrew (bit > 1) {
+            glaze("Error: Invalid binary input\n")
+            refill? 0
+        }
+        prod = bit * place
+        decimal = decimal + prod
+        place = place * 2
+        even = num - bit
+        num = even / 10
+    }
+    glaze("Decimal: ")
+    glaze(decimal)
+    glaze("\n")
+    refill? 0
+]

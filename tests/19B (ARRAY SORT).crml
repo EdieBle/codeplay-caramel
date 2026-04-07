@@ -1,0 +1,62 @@
+bean arr[6] = [0, 0, 0, 0, 0, 0]
+
+bean cup() [
+    bean n = 0
+    bean choice = 0
+    bean tmp = 0
+    bean val = 0
+    glaze("Input the number of elements: ")
+    batter@ n
+    ifbrew (n <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    ifbrew (n > 6) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    pour (bean i = 0; i < n; i++) {
+        glaze("element - ")
+        glaze(i)
+        glaze(" : ")
+        batter@ val
+        order.arr[i] = val
+    }
+    glaze("1. Ascending\n")
+    glaze("2. Descending\n")
+    glaze("Enter choice: ")
+    batter@ choice
+    ifbrew (choice < 1) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    ifbrew (choice > 2) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    pour (bean i = 0; i < n - 1; i++) {
+        pour (bean j = 0; j < n - i - 1; j++) {
+            ifbrew (choice == 1) {
+                ifbrew (order.arr[j] > order.arr[j + 1]) {
+                    tmp = order.arr[j]
+                    order.arr[j] = order.arr[j + 1]
+                    order.arr[j + 1] = tmp
+                }
+            }
+            elspress {
+                ifbrew (order.arr[j] < order.arr[j + 1]) {
+                    tmp = order.arr[j]
+                    order.arr[j] = order.arr[j + 1]
+                    order.arr[j + 1] = tmp
+                }
+            }
+        }
+    }
+    glaze("Sorted array: ")
+    pour (bean i = 0; i < n; i++) {
+        glaze(order.arr[i])
+        glaze(" ")
+    }
+    glaze("\n")
+    refill? 0
+]

@@ -1,0 +1,22 @@
+bean cup() [
+    bean n = 0
+    bean aa = 0
+    bean bb = 1
+    bean nxt = 0
+    glaze("Enter number of terms: ")
+    batter@ n
+    ifbrew (n <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    glaze("Fibonacci Series: ")
+    pour (bean i = 0; i < n; i++) {
+        glaze(aa)
+        glaze(" ")
+        nxt = aa + bb
+        aa = bb
+        bb = nxt
+    }
+    glaze("\n")
+    refill? 0
+]

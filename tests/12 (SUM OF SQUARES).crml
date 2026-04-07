@@ -1,0 +1,20 @@
+bean cup() [
+    bean n = 0
+    bean sum = 0
+    glaze("Enter N: ")
+    batter@ n
+    ifbrew (n <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    pour (bean i = 1; i <= n; i++) {
+        bean sq = i * i
+        sum = sum + sq
+    }
+    glaze("Sum of squares from 1 to ")
+    glaze(n)
+    glaze(": ")
+    glaze(sum)
+    glaze("\n")
+    refill? 0
+]

@@ -1,0 +1,79 @@
+recipe drip circlearea(drip rad) [
+    drip area = 3.14159 * rad * rad
+    refill? (area)
+]
+
+recipe drip triarea(drip ba, drip he) [
+    drip area = 0.5 * ba * he
+    refill? (area)
+]
+
+recipe drip sqarea(drip si) [
+    drip area = si * si
+    refill? (area)
+]
+
+recipe drip rectarea(drip le, drip wi) [
+    drip area = le * wi
+    refill? (area)
+]
+
+bean cup() [
+    bean choice = 0
+    drip radius = 0.0
+    drip base = 0.0
+    drip height = 0.0
+    drip side = 0.0
+    drip length = 0.0
+    drip width = 0.0
+    drip result = 0.0
+
+    glaze("Area Calculator\n")
+    glaze("1. Circle\n")
+    glaze("2. Triangle\n")
+    glaze("3. Square\n")
+    glaze("4. Rectangle\n")
+    glaze("Enter choice: ")
+    batter@ choice
+
+    ifbrew (choice == 1) {
+        glaze("Enter radius: ")
+        batter@ radius
+        result = circlearea(radius)
+        glaze("Area: ")
+        glaze(result)
+        glaze("\n")
+    }
+    elifroth (choice == 2) {
+        glaze("Enter base: ")
+        batter@ base
+        glaze("Enter height: ")
+        batter@ height
+        result = triarea(base, height)
+        glaze("Area: ")
+        glaze(result)
+        glaze("\n")
+    }
+    elifroth (choice == 3) {
+        glaze("Enter side: ")
+        batter@ side
+        result = sqarea(side)
+        glaze("Area: ")
+        glaze(result)
+        glaze("\n")
+    }
+    elifroth (choice == 4) {
+        glaze("Enter length: ")
+        batter@ length
+        glaze("Enter width: ")
+        batter@ width
+        result = rectarea(length, width)
+        glaze("Area: ")
+        glaze(result)
+        glaze("\n")
+    }
+    elspress {
+        glaze("Invalid Input\n")
+    }
+    refill? 0
+]

@@ -1,0 +1,61 @@
+bean cup() [
+    bean choice = 0
+    drip radius = 0.0
+    drip base = 0.0
+    drip height = 0.0
+    drip side = 0.0
+    drip length = 0.0
+    drip width = 0.0
+    drip area = 0.0
+
+    glaze("Area Calculator\n")
+    glaze("1. Circle\n")
+    glaze("2. Triangle\n")
+    glaze("3. Square\n")
+    glaze("4. Rectangle\n")
+    glaze("Enter choice: ")
+    batter@ choice
+
+    flavour (choice) {
+        syrup 1:
+            glaze("Enter radius: ")
+            batter@ radius
+            area = 3.14159 * radius * radius
+            glaze("Area: ")
+            glaze(area)
+            glaze("\n")
+        snap
+        syrup 2:
+            glaze("Enter base: ")
+            batter@ base
+            glaze("Enter height: ")
+            batter@ height
+            area = 0.5 * base * height
+            glaze("Area: ")
+            glaze(area)
+            glaze("\n")
+        snap
+        syrup 3:
+            glaze("Enter side: ")
+            batter@ side
+            area = side * side
+            glaze("Area: ")
+            glaze(area)
+            glaze("\n")
+        snap
+        syrup 4:
+            glaze("Enter length: ")
+            batter@ length
+            glaze("Enter width: ")
+            batter@ width
+            area = length * width
+            glaze("Area: ")
+            glaze(area)
+            glaze("\n")
+        snap
+        defoam:
+            glaze("Invalid Input\n")
+        snap
+    }
+    refill? 0
+]

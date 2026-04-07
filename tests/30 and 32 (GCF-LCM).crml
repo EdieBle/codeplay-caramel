@@ -1,0 +1,31 @@
+recipe bean gcd(bean a, bean b) [
+    ifbrew (b == 0) {
+        refill? (a)
+    }
+    refill? (gcd(b, a % b))
+]
+
+recipe bean lcm(bean a, bean b) [
+    refill? ((a * b) / gcd(a, b))
+]
+
+bean cup() [
+    bean num1, num2, result, result1
+    
+	glaze("=====FINDING THE GCD AND LCM=====\n")
+	glaze("Enter first number: ")
+    batter@num1
+	glaze("Enter second number: ")
+    batter@num2    
+
+    result = lcm(num1, num2)
+	result1 = gcd(num1, num2)
+    
+    glaze("LCM is: ")
+    glaze(result)
+    glaze("\n")
+    glaze("GCD is: ")
+    glaze(result1)
+    
+    refill? 0
+]

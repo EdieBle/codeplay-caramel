@@ -1,0 +1,31 @@
+bean cup() [
+    bean n = 0
+    bean num = 0
+    bean rev = 0
+    bean sumdig = 0
+    bean digit = 0
+    bean even = 0
+    bean prod = 0
+    glaze("Enter a number: ")
+    batter@ n
+    ifbrew (n <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    num = n
+    whilehot (num > 0) {
+        digit = num % 10
+        prod = rev * 10
+        rev = prod + digit
+        sumdig = sumdig + digit
+        even = num - digit
+        num = even / 10
+    }
+    glaze("Sum of digits: ")
+    glaze(sumdig)
+    glaze("\n")
+    glaze("Reverse: ")
+    glaze(rev)
+    glaze("\n")
+    refill? 0
+]
