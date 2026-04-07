@@ -1138,15 +1138,25 @@ class StructuredCodeGenerator:
             def is_churro(val_raw, inferred_type):
                 if inferred_type == "churro":
                     return True
-                # Detect churro literal: single-quoted single character e.g. 'a'
                 if isinstance(val_raw, str) and len(val_raw) == 3 \
                         and val_raw[0] == "'" and val_raw[-1] == "'":
                     return True
                 return False
 
+            # Determine other operand's type
+            t1 = self._get_var_type(instr.arg1)
+            t2 = self._get_var_type(instr.arg2)
+            other_is_blend = (
+                (isinstance(instr.arg2, str) and instr.arg2.startswith('"')) or t2 == "blend"
+            )
+            other_is_blend_left = (
+                (isinstance(instr.arg1, str) and instr.arg1.startswith('"')) or t1 == "blend"
+            )
+
             if is_churro(instr.arg1, t1) or is_churro(instr.arg2, t2):
-                a = f"ord({a})" if is_churro(instr.arg1, t1) else a
-                b = f"ord({b})" if is_churro(instr.arg2, t2) else b
+                # Don't ord() when comparing churro against a blend/string literal
+                a = f"ord({a})" if is_churro(instr.arg1, t1) and not other_is_blend else a
+                b = f"ord({b})" if is_churro(instr.arg2, t2) and not other_is_blend_left else b
 
             if binop == "&&":
                 self._emit(f"{dest} = _caramel_to_bool({a}) and _caramel_to_bool({b})")
@@ -1172,15 +1182,20 @@ class StructuredCodeGenerator:
             else:
                 self._emit("_caramel_print()")
 
-        elif op == "INPUT":
+        elif op == "INPUT": # WALA PALA YUNG TEMP PAKI TEST IF VALID, also check if it does indeed print kase sa parser oks naman and child siya ni batter@
             dest = self._py_var(instr.dest)
             dtype = self._get_var_type(instr.dest) or instr.extra.get("array_elem_type")
+            prompt = instr.extra.get("prompt") or ""
+            prompt_arg = f"{prompt}" if prompt else "''"
             if dtype == "bean":
-                self._emit(f"{dest} = int(_caramel_input())")
+                self._emit(f"{dest} = int(_caramel_input({prompt_arg}))")
             elif dtype == "drip":
-                self._emit(f"{dest} = float(_caramel_input())")
+                self._emit(f"{dest} = float(_caramel_input({prompt_arg}))")
+            elif dtype == "temp":
+                self._emit(f"_inp = _caramel_input({prompt_arg})")
+                self._emit(f"{dest} = _inp.lower() in (\"hot\", \"true\", \"1\")")
             else:
-                self._emit(f"{dest} = _caramel_input()")
+                self._emit(f"{dest} = _caramel_input({prompt_arg})")
 
         elif op == "RETURN":
             if instr.arg1 is not None:
@@ -1211,17 +1226,16 @@ class StructuredCodeGenerator:
             name = instr.dest
             dims = instr.extra.get("dims", [])
             init_vals = instr.extra.get("init", [])
-            if name.startswith("order."):
-                var = name[6:]
-            else:
-                var = name
+            dtype = instr.extra.get("type", "bean")
+            default = {"churro": "''", "blend": '""', "temp": "False", "drip": "0.0"}.get(dtype, "0")
+            var = name[6:] if name.startswith("order.") else name
 
             if init_vals:
                 self._emit(f"{var} = {init_vals}")
             elif len(dims) == 1:
-                self._emit(f"{var} = [0] * {dims[0]}")
+                self._emit(f"{var} = [{default}] * {dims[0]}")
             elif len(dims) == 2:
-                self._emit(f"{var} = [[0] * {dims[1]} for _ in range({dims[0]})]")
+                self._emit(f"{var} = [[{default}] * {dims[1]} for _ in range({dims[0]})]")
             else:
                 self._emit(f"{var} = []")
 
