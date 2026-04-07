@@ -1026,6 +1026,16 @@ class IRGenerator:
                     if self._is_node(c2) and c2.name in ("expression", "blend_val"):
                         return self._visit(c2)
                 continue
+            
+            # sift
+            if self._is_token(child) and child.type == "SIFT":
+                for c2 in children:
+                    if self._is_node(c2) and c2.name == "sift_arg":
+                        arg_val = self._visit(c2)
+                        self._emit("PARAM", arg1=arg_val)
+                        t = self._new_temp()
+                        self._emit("CALL", dest=t, arg1="__sift__", arg_count=1)
+                        return t
 
         # Fallback: visit children
         for child in children:

@@ -439,6 +439,8 @@ class CodeGenerator:
             return "_anon"
         if name == "cup":
             return "_main_cup"
+        if name == "__sift__":
+            return "len"
         if name.startswith("class_"):
             return f"_class_{name[6:]}"
         if name.startswith("new_"):
@@ -598,6 +600,8 @@ class StructuredCodeGenerator:
             return "_anon"
         if name == "cup":
             return "_main_cup"
+        if name == "__sift__":
+            return "len"
         if name.startswith("class_"):
             return f"_class_{name[6:]}"
         safe = str(name).replace(".", "_").replace("?", "_q").replace("@", "_at")

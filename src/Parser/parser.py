@@ -174,7 +174,7 @@ class RDParser:
     PRIMARY_LITERALS = {"BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD", "BLENDLIT"}
     EXPR_START = {
         "NOT", "INCREMENT", "DECREMENT", "MINUS", "ID", "ORDER",
-        "BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD", "BLENDLIT", "OP_PAREN"
+        "BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD", "BLENDLIT", "OP_PAREN", "SIFT"
     }
     BLEND_TERM_START = {
         "BLENDLIT", "ID", "ORDER", "OP_PAREN",
@@ -1076,6 +1076,13 @@ class RDParser:
                 self.parse_expression(),
                 self._expect("CL_PAREN")
             ])
+        if t == "SIFT":
+            return self._node("primary", [
+                self._expect("SIFT"),
+                self._expect("OP_PAREN"),
+                self.parse_sift_arg(),
+                self._expect("CL_PAREN")
+            ])
         self._error({
             "ID", "ORDER", "BEANLIT", "DRIPLIT", "CHURROLIT",
             "HOT", "COLD", "BLENDLIT", "OP_PAREN"
@@ -1303,6 +1310,10 @@ class RDParser:
             self._expect("CL_PAREN")
         ])
 
+    def parse_sift_arg(self):
+        """Parse rule: sift_arg -> expression"""
+        return self._node("sift_arg", [self.parse_expression()])
+    
     def parse_function_args(self):
         """Parse rule: function_args -> BLENDLIT | expression | λ"""
         t = self._current().type

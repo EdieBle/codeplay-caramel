@@ -346,7 +346,9 @@ class SemanticAnalyzer:
                 scope_level=self.symbol_table.scope_level,
                 return_type=return_type
             )
-
+        if func_name == "sift":
+            self._error("E_SIFT_RES", "'sift' is a reserved built-in and cannot be used as a function name", "sift")
+        
             if not self.symbol_table.declare(func_name, symbol):
                 self.errors.append(SemanticError(
                     "E001",
@@ -378,7 +380,20 @@ class SemanticAnalyzer:
             self.symbol_table.pop_scope()
         else:
             self._visit_children(node)
-
+            
+    def _visit_sift_arg(self, node):
+        """sift argument must be blend type or a recipe returning blend."""
+        for child in node.children:
+            if not self._is_parse_node(child):
+                continue
+            inferred = self._infer_value_type(child)
+            if inferred is not None and inferred != "blend":
+                self._error(
+                    "E_SIFT",
+                    f"'sift' requires a blend argument but got '{inferred}'",
+                    child
+                )
+                
     def _extract_parameters(self, param_node):
         """Extract list of (name, type) tuples from a parameter AST node."""
         params = []
@@ -428,6 +443,9 @@ class SemanticAnalyzer:
                 scope_level=self.symbol_table.scope_level,
                 return_type="void"
             )
+        
+        if func_name == "sift":
+            self._error("E_SIFT_RES", "'sift' is a reserved built-in and cannot be used as a function name", "sift")
             
             if not self.symbol_table.declare(func_name, symbol):
                 self.errors.append(SemanticError(
