@@ -10,7 +10,7 @@ class State:
 
 
 TRANSITIONS_DFA = {
-    0: State('initial', [1, 31, 54, 69, 90, 98, 104, 108, 115, 119, 123, 129, 134, 147, 161, 175, 184, 188, 
+    0: State('initial', [1, 31, 54, 65, 86, 94, 100, 104, 111, 115, 119, 125, 130, 143, 161, 175, 184, 188, 
                         194, 200, 207, 211, 213, 217, 221, 225, 228, 231, 233, 235, 237, 238, 240, 241, 243, 
                         245, 247, 249, 250, 291, 297, 302, 332]),
 
@@ -29,37 +29,41 @@ TRANSITIONS_DFA = {
         51: State('u', 52), 52: State('p', 53), 53: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="cup"),
 
     # decaf, drip
-    54: State('d', [55, 65]),
-        55: State('e', [60]), # 56: State('c', 57), 57: State('a', 58), 58: State('f', 59), 59: State(DELIM_VAL['space_delim'], end = True, token_type="decaf"),
-                    60: State('f', 61), 61: State('o', 62), 62: State('a', 63), 63: State('m', 64), 64: State(':', end = True, token_type="defoam"),
-        65: State('r', 66), 66: State('i', 67), 67: State('p', 68), 68: State(DELIM_VAL['space_delim'], end = True, token_type="drip"),
+    54: State('d', [55, 61]), 
+        55: State('e', 56), 56: State('f', 57), 57: State('o', 58), 58: State('a', 59), 59: State('m', 60), 60: State(':', end = True, token_type="defoam"),
+        61: State('r', 62), 62: State('i', 63), 63: State('p', 64), 64: State(DELIM_VAL['space_delim'], end = True, token_type="drip"),
 
     # elifroth, elspress, empty
-    69: State('e', [70, 85]),
-        70: State('l', [71,78]), 71: State('i', 72), 72: State('f', 73), 73: State('r', 74), 74: State('o', 75), 75: State('t', 76), 76: State('h', 77), 77: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="elifroth"),
-                    78: State('s', 79), 79: State('p', 80), 80: State('r', 81), 81: State('e', 82), 82: State('s', 83), 83: State('s', 84), 84: State(DELIM_VAL['spacebraces_delim'], end = True, token_type="elspress"),
-        85: State('m', 86), 86: State('p', 87), 87: State('t', 88), 88: State('y', 89), 89: State(DELIM_VAL['space_delim'], end = True, token_type="empty"),
+    65: State('e', [66, 81]),
+        66: State('l', [67,74]), 
+            67: State('i', 68), 68: State('f', 69), 69: State('r', 70), 70: State('o', 71), 71: State('t', 72), 72: State('h', 73), 73: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="elifroth"),
+            74: State('s', 75), 75: State('p', 76), 76: State('r', 77), 77: State('e', 78), 78: State('s', 79), 79: State('s', 80), 80: State(DELIM_VAL['spacebraces_delim'], end = True, token_type="elspress"),
+        81: State('m', 82), 82: State('p', 83), 83: State('t', 84), 84: State('y', 85), 85: State(DELIM_VAL['space_delim'], end = True, token_type="empty"),
 
     # flavour
-    90: State('f', 91), 91: State('l', 92), 92: State('a', 93), 93: State('v', 94), 94: State('o', 95), 95: State('u', 96), 96: State('r', 97), 97: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="flavour"),
+    86: State('f', 87), 87: State('l', 88), 88: State('a', 89), 89: State('v', 90), 90: State('o', 91), 91: State('u', 92), 92: State('r', 93), 93: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="flavour"),
 
     # glaze, hot, ifbrew, mug, new, order
-    98: State('g', 99), 99: State('l', 100), 100: State('a', 101), 101: State('z', 102), 102: State('e', 103), 103: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="glaze"),
-    104: State('h', 105), 105: State('o', 106), 106: State('t', 107), 107: State(DELIM_VAL['temp_delim'], end = True, token_type="hot"),
-    108: State('i', 109), 109: State('f', 110), 110: State('b', 111), 111: State('r', 112), 112: State('e', 113), 113: State('w', 114), 114: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="ifbrew"),
-    115: State('m', 116), 116: State('u', 117), 117: State('g', 118), 118: State(DELIM_VAL['space_delim'], end = True, token_type="mug"),
-    119: State('n', 120), 120: State('e', 121), 121: State('w', 122), 122: State(DELIM_VAL['space_delim'], end = True, token_type="new"),
-    123: State('o', 124), 124: State('r', 125), 125: State('d', 126), 126: State('e', 127), 127: State('r', 128), 128: State('.', end = True, token_type="order"),
+    94: State('g', 95), 95: State('l', 96), 96: State('a', 97), 97: State('z', 98), 98: State('e', 99), 99: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="glaze"),
+    100: State('h', 101), 101: State('o', 102), 102: State('t', 103), 103: State(DELIM_VAL['temp_delim'], end = True, token_type="hot"),
+    104: State('i', 105), 105: State('f', 106), 106: State('b', 107), 107: State('r', 108), 108: State('e', 109), 109: State('w', 110), 110: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="ifbrew"),
+    111: State('m', 112), 112: State('u', 113), 113: State('g', 114), 114: State(DELIM_VAL['space_delim'], end = True, token_type="mug"),
+    115: State('n', 116), 116: State('e', 117), 117: State('w', 118), 118: State(DELIM_VAL['space_delim'], end = True, token_type="new"),
+    119: State('o', 120), 120: State('r', 121), 121: State('d', 122), 122: State('e', 123), 123: State('r', 124), 124: State('.', end = True, token_type="order"),
     
     # pour
-    129: State('p', 130), 130: State('o', 131), 131: State('u', 132), 132: State('r', 133), 133: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="pour"),
+    125: State('p', 126), 126: State('o', 127), 127: State('u', 128), 128: State('r', 129), 129: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="pour"),
     
     # recipe and refill?
-    134: State('r', 135), 135: State('e', [136, 141]), 136: State('c', 137), 137: State('i', 138), 138: State('p', 139), 139: State('e', 140), 140: State(DELIM_VAL['space_delim'], end = True, token_type="recipe"),
-    141: State('f', 142), 142: State('i', 143), 143: State('l', 144), 144: State('l', 145), 145: State('?', 146), 146: State([*DELIM_VAL['refill_delim'], "\n"], end = True, token_type="refill?"),
+    130: State('r', 131), 131: State('e', [132, 137]), 
+        132: State('c', 133), 133: State('i', 134), 134: State('p', 135), 135: State('e', 136), 136: State(DELIM_VAL['space_delim'], end = True, token_type="recipe"),
+        137: State('f', 138), 138: State('i', 139), 139: State('l', 140), 140: State('l', 141), 141: State('?', 142), 142: State([*DELIM_VAL['refill_delim'], "\n"], end = True, token_type="refill?"),
     
     # skip, snap, syrup
-    147: State('s', [148, 152, 156]), 148: State('k', 149), 149: State('i', 150), 150: State('p', 151), 151: State(ATOMIC_VAL['spacenew_delim'], end = True, token_type="skip"),
+    # 147: State('s', [148, 152, 156]), 148: State('i', 149), 149: State('f', 150), 150: State('t', 151), 151: State('(', end = True, token_type="sift"),
+    143: State('s', [144, 148, 152, 156]), 
+                    144: State('i', 145), 145: State('f', 146), 146: State('t', 147), 147: State('(', end = True, token_type="sift"),
+                    148: State('k', 149), 149: State('i', 150), 150: State('p', 151), 151: State(ATOMIC_VAL['spacenew_delim'], end = True, token_type="skip"),
                     152: State('n', 153), 153: State('a', 154), 154: State('p', 155), 155: State(ATOMIC_VAL['spacenew_delim'], end = True, token_type="snap"),
                     156: State('y', 157), 157: State('r', 158), 158: State('u', 159), 159: State('p', 160), 160: State(DELIM_VAL['space_delim'], end = True, token_type="syrup"),
     
@@ -83,17 +87,17 @@ TRANSITIONS_DFA = {
     
     # Minus (-)
     194: State('-', [250, 195, 196, 198]), 195: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="-"),
-    196: State('-', 197), 197: State(DELIM_VAL['unary_delim'], end = True, token_type="--"),
-    198: State('=', 199), 199: State(DELIM_VAL['assignment_delim'], end = True, token_type="-="),
+        196: State('-', 197), 197: State(DELIM_VAL['unary_delim'], end = True, token_type="--"),
+        198: State('=', 199), 199: State(DELIM_VAL['assignment_delim'], end = True, token_type="-="),
     
     # Asterisk (*)
     200: State('*', [201, 202, 205]), 201: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="*"),
-    202: State('*', 203), 203: State('*', 204), 204: State([']', *DELIM_VAL['space_delim']], end = True, token_type="***"),
-    205: State('=', 206), 206: State(DELIM_VAL['assignment_delim'], end = True, token_type="*="),
+        202: State('*', 203), 203: State('*', 204), 204: State([']', *DELIM_VAL['space_delim']], end = True, token_type="***"),
+        205: State('=', 206), 206: State(DELIM_VAL['assignment_delim'], end = True, token_type="*="),
     
     # Slash (/)
     207: State('/', [209, 208]), 208: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="/"),
-    209: State('=', 210), 210: State(DELIM_VAL['assignment_delim'], end = True, token_type="/="),
+        209: State('=', 210), 210: State(DELIM_VAL['assignment_delim'], end = True, token_type="/="),
     
     # Modulo (%)
     211: State('%', 212), 212: State(DELIM_VAL['arithmetic_delim'], end = True, token_type="%"),
@@ -108,7 +112,7 @@ TRANSITIONS_DFA = {
     
     # NOT (!)
     221: State('!', [222, 223]), 222: State(DELIM_VAL['not_delim'], end = True, token_type="!"),
-    223: State('=', 224), 224: State(DELIM_VAL['relational_delim'], end = True, token_type="!="),
+        223: State('=', 224), 224: State(DELIM_VAL['relational_delim'], end = True, token_type="!="),
     
     # AND (&) 
     225: State('&', 226), 226: State('&', 227), 227: State(DELIM_VAL['logical_delim'], end = True, token_type="&&"),
