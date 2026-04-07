@@ -1,0 +1,35 @@
+bean cup() [
+    bean array_a[5]
+	bean array_b[5]
+	bean array_c[5]
+    
+    ~~ Input Array A
+    glaze("Enter 5 numbers for Array A:\n")
+    pour(bean i = 0; i <= 4; i++) {
+        batter@array_a[i]
+    }
+    
+    ~~ Input Array B
+    glaze("Enter 5 numbers for Array B:\n")
+    pour(bean i = 0; i <= 4; i++) {
+        batter@array_b[i]
+    }
+    
+    ~~ Compute sum in Array C
+    pour(bean i = 0; i <= 4; i++) {
+		glaze("index value currently: " + i + "\n")
+		glaze("value of arr_a: " + array_a[i] + "\n")
+		glaze("value of arr_b: " + array_b[i] + "\n")
+        array_c[i] = array_a[i] + array_b[i]
+    }
+    
+    ~~ Display results
+    glaze("Array C (sum):\n")
+    pour(bean i = 0; i <= 4; i++) {
+        glaze("value of index: " + i + " is " + array_c[i] + "\n")
+        glaze(" ")
+    }
+    glaze("\n")
+    
+    refill? 0
+]

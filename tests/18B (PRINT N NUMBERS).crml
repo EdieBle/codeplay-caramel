@@ -1,0 +1,21 @@
+recipe bean printnums(bean n, bean curr) [
+    ifbrew (curr <= n) {
+        glaze(curr)
+        glaze(" ")
+        bean dummy = printnums(n, curr + 1)
+    }
+    refill? (0)
+]
+
+bean cup() [
+    bean n = 0
+    glaze("Input a number: ")
+    batter@ n
+    ifbrew (n <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    bean dummy = printnums(n, 1)
+    glaze("\n")
+    refill? 0
+]

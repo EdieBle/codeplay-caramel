@@ -1,0 +1,30 @@
+bean cup() [
+    bean n = 0
+    bean num = 0
+    bean rev = 0
+    bean digit = 0
+    bean even = 0
+    bean prod = 0
+    glaze("Enter a positive integer: ")
+    batter@ n
+    ifbrew (n <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    num = n
+    whilehot (num > 0) {
+        digit = num % 10
+        prod = rev * 10
+        rev = prod + digit
+        even = num - digit
+        num = even / 10
+    }
+    glaze(n)
+    ifbrew (n == rev) {
+        glaze(" is a palindrome\n")
+    }
+    ifbrew (n != rev) {
+        glaze(" is not a palindrome\n")
+    }
+    refill? 0
+]

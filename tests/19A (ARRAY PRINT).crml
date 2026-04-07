@@ -1,0 +1,30 @@
+bean arr[6] = [0, 0, 0, 0, 0, 0]
+
+bean cup() [
+    bean n = 0
+    bean val = 0
+    glaze("Input the number of elements: ")
+    batter@ n
+    ifbrew (n <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    ifbrew (n > 6) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    pour (bean i = 0; i < n; i++) {
+        glaze("element - ")
+        glaze(i)
+        glaze(" : ")
+        batter@ val
+        order.arr[i] = val
+    }
+    glaze("The elements in the array are: ")
+    pour (bean i = 0; i < n; i++) {
+        glaze(order.arr[i])
+        glaze(" ")
+    }
+    glaze("\n")
+    refill? 0
+]

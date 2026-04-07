@@ -1,0 +1,25 @@
+bean cup() [
+	bean n, step, n_save
+	glaze("Input any number (positive) to start the Hailstone Sequence: ")
+	batter@ n
+	step = 0
+	n_save = n
+	
+	glaze("The hailstone sequence starting at " + n + " is: " + n + " ")
+	ifbrew(n_save > 0) {
+		whilehot(n > 1){
+			ifbrew (n % 2 == 0){
+				n = n/2
+			}
+			elspress {
+				n = (3*n)+1
+			}
+			step = step+1
+			glaze("" + n + " ")
+		}
+	} elspress {
+			glaze("Invalid number")
+	}
+	glaze ("\nThe number " + n_save + " went to 1 in " + step + " steps")
+  refill? 0
+]	
