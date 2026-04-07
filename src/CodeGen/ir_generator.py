@@ -105,10 +105,10 @@ class IRGenerator:
 
     ASSIGN_OP_MAP = {
         "EQUALS": "=",
-        "PLUS_EQUALS": "+=",
-        "EQUAL_MINUS": "-=",      
-        "MULTIPLY_EQUALS": "*=",
-        "DIVIDE_EQUALS": "/=",
+        "EQUAL_PLUS":     "+",
+        "EQUAL_MINUS":    "-",
+        "EQUAL_ASTERISK": "*",
+        "EQUAL_DIVIDE":   "/",
     }
 
     LITERAL_TYPES = {
@@ -667,9 +667,28 @@ class IRGenerator:
                 self._emit("ARR_STORE", dest=var_name, arg1=idx, arg2=val)
             return
 
-        # Compound assignment: +=, -=, *=, /=
-        if self._is_token(first) and first.type in self.ASSIGN_OP_MAP:
-            op = self.ASSIGN_OP_MAP[first.type]
+        # Compound assignment: +=, -=, *=, /= (first child is assign_op node)
+        if self._is_node(first) and first.name == "assign_op":
+            # Extract the operator token from inside the assign_op node
+            op_token = None
+            for ac in self._get_children(first):
+                if self._is_token(ac) and ac.type in self.ASSIGN_OP_MAP:
+                    op_token = ac
+                    break
+            if op_token is None:
+                return
+            # plain = handled separately
+            if op_token.type == "EQUALS":
+                val = None
+                for c in children[1:]:
+                    if self._is_node(c):
+                        val = self._visit(c)
+                        break
+                if val is not None:
+                    self._emit("ASSIGN", dest=var_name, arg1=val)
+                return
+            # compound op
+            base_op = self.ASSIGN_OP_MAP[op_token.type]
             val = None
             for c in children[1:]:
                 if self._is_node(c):
@@ -677,7 +696,6 @@ class IRGenerator:
                     break
             if val is not None:
                 t = self._new_temp()
-                base_op = op[0]  # '+' from '+=' [seems bugged??]
                 self._emit("BINOP", dest=t, arg1=var_name, arg2=val, binop=base_op)
                 self._emit("ASSIGN", dest=var_name, arg1=t)
             return

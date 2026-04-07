@@ -696,11 +696,11 @@ class RDParser:
     def parse_id_dec_tail(self):
         """Parse rule: id_dec_tail -> = value | . ID tail | [idx] tail | postfix_op"""
         t = self._current().type
-        if t == "EQUALS":
-            return self._node("id_dec_tail", [
-                self._expect("EQUALS"),
-                self.parse_assign_val()
-            ])
+        if t in {"EQUALS", "EQUAL_PLUS", "EQUAL_MINUS", "EQUAL_ASTERISK", "EQUAL_DIVIDE"}:
+                return self._node("id_dec_tail", [
+                    self.parse_assign_op(),
+                    self.parse_assign_val()
+                ])
         if t == "DOT_ACC":
             return self._node("id_dec_tail", [
                 self._expect("DOT_ACC"),
@@ -717,8 +717,8 @@ class RDParser:
         if t in self.UNARY_OP:
             return self._node("id_dec_tail", [self.parse_unary_op()])
         self._error({
-            "EQUALS", "DOT_ACC", "OP_BRACKETS",
-            "INCREMENT", "DECREMENT"
+            "EQUALS", "EQUAL_PLUS", "EQUAL_MINUS", "EQUAL_ASTERISK", "EQUAL_DIVIDE",
+            "DOT_ACC", "OP_BRACKETS", "INCREMENT", "DECREMENT"
         })
 
     def parse_assign_val(self):
@@ -2337,8 +2337,7 @@ class Parser:
                     message = f"Unexpected token [{message_display}, {e.token.value}]"
 
                 if expected_readable:
-                    expected_list = ", ".join(expected_readable)
-                    message = f"{message}. Expected one of: {expected_list}"
+                    message = f"{message}"
 
             self.errors.append({
                 "type": "SYNTAX_ERROR",
