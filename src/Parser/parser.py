@@ -189,7 +189,7 @@ class RDParser:
 
     # ========================================================================
     # 1. PROGRAM STRUCTURE & INITIALIZATION
-    # ========================================================================
+    # ========================================================================\
 
     def parse(self):
         """Main entry point: parse the entire program."""
@@ -1129,7 +1129,7 @@ class RDParser:
                 self.parse_function_args(),
                 self.parse_function_args_tail(),
                 self._expect("CL_PAREN")
-            ])
+            ])  
         return self._node("primary_dot_tail", [self._node("_empty")])
 
     def parse_primary_order_tail(self):
@@ -1292,6 +1292,14 @@ class RDParser:
             self._expect("OP_PAREN"),
             self.parse_function_args(),
             self.parse_function_args_tail(),
+            self._expect("CL_PAREN")
+        ])
+
+    def parse_sift_call(self): # PRE-DEFINED - is length()
+        """Parse rule: function_call -> ID (args)"""
+        return self._node("sift_call", [
+            self._expect("ID"),
+            self._expect("OP_PAREN"),
             self._expect("CL_PAREN")
         ])
 

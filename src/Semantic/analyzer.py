@@ -519,24 +519,113 @@ class SemanticAnalyzer:
                 is_constant = True
                 break
 
-        # Pass 2: find the ID and declare it with the correct is_constant value
+        # Pass 2: find the ID and declare it; also detect arrays and check bounds.
+        id_token = None
         for child in node.children:
             if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
-                print(f"[DEBUG] Declaring '{child.value}' dtype='{dtype}' is_constant={is_constant} at scope_level={self.symbol_table.scope_level}")
-                
-                sym = Symbol(
-                    child.value, "variable",
-                    dtype=dtype,
-                    is_constant=is_constant,
-                    scope_level=self.symbol_table.scope_level,
-                    line=getattr(child, 'line', None)
-                )
-                if not self.symbol_table.declare(child.value, sym):
-                    self._error("E001", f"Redefinition of identifier '{child.value}'", child)
+                id_token = child
                 break
+
+        if id_token:
+            # Detect array declaration and collect size + initializer count
+            is_array = False
+            arr_size = None
+            arr_init_count = None
+            arr_size_token = None
+
+            for child in node.children:
+                if not (self._is_parse_node(child) and child.name == "dtype_id_tail"):
+                    continue
+                for tc in child.children:
+                    if (self._is_parse_node(tc) and tc.name == "OP_BRACKETS") or \
+                       (not self._is_parse_node(tc) and hasattr(tc, 'type') and tc.type == "OP_BRACKETS"):
+                        is_array = True
+                    if self._is_parse_node(tc) and tc.name == "arr_size_val":
+                        for sc in tc.children:
+                            if not self._is_parse_node(sc) and hasattr(sc, 'type') and sc.type == "BEANLIT":
+                                arr_size = int(sc.value)
+                                arr_size_token = sc
+                    if self._is_parse_node(tc) and tc.name == "arr_dec_dim":
+                        # Detect 2D: arr_dec_dim starts with OP_BRACKETS + arr_size_val
+                        col_size = None
+                        is_2d = False
+                        for dc in tc.children:
+                            if (self._is_parse_node(dc) and dc.name == "OP_BRACKETS") or \
+                            (not self._is_parse_node(dc) and hasattr(dc, 'type') and dc.type == "OP_BRACKETS"):
+                                is_2d = True
+                            if self._is_parse_node(dc) and dc.name == "arr_size_val":
+                                for sc in dc.children:
+                                    if not self._is_parse_node(sc) and hasattr(sc, 'type') and sc.type == "BEANLIT":
+                                        col_size = int(sc.value)
+                            if self._is_parse_node(dc) and dc.name == "arr_cont_1d":
+                                arr_init_count = self._count_arr_elements_1d(dc)
+                            elif self._is_parse_node(dc) and dc.name == "arr_cont_2d":
+                                if is_2d and col_size is not None and arr_size is not None:
+                                    # Check row count and each row's element count separately
+                                    arr_init_count = self._check_arr_2d_bounds(
+                                        dc, arr_size, col_size, id_token
+                                    )
+                                else:
+                                    arr_init_count = self._count_arr_elements_2d(dc)
+
+            print(f"[DEBUG] Declaring '{id_token.value}' dtype='{dtype}' is_constant={is_constant} is_array={is_array} at scope_level={self.symbol_table.scope_level}")
+
+            sym = Symbol(
+                id_token.value, "variable",
+                dtype=dtype,
+                is_constant=is_constant,
+                is_array=is_array,
+                scope_level=self.symbol_table.scope_level,
+                line=getattr(id_token, 'line', None)
+            )
+            if not self.symbol_table.declare(id_token.value, sym):
+                self._error("E001", f"Redefinition of identifier '{id_token.value}'", id_token)
+
+            # Bounds check: initializer count must not exceed declared size
+            if is_array and arr_size is not None and arr_init_count is not None:
+                if not is_2d and arr_init_count > arr_size: # stop asking, this part is for the 2d
+                    self._error(
+                        "E_ARR",
+                        f"Array '{id_token.value}' declared with size {arr_size} "
+                        f"but initialized with {arr_init_count} element(s)",
+                        arr_size_token or id_token
+                    )
 
         self._visit_children(node)
         self.current_var_type = None
+
+    def _check_arr_2d_bounds(self, arr_cont_2d_node, row_size, col_size, id_token):
+        """Check 2D array bounds: row count vs row_size, each row's count vs col_size.
+        Returns total element count (for consistency), emits errors directly."""
+        rows = []
+        # Collect all opt_arr_elems nodes (each is one row)
+        for child in arr_cont_2d_node.children:
+            if self._is_parse_node(child) and child.name == "opt_arr_elems":
+                rows.append(child)
+            elif self._is_parse_node(child) and child.name == "arr_cont_2d_tail":
+                for tc in child.children:
+                    if self._is_parse_node(tc) and tc.name == "opt_arr_elems":
+                        rows.append(tc)
+
+        if len(rows) > row_size:
+            self._error(
+                "E_ARR",
+                f"Array '{id_token.value}' declared with {row_size} row(s) "
+                f"but initialized with {len(rows)} row(s)",
+                id_token
+            )
+
+        for i, row in enumerate(rows):
+            count = self._count_arr_elements_1d(row)
+            if count > col_size:
+                self._error(
+                    "E_ARR",
+                    f"Array '{id_token.value}' row {i} declared with size {col_size} "
+                    f"but initialized with {count} element(s)",
+                    id_token
+                )
+        return sum(self._count_arr_elements_1d(r) for r in rows)
+
 
     def _visit_primary(self, node):
         """Visit primary: check for undeclared variables.
@@ -823,8 +912,34 @@ class SemanticAnalyzer:
         
         self._visit_children(node)
     
+    def _count_arr_elements_1d(self, arr_cont_1d_node):
+        """Count elements in a 1D array initializer (arr_cont_1d node)."""
+        count = 0
+        for child in arr_cont_1d_node.children:
+            if self._is_parse_node(child) and child.name == "arr_elem":
+                count += 1
+            elif self._is_parse_node(child) and child.name == "ext_arr_elem":
+                for ec in child.children:
+                    if self._is_parse_node(ec) and ec.name == "arr_elem":
+                        count += 1
+        return count
+
+    def _count_arr_elements_2d(self, arr_cont_2d_node):
+        """Count total elements across all rows in a 2D array initializer (arr_cont_2d node)."""
+        count = 0
+        for child in arr_cont_2d_node.children:
+            if self._is_parse_node(child) and child.name == "arr_cont_1d":
+                count += self._count_arr_elements_1d(child)
+            elif self._is_parse_node(child) and child.name == "opt_arr_elems":
+                count += self._count_arr_elements_1d(child)
+            elif self._is_parse_node(child) and child.name == "arr_cont_2d_tail":
+                for tc in child.children:
+                    if self._is_parse_node(tc) and tc.name == "opt_arr_elems":
+                        count += self._count_arr_elements_1d(tc)
+        return count
+
     def _visit_order_dec_stmt(self, node):
-        """Visit array declaration"""
+        """Visit order declaration"""
         self._visit_children(node)
     
     # TYPE CHECKING METHODS
