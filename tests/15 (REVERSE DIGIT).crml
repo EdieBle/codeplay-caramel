@@ -6,11 +6,12 @@ bean cup() [
     bean digit = 0
     bean even = 0
     bean prod = 0
+	temp is_neg = cold
     glaze("Enter a number: ")
     batter@ n
     ifbrew (n <= 0) {
-        glaze("Error: Invalid Input\n")
-        refill? 0
+        n *= -1
+		is_neg = hot
     }
     num = n
     whilehot (num > 0) {
@@ -21,6 +22,12 @@ bean cup() [
         even = num - digit
         num = even / 10
     }
+	
+	ifbrew (is_neg == hot) {
+		rev *= -1
+		sumdig *= -1
+	}
+
     glaze("Sum of digits: ")
     glaze(sumdig)
     glaze("\n")
