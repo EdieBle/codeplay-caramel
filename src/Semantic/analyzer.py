@@ -529,10 +529,10 @@ class SemanticAnalyzer:
         if id_token:
             # Detect array declaration and collect size + initializer count
             is_array = False
+            is_2d = False
             arr_size = None
             arr_init_count = None
             arr_size_token = None
-
             for child in node.children:
                 if not (self._is_parse_node(child) and child.name == "dtype_id_tail"):
                     continue
