@@ -1,6 +1,14 @@
+recipe bean count_dig(bean num) [
+    ifbrew (num == 0) {
+        refill? (0)
+    }
+    bean rem = num % 10
+    bean rest = num - rem
+    refill? (count_dig(rest / 10) + 1)
+]
+
 bean cup() [
     bean n = 0
-    bean num = 0
     bean count = 0
     glaze("Input a number: ")
     batter@ n
@@ -8,16 +16,7 @@ bean cup() [
         glaze("Error: Invalid Input\n")
         refill? 0
     }
-    num = n
-    whilehot (num > 0) {
-        count = count + 1
-        bean rem = num % 10
-        bean even = num - rem
-        num = even / 10
-    }
-    ifbrew (count == 0) {
-        count = 1
-    }
+    count = count_dig(n)
     glaze("The number of digits in the number is: ")
     glaze(count)
     glaze("\n")
