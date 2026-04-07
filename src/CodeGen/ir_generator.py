@@ -344,8 +344,8 @@ class IRGenerator:
                 break
 
         if has_brackets:
-            # Array declaration: find size and init values
             arr_size = None
+            col_size = None
             init_vals = []
             for child in children:
                 if self._is_node(child) and child.name == "arr_size_val":
@@ -354,12 +354,20 @@ class IRGenerator:
                             arr_size = int(c2.value)
                 if self._is_node(child) and child.name == "arr_dec_dim":
                     init_vals = self._collect_arr_init_values(child)
+                    # Check for 2D: arr_dec_dim starts with OP_BRACKETS + arr_size_val
+                    for dc in self._get_children(child):
+                        if self._is_node(dc) and dc.name == "arr_size_val":
+                            for sc in self._get_children(dc):
+                                if self._is_token(sc) and sc.type == "BEANLIT":
+                                    col_size = int(sc.value)
 
-            # Convert preceding DECLARE to ARR_DECLARE
             for instr in reversed(self.instructions):
                 if instr.op == "DECLARE":
                     instr.op = "ARR_DECLARE"
-                    instr.extra["dims"] = [arr_size] if arr_size else []
+                    if col_size is not None:
+                        instr.extra["dims"] = [arr_size, col_size]
+                    else:
+                        instr.extra["dims"] = [arr_size] if arr_size else []
                     if init_vals:
                         instr.extra["init"] = init_vals
                     break
@@ -1226,20 +1234,25 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_input_stmt(self, node):
-        # Handle batter@ input statement
-        # Check if any child subtree contains an array access (OP_BRACKETS)
-        # If so, treat as array element input: ARR_STORE dest=arr, arg1=idx, arg2=INPUT
+        # Extract optional prompt from input_val node
+        prompt = None
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name == "input_val":
+                for ic in self._get_children(child):
+                    if self._is_token(ic) and ic.type == "BLENDLIT":
+                        prompt = ic.value
+                        break
+
         arr_name, arr_idx = self._find_array_input_target(node)
         if arr_name is not None:
             t = self._new_temp()
             dtype = self._var_types.get(arr_name)
-            # emit a temp to hold the input value
-            self._emit("INPUT", dest=t, array_elem_type=dtype)
+            self._emit("INPUT", dest=t, array_elem_type=dtype, prompt=prompt)
             self._emit("ARR_STORE", dest=arr_name, arg1=arr_idx, arg2=t)
         else:
             targets = self._collect_input_targets(node)
             for target in targets:
-                self._emit("INPUT", dest=target)
+                self._emit("INPUT", dest=target, prompt=prompt)
 
     def _find_array_input_target(self, node):
         ids = []
@@ -1270,10 +1283,10 @@ class IRGenerator:
         for child in self._get_children(node):
             if self._is_token(child) and child.type == "ID":
                 targets.append(child.value)
-            elif self._is_node(child) and child.name not in ("_empty",):
+            elif self._is_node(child) and child.name not in ("_empty", "input_val"):  # ← add input_val
                 targets.extend(self._collect_input_targets(child))
         return targets
-
+    
     def _visit_input_args(self, node):
         self._visit_children_all(node)
 

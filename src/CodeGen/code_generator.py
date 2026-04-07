@@ -374,15 +374,17 @@ class CodeGenerator:
     def _gen_INPUT(self, instr):
         dest = self._py_var(instr.dest)
         dtype = self._get_var_type(instr.dest)
+        prompt = instr.extra.get("prompt") or ""
+        prompt_arg = f"{prompt}" if prompt else "''"
         if dtype == "bean":
-            self._emit(f"{dest} = int(_caramel_input())")
+            self._emit(f"{dest} = int(_caramel_input({prompt_arg}))")
         elif dtype == "drip":
-            self._emit(f"{dest} = float(_caramel_input())")
+            self._emit(f"{dest} = float(_caramel_input({prompt_arg}))")
         elif dtype == "temp":
-            self._emit(f'_inp = _caramel_input()')
+            self._emit(f'_inp = _caramel_input({prompt_arg})')
             self._emit(f'{dest} = _inp.lower() in ("hot", "true", "1")')
         else:
-            self._emit(f"{dest} = _caramel_input()")
+            self._emit(f"{dest} = _caramel_input({prompt_arg})")
 
     def _gen_CONCAT(self, instr):
         dest = self._py_var(instr.dest)
@@ -400,10 +402,12 @@ class CodeGenerator:
     def _gen_ARR_DECLARE(self, instr):
         dest = self._py_var(instr.dest)
         dims = instr.extra.get("dims", [])
+        dtype = instr.extra.get("type", "bean")
+        default = {"churro": "''", "blend": '""', "temp": "False", "drip": "0.0"}.get(dtype, "0")
         if len(dims) == 1:
-            self._emit(f"{dest} = [None] * {dims[0]}")
+            self._emit(f"{dest} = [{default}] * {dims[0]}")
         elif len(dims) == 2:
-            self._emit(f"{dest} = [[None] * {dims[1]} for _ in range({dims[0]})]")
+            self._emit(f"{dest} = [[{default}] * {dims[1]} for _ in range({dims[0]})]")
         else:
             self._emit(f"{dest} = []")
         self._declared.add(dest)
@@ -1112,12 +1116,13 @@ class StructuredCodeGenerator:
             if var not in self._declared:
                 self._emit(f"{var} = {default}")
                 self._declared.add(var)
-
+                
         elif op == "ASSIGN":
             dest = self._py_var(instr.dest)
             val = self._py_val(instr.arg1)
             var_type = self._get_var_type(instr.dest)
-            if var_type == "bean":
+            src_type = self._get_var_type(instr.arg1) if isinstance(instr.arg1, str) else None
+            if var_type == "bean" and src_type not in ("churro", "blend"):
                 self._emit(f"{dest} = int({val})")
             else:
                 self._emit(f"{dest} = {val}")
@@ -1127,6 +1132,22 @@ class StructuredCodeGenerator:
             a = self._py_val(instr.arg1)
             b = self._py_val(instr.arg2)
             binop = instr.extra.get("binop", "+")
+            t1 = self._get_var_type(instr.arg1)
+            t2 = self._get_var_type(instr.arg2)
+
+            def is_churro(val_raw, inferred_type):
+                if inferred_type == "churro":
+                    return True
+                # Detect churro literal: single-quoted single character e.g. 'a'
+                if isinstance(val_raw, str) and len(val_raw) == 3 \
+                        and val_raw[0] == "'" and val_raw[-1] == "'":
+                    return True
+                return False
+
+            if is_churro(instr.arg1, t1) or is_churro(instr.arg2, t2):
+                a = f"ord({a})" if is_churro(instr.arg1, t1) else a
+                b = f"ord({b})" if is_churro(instr.arg2, t2) else b
+
             if binop == "&&":
                 self._emit(f"{dest} = _caramel_to_bool({a}) and _caramel_to_bool({b})")
             elif binop == "||":
@@ -1236,7 +1257,31 @@ class StructuredCodeGenerator:
         return idx + 1
 
     def _get_var_type(self, var_name):
+        """Try to find the declared type of a variable from the IR.
+        For temps, infer from the instruction that produced them."""
+        if not isinstance(var_name, str):
+            return None
         for instr in self.ir:
             if instr.op == "DECLARE" and instr.dest == var_name:
                 return instr.extra.get("type")
+        # Temp variable — infer from producing instruction
+        for instr in self.ir:
+            if instr.dest != var_name:
+                continue
+            if instr.op == "ASSIGN":
+                return self._get_var_type(instr.arg1)
+            if instr.op in ("BINOP", "CONCAT"):
+                # Infer from operands — if either is churro/blend, result is that type
+                t1 = self._get_var_type(instr.arg1)
+                t2 = self._get_var_type(instr.arg2)
+                if "blend" in (t1, t2):
+                    return "blend"
+                if "churro" in (t1, t2):
+                    return "churro"
+                return t1 or t2
+            if instr.op == "ARR_LOAD":
+                # Array element — return the array's element type
+                return self._get_var_type(instr.arg1)
+            if instr.op == "CALL" and instr.arg1 == "__sift__":
+                return "bean"
         return None

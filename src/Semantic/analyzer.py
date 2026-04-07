@@ -330,6 +330,8 @@ class SemanticAnalyzer:
     # Functions
     def _visit_recipe_def(self, node):
         """Visit recipe_def: recipe return_type ID (params) { body refill }"""
+        # debug
+        # print(f"[RECIPE DEBUG] node children: {[(c.name if hasattr(c, 'name') else f'TOKEN type={c.type} val={c.value}') for c in node.children]}")
         func_name = None
         for child in node.children:
             if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
@@ -339,6 +341,8 @@ class SemanticAnalyzer:
         return_type = self._extract_return_type(node)
 
         if func_name:
+            if func_name == "sift":
+                self._error("E_SIFT_RES", "'sift' is a reserved built-in and cannot be used as a function name", "sift")
             symbol = Symbol(
                 func_name,
                 "function",
@@ -346,8 +350,6 @@ class SemanticAnalyzer:
                 scope_level=self.symbol_table.scope_level,
                 return_type=return_type
             )
-        if func_name == "sift":
-            self._error("E_SIFT_RES", "'sift' is a reserved built-in and cannot be used as a function name", "sift")
         
             if not self.symbol_table.declare(func_name, symbol):
                 self.errors.append(SemanticError(
@@ -360,9 +362,12 @@ class SemanticAnalyzer:
             self.symbol_table.push_scope()
             prev_function = self.current_function
             self.current_function = func_name
-
+            
+            # debug
+            # print(f"[RECIPE '{func_name}'] all children: {[c.name if hasattr(c, 'name') else f'TOKEN:{c.type}' for c in node.children]}")
             for child in node.children:
                 if self._is_parse_node(child) and child.name == "parameter":
+                    print(f"[RECIPE '{func_name}'] parameter node children: {[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in child.children]}")
                     for param_name, param_type in self._extract_parameters(child):
                         param_symbol = Symbol(
                             param_name,
@@ -373,12 +378,15 @@ class SemanticAnalyzer:
                         param_symbol.is_initialized = True
                         self.symbol_table.declare(param_name, param_symbol)
                     break
-
+            
+            #debug
+            print(f"[RECIPE '{func_name}'] scope before visit_children: {list(self.symbol_table.scopes[-1].keys())}")
             self._visit_children(node)
 
             self.current_function = prev_function
             self.symbol_table.pop_scope()
         else:
+            print(f"[RECIPE '{func_name}'] scope before visit_children: {list(self.symbol_table.scopes[-1].keys())}")
             self._visit_children(node)
             
     def _visit_sift_arg(self, node):
@@ -397,6 +405,8 @@ class SemanticAnalyzer:
     def _extract_parameters(self, param_node):
         """Extract list of (name, type) tuples from a parameter AST node."""
         params = []
+        # debug
+        # print(f"[EXTRACT_PARAMS] children: {[c.name if hasattr(c, 'name') else f'TOKEN:{c.type}' for c in (param_node.children or [])]}")
         for child in (param_node.children or []):
             if not self._is_parse_node(child):
                 continue
@@ -414,6 +424,8 @@ class SemanticAnalyzer:
 
     def _extract_one_param(self, dtype_param_node):
         """Extract (name, type) from a single dtype_param node."""
+        # debug
+        # print(f"[EXTRACT_ONE_PARAM] children: {[c.name if hasattr(c, 'name') else f'TOKEN:{c.type}={c.value}' for c in (dtype_param_node.children or [])]}")
         param_type = None
         param_name = None
         for child in (dtype_param_node.children or []):
