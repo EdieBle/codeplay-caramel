@@ -648,10 +648,37 @@ class StructuredCodeGenerator:
         return self._py_var(s)
 
     def _get_var_type(self, var_name):
-        for instr in self.ir:
-            if instr.op == "DECLARE" and instr.dest == var_name:
-                return instr.extra.get("type")
-        return None
+            """Try to find the declared type of a variable from the IR.
+            For temps, infer from the instruction that produced them."""
+            if not isinstance(var_name, str):
+                return None
+            for instr in self.ir:
+                if instr.op == "DECLARE" and instr.dest == var_name:
+                    return instr.extra.get("type")
+            # Temp variable — infer from producing instruction
+            for instr in self.ir:
+                if instr.dest != var_name:
+                    continue
+                if instr.op == "ASSIGN":
+                    return self._get_var_type(instr.arg1)
+                if instr.op in ("BINOP", "CONCAT"):
+                    t1 = self._get_var_type(instr.arg1)
+                    t2 = self._get_var_type(instr.arg2)
+                    binop = instr.extra.get("binop", "")
+                    # Relational and logical ops always produce bool — never inherit churro/blend
+                    if binop in (">", "<", ">=", "<=", "==", "!=", "&&", "||"):
+                        return "temp"
+                    if "blend" in (t1, t2):
+                        return "blend"
+                    if "churro" in (t1, t2):
+                        return "churro"
+                    return t1 or t2
+                if instr.op == "ARR_LOAD":
+                    # Array element — return the array's element type
+                    return self._get_var_type(instr.arg1)
+                if instr.op == "CALL" and instr.arg1 == "__sift__":
+                    return "bean"
+            return None
 
     # ------------------------------------------------------------------
     # Header / Footer
@@ -1285,9 +1312,12 @@ class StructuredCodeGenerator:
             if instr.op == "ASSIGN":
                 return self._get_var_type(instr.arg1)
             if instr.op in ("BINOP", "CONCAT"):
-                # Infer from operands — if either is churro/blend, result is that type
                 t1 = self._get_var_type(instr.arg1)
                 t2 = self._get_var_type(instr.arg2)
+                binop = instr.extra.get("binop", "")
+                # Relational and logical ops always produce bool — never inherit churro/blend
+                if binop in (">", "<", ">=", "<=", "==", "!=", "&&", "||"):
+                    return "temp"
                 if "blend" in (t1, t2):
                     return "blend"
                 if "churro" in (t1, t2):
