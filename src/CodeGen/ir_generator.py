@@ -352,6 +352,8 @@ class IRGenerator:
                     for c2 in self._get_children(child):
                         if self._is_token(c2) and c2.type == "BEANLIT":
                             arr_size = int(c2.value)
+                        elif self._is_token(c2) and c2.type == "FLEX_ASTERISK":
+                            arr_size = "***" 
                 if self._is_node(child) and child.name == "arr_dec_dim":
                     init_vals = self._collect_arr_init_values(child)
                     # Check for 2D: arr_dec_dim starts with OP_BRACKETS + arr_size_val
@@ -1328,15 +1330,14 @@ class IRGenerator:
     def _generate_if_chain(self, node, end_label):
         children = self._get_children(node)
 
-        # Find the condition expression
-        cond = None
+        cond_node = None
         body_children = []
         tail_node = None
-
         in_body = False
+
         for child in children:
-            if self._is_node(child) and child.name == "expression":
-                cond = self._visit(child)
+            if self._is_node(child) and child.name == "expression" and cond_node is None:
+                cond_node = child          # ← store node, don't visit yet
             elif self._is_token(child) and child.type == "OP_BRACES":
                 in_body = True
             elif self._is_token(child) and child.type == "CL_BRACES":
@@ -1344,26 +1345,23 @@ class IRGenerator:
             elif self._is_node(child) and child.name == "if_cond_tail":
                 tail_node = child
             elif in_body or (self._is_node(child) and child.name in
-                             ("statement", "stmt_tail")):
+                            ("statement", "stmt_tail")):
                 body_children.append(child)
 
-        # Generate: IF_FALSE cond -> else_label
         else_label = self._new_label("ELSE")
-        if cond is not None:
+        if cond_node is not None:
+            cond = self._visit(cond_node)  # ← evaluate HERE, after prior GOTO is emitted
             self._emit("IF_FALSE", arg1=cond, dest=else_label)
 
-        # Emit body
         for bc in body_children:
             self._visit(bc)
 
-        # Jump to end
         self._emit("GOTO", dest=end_label)
         self._emit("LABEL", dest=else_label)
 
-        # Process tail (elifroth / elspress / empty)
         if tail_node:
             self._visit_if_cond_tail(tail_node, end_label)
-
+            
     def _visit_if_cond_tail(self, node, end_label):
         children = self._get_children(node)
         if not children:

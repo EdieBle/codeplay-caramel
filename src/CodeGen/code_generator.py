@@ -405,7 +405,10 @@ class CodeGenerator:
         dtype = instr.extra.get("type", "bean")
         default = {"churro": "''", "blend": '""', "temp": "False", "drip": "0.0"}.get(dtype, "0")
         if len(dims) == 1:
-            self._emit(f"{dest} = [{default}] * {dims[0]}")
+            if dims[0] == "***":
+                self._emit(f"{dest} = []")
+            else:
+                self._emit(f"{dest} = [{default}] * {dims[0]}")
         elif len(dims) == 2:
             self._emit(f"{dest} = [[{default}] * {dims[1]} for _ in range({dims[0]})]")
         else:
@@ -1034,22 +1037,26 @@ class StructuredCodeGenerator:
                     break
 
                 if elif_if_false is not None:
-                    # Build a map of temp vars from BINOPs before elif
-                    # so we can inline them into the elif condition
                     self._elif_binops = getattr(self, '_elif_binops', {})
+                    # Find which temp the IF_FALSE condition uses
+                    final_cond = self.ir[elif_if_false].arg1
                     for j in range(else_label_idx + 1, elif_if_false):
                         if self.ir[j].op == "BINOP":
                             b_instr = self.ir[j]
-                            a = self._py_val(b_instr.arg1)
-                            b = self._py_val(b_instr.arg2)
+                            raw_a = self._py_var(b_instr.arg1) if isinstance(b_instr.arg1, str) else self._py_val(b_instr.arg1)
+                            raw_b = self._py_var(b_instr.arg2) if isinstance(b_instr.arg2, str) else self._py_val(b_instr.arg2)
+                            a = self._elif_binops.get(raw_a, raw_a)
+                            b = self._elif_binops.get(raw_b, raw_b)
                             binop = b_instr.extra.get("binop", "+")
+                            dest = self._py_var(b_instr.dest)
                             if binop == "&&":
                                 expr = f"_caramel_to_bool({a}) and _caramel_to_bool({b})"
                             elif binop == "||":
                                 expr = f"_caramel_to_bool({a}) or _caramel_to_bool({b})"
                             else:
                                 expr = f"{a} {binop} {b}"
-                            self._elif_binops[self._py_var(b_instr.dest)] = expr
+                            self._elif_binops[dest] = expr
+
                     # Generate elif chain
                     bi = elif_if_false
                     while bi < end_label_idx:
@@ -1128,6 +1135,30 @@ class StructuredCodeGenerator:
         # No else block
         if else_label_idx:
             return else_label_idx + 1
+        
+
+        if not is_elif:
+            # Look ahead for elif blocks and pre-emit their intermediate BINOPs
+            for j in range(else_label_idx + 1, end_label_idx):
+                if self.ir[j].op == "BINOP":
+                    b_instr = self.ir[j]
+                    # Check if this feeds into an IF_FALSE (final condition) or is intermediate
+                    if self.ir[elif_if_false].arg1 != b_instr.dest:
+                        dest = self._py_var(b_instr.dest)
+                        a = self._py_val(b_instr.arg1)
+                        b = self._py_val(b_instr.arg2)
+                        binop = b_instr.extra.get("binop", "+")
+                        if binop == "&&":
+                            self._emit(f"{dest} = _caramel_to_bool({a}) and _caramel_to_bool({b})")
+                        elif binop == "||":
+                            self._emit(f"{dest} = _caramel_to_bool({a}) or _caramel_to_bool({b})")
+                        else:
+                            self._emit(f"{dest} = {a} {binop} {b}")
+                elif self.ir[j].op == "IF_FALSE":
+                    break
+            # Now emit the if/elif line
+            self._emit(f"{keyword} _caramel_to_bool({cond}):")
+
         return body_end + 1
 
     def _gen_simple(self, instr, idx):
@@ -1260,9 +1291,20 @@ class StructuredCodeGenerator:
             if init_vals:
                 self._emit(f"{var} = {init_vals}")
             elif len(dims) == 1:
-                self._emit(f"{var} = [{default}] * {dims[0]}")
+                if dims[0] == "***":
+                    self._emit(f"{var} = []")
+                else:
+                    self._emit(f"{var} = [{default}] * {dims[0]}")
             elif len(dims) == 2:
-                self._emit(f"{var} = [[{default}] * {dims[1]} for _ in range({dims[0]})]")
+                r, c = dims[0], dims[1]
+                if r == "***" and c == "***":
+                    self._emit(f"{var} = []")  # fully dynamic, rows added on demand
+                elif r == "***":
+                    self._emit(f"{var} = []")  # dynamic rows, each row has fixed cols when added
+                elif c == "***":
+                    self._emit(f"{var} = [[] for _ in range({r})]")  # fixed rows, dynamic cols
+                else:
+                    self._emit(f"{var} = [[{default}] * {c} for _ in range({r})]")
             else:
                 self._emit(f"{var} = []")
 
@@ -1276,7 +1318,14 @@ class StructuredCodeGenerator:
             arr = self._py_var(instr.dest)
             idx_val = self._py_val(instr.arg1)
             val = self._py_val(instr.arg2)
-            self._emit(f"{arr}[{idx_val}] = {val}")
+            # Check if this is a *** (dynamic) array
+            arr_decl = next((ins for ins in self.ir if ins.op == "ARR_DECLARE" and ins.dest == instr.dest), None)
+            is_dynamic = arr_decl and arr_decl.extra.get("dims") == ["***"]
+            if is_dynamic:
+                self._emit(f"while len({arr}) <= {idx_val}: {arr}.append({self._get_default_for(instr.dest)})")
+                self._emit(f"{arr}[{idx_val}] = {val}")
+            else:
+                self._emit(f"{arr}[{idx_val}] = {val}")
 
         elif op == "MEMBER_ACC":
             dest = self._py_var(instr.dest)
@@ -1329,3 +1378,11 @@ class StructuredCodeGenerator:
             if instr.op == "CALL" and instr.arg1 == "__sift__":
                 return "bean"
         return None
+
+    # ==========================
+    # HELPER FUNCTIONS
+    # ==========================
+
+    def _get_default_for(self, var_name):
+        dtype = self._get_var_type(var_name)
+        return {"churro": "''", "blend": '""', "temp": "False", "drip": "0.0"}.get(dtype, "0")

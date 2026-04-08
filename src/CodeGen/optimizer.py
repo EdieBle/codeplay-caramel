@@ -320,11 +320,12 @@ class IROptimizer:
     def _pass_dead_code_elimination(self):
         new_instrs = []
         skip = False
+        NEVER_SKIP = {"BINOP", "UNARYOP", "ASSIGN", "LABEL", "FUNC_BEGIN", "FUNC_END"}
 
         for instr in self.instructions:
-            if instr.op in ("LABEL", "FUNC_BEGIN", "FUNC_END"):  # ← add FUNC_BEGIN, FUNC_END
+            if instr.op in ("LABEL", "FUNC_BEGIN", "FUNC_END"):
                 skip = False
-            if not skip:
+            if not skip or instr.op in NEVER_SKIP:
                 new_instrs.append(instr)
             if instr.op == "GOTO" and not skip:
                 skip = True
