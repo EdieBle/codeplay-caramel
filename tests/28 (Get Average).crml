@@ -8,8 +8,10 @@ bean cup() [
 	drip sum, sum_math, sum_sci, sum_eng, sum_fil
 	drip average_math, average_sci, average_eng, average_fil
 	glaze("===Math Quiz Scores===\n")
-	pour(bean i=1; i<6; i++){
-		glaze("Quiz " + i+1 + ": ")
+	pour(bean i=0; i<5; i++){
+		glaze("Quiz ")
+		glaze(i + 1)
+		glaze(": ")
 		batter@ score
 		math[i] = score
 		sum_math = sum_math + score
@@ -18,9 +20,11 @@ bean cup() [
 	average_math = sum_math/5
 	glaze("[MATH] AVERAGE: " + average_math)
 	
-	glaze("\n===Science Quiz Scores===\n")
-	pour(bean i=1; i<6; i++){
-		glaze("Quiz " + i+1 + ": ")
+	glaze("\n\n===Science Quiz Scores===\n")
+	pour(bean i=0; i<5; i++){
+		glaze("Quiz ")
+		glaze(i + 1)
+		glaze(": ")
 		batter@ score
 		sci[i] = score
 		sum_sci = sum_sci + score
@@ -29,9 +33,11 @@ bean cup() [
 	average_sci = sum_sci/5
 	glaze("[SCIENCE] AVERAGE: " + average_sci)
 	
-	glaze("\n===English Quiz Scores===\n")
-	pour(bean i=1; i<6; i++){
-		glaze("Quiz " + i+1 + ": ")
+	glaze("\n\n===English Quiz Scores===\n")
+	pour(bean i=0; i<5; i++){
+		glaze("Quiz ")
+		glaze(i + 1)
+		glaze(": ")
 		batter@ score
 		eng[i] = score
 		sum_eng = sum_eng + score
@@ -40,9 +46,11 @@ bean cup() [
 	average_eng = sum_eng/5
 	glaze("[ENGLISH] AVERAGE: " + average_eng)
 
-	glaze("\n===Filipino Quiz Scores===\n")
-	pour(bean i=1; i<6; i++){
-		glaze("Quiz " + i+1 + ": ")
+	glaze("\n\n===Filipino Quiz Scores===\n")
+	pour(bean i=0; i<5; i++){
+		glaze("Quiz ")
+		glaze(i + 1)
+		glaze(": ")
 		batter@ score
 		fil[i] = score
 		sum_fil = sum_fil + score
