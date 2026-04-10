@@ -1,0 +1,40 @@
+recipe bean factorial(bean n) [
+    ifbrew (n <= 1) {
+        refill? (1)
+    }
+    refill? (n * factorial(n - 1))
+]
+
+recipe bean digit_fact_sum(bean num) [
+    ifbrew (num == 0) {
+        refill? (0)
+    }
+    bean digit = num % 10
+    bean rest = num - digit
+    refill? (factorial(digit) + digit_fact_sum(rest / 10))
+]
+
+bean cup() [
+    bean n = 0
+    bean sum = 0
+
+    glaze("Enter a number: ")
+    batter@ n
+
+    ifbrew (n <= 0) {
+        glaze("Error: please enter a positive number\n")
+        refill? 0
+    }
+
+    sum = digit_fact_sum(n)
+
+    ifbrew (sum == n) {
+        glaze(n)
+        glaze(" is a Strong Number\n")
+    } elspress {
+        glaze(n)
+        glaze(" is NOT a Strong Number\n")
+    }
+
+    refill? 0
+]

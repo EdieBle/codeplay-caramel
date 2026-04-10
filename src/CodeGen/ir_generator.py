@@ -513,22 +513,25 @@ class IRGenerator:
 
     def _visit_blend_term(self, node):
         children = self._get_children(node)
-
-        print(f"\n[DEBUG blend_term] children:")
-        for i, child in enumerate(children):
-            print(f"  [{i}] is_node={self._is_node(child)}, is_token={self._is_token(child)}, "
-                f"name={getattr(child, 'name', None)}, type={getattr(child, 'type', None)}, "
-                f"value={getattr(child, 'value', None)}")
         for i, child in enumerate(children):
             if self._is_token(child) and child.type == "ID":
                 var_name = child.value
-                # Check if there's an array access tail following
                 for c2 in children[i + 1:]:
                     if self._is_node(c2) and c2.name == "blend_term_id_tail":
                         return self._visit_blend_term_id_tail(var_name, c2)
                 return var_name
             if self._is_token(child) and child.type == "BLENDLIT":
                 return child.value
+            if self._is_token(child) and child.type == "BEANLIT":   
+                return int(child.value)
+            if self._is_token(child) and child.type == "DRIPLIT":   
+                return float(child.value)
+            if self._is_token(child) and child.type == "CHURROLIT": 
+                return child.value
+            if self._is_token(child) and child.type == "HOT":
+                return True
+            if self._is_token(child) and child.type == "COLD":
+                return False
             if self._is_node(child):
                 return self._visit(child)
         return None
@@ -1774,11 +1777,15 @@ class IRGenerator:
             if self._is_token(child):
                 if child.type == "SNAP":
                     if self._loop_stack:
-                        self._emit("SNAP")
-                    return
+                        update_label, end_label = self._loop_stack[-1]
+                        self._emit("GOTO", dest=end_label)
                 if child.type == "SKIP":
                     if self._loop_stack:
-                        self._emit("SKIP")
+                        update_label, end_label = self._loop_stack[-1]
+                        if update_label:
+                            self._emit("GOTO", dest=update_label) 
+                        else:
+                            self._emit("SKIP")
                     return
 
     # ------------------------------------------------------------------

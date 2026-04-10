@@ -281,17 +281,23 @@ class CodeGenerator:
         val = self._py_val(instr.arg1)
         self._emit(f"{dest} = {val}")
 
+    # IMPORTANT: BINOP AREA handles the operations and stuff
     def _gen_BINOP(self, instr):
         dest = self._py_var(instr.dest)
         a = self._py_val(instr.arg1)
         b = self._py_val(instr.arg2)
         op = instr.extra.get("binop", "+")
+        t1 = self._get_var_type(instr.arg1)
+        t2 = self._get_var_type(instr.arg2)
 
-        # Translate CARAMEL logical operators to Python
         if op == "&&":
             self._emit(f"{dest} = _caramel_to_bool({a}) and _caramel_to_bool({b})")
         elif op == "||":
             self._emit(f"{dest} = _caramel_to_bool({a}) or _caramel_to_bool({b})")
+        elif op == "+" and "blend" in (t1, t2):
+            a = f"str({a})" if t1 != "blend" else a
+            b = f"str({b})" if t2 != "blend" else b
+            self._emit(f"{dest} = {a} + {b}")
         else:
             self._emit(f"{dest} = {a} {op} {b}")
 
@@ -650,39 +656,46 @@ class StructuredCodeGenerator:
             return s[6:]  # global array: order.arr -> arr
         return self._py_var(s)
 
+    # RELATED TO BINOP
     def _get_var_type(self, var_name):
-            """Try to find the declared type of a variable from the IR.
-            For temps, infer from the instruction that produced them."""
-            if not isinstance(var_name, str):
-                return None
-            for instr in self.ir:
-                if instr.op == "DECLARE" and instr.dest == var_name:
-                    return instr.extra.get("type")
-            # Temp variable — infer from producing instruction
-            for instr in self.ir:
-                if instr.dest != var_name:
-                    continue
-                if instr.op == "ASSIGN":
-                    return self._get_var_type(instr.arg1)
-                if instr.op in ("BINOP", "CONCAT"):
-                    t1 = self._get_var_type(instr.arg1)
-                    t2 = self._get_var_type(instr.arg2)
-                    binop = instr.extra.get("binop", "")
-                    # Relational and logical ops always produce bool — never inherit churro/blend
-                    if binop in (">", "<", ">=", "<=", "==", "!=", "&&", "||"):
-                        return "temp"
-                    if "blend" in (t1, t2):
-                        return "blend"
-                    if "churro" in (t1, t2):
-                        return "churro"
-                    return t1 or t2
-                if instr.op == "ARR_LOAD":
-                    # Array element — return the array's element type
-                    return self._get_var_type(instr.arg1)
-                if instr.op == "CALL" and instr.arg1 == "__sift__":
-                    return "bean"
+        """Try to find the declared type of a variable from the IR.
+        For temps, infer from the instruction that produced them."""
+        if not isinstance(var_name, str):
             return None
-
+        # Detect churro literal: single-quoted single character e.g. 'A'
+        if len(var_name) == 3 and var_name[0] == "'" and var_name[-1] == "'":
+            return "churro"
+        # Detect blend literal: double-quoted string
+        if len(var_name) >= 2 and var_name[0] == '"' and var_name[-1] == '"':
+            return "blend"
+        for instr in self.ir:
+            if instr.op == "DECLARE" and instr.dest == var_name:
+                return instr.extra.get("type")
+        # Temp variable — infer from producing instruction
+        for instr in self.ir:
+            if instr.dest != var_name:
+                continue
+            if instr.op == "ASSIGN":
+                return self._get_var_type(instr.arg1)
+            if instr.op in ("BINOP", "CONCAT"):
+                t1 = self._get_var_type(instr.arg1)
+                t2 = self._get_var_type(instr.arg2)
+                binop = instr.extra.get("binop", "")
+                if binop in (">", "<", ">=", "<=", "==", "!=", "&&", "||"):
+                    return "temp"
+                if binop in ("+", "-", "*", "/", "%"):
+                    if "churro" in (t1, t2) and "blend" not in (t1, t2):
+                        return "bean"  # churro arithmetic → bean
+                if "blend" in (t1, t2):
+                    return "blend"  # any blend concat → blend
+                if "churro" in (t1, t2):
+                    return "churro"
+                return t1 or t2
+            if instr.op == "ARR_LOAD":
+                return self._get_var_type(instr.arg1)
+            if instr.op == "CALL" and instr.arg1 == "__sift__":
+                return "bean"
+        return None
     # ------------------------------------------------------------------
     # Header / Footer
     # ------------------------------------------------------------------
@@ -1220,6 +1233,12 @@ class StructuredCodeGenerator:
                 self._emit(f"{dest} = _caramel_to_bool({a}) and _caramel_to_bool({b})")
             elif binop == "||":
                 self._emit(f"{dest} = _caramel_to_bool({a}) or _caramel_to_bool({b})")
+
+                #should handle the cases wherein glaze j + "\n" as it transforms arg1 or arg2 into a string if the other is blend/string
+            elif binop == "+" and "blend" in (t1, t2):
+                a = f"str({a})" if t1 != "blend" else a
+                b = f"str({b})" if t2 != "blend" else b
+                self._emit(f"{dest} = {a} + {b}")
             else:
                 self._emit(f"{dest} = {a} {binop} {b}")
 
@@ -1351,6 +1370,12 @@ class StructuredCodeGenerator:
         For temps, infer from the instruction that produced them."""
         if not isinstance(var_name, str):
             return None
+        # Detect churro literal: single-quoted single character e.g. 'A'
+        if len(var_name) == 3 and var_name[0] == "'" and var_name[-1] == "'":
+            return "churro"
+        # Detect blend literal: double-quoted string
+        if len(var_name) >= 2 and var_name[0] == '"' and var_name[-1] == '"':
+            return "blend"
         for instr in self.ir:
             if instr.op == "DECLARE" and instr.dest == var_name:
                 return instr.extra.get("type")
@@ -1364,16 +1389,17 @@ class StructuredCodeGenerator:
                 t1 = self._get_var_type(instr.arg1)
                 t2 = self._get_var_type(instr.arg2)
                 binop = instr.extra.get("binop", "")
-                # Relational and logical ops always produce bool — never inherit churro/blend
                 if binop in (">", "<", ">=", "<=", "==", "!=", "&&", "||"):
                     return "temp"
+                if binop in ("+", "-", "*", "/", "%"):
+                    if "churro" in (t1, t2) and "blend" not in (t1, t2):
+                        return "bean"  # churro arithmetic → bean
                 if "blend" in (t1, t2):
-                    return "blend"
+                    return "blend"  # any blend concat → blend
                 if "churro" in (t1, t2):
                     return "churro"
                 return t1 or t2
             if instr.op == "ARR_LOAD":
-                # Array element — return the array's element type
                 return self._get_var_type(instr.arg1)
             if instr.op == "CALL" and instr.arg1 == "__sift__":
                 return "bean"

@@ -186,9 +186,9 @@ def tokenize(code):
 
             if can_go_to_194 and next_ch_la_2 is not None and next_ch_la_2.isdigit():
                 prev = last_significant_token(tokens)
-                print(f"\n\n\n can go to 194 and next character is minus but next next character is digit? {can_go_to_194}\n\n\n")
-                print(prev)
-                if (prev and (prev["type"] == "beanlit" or prev["type"] == "id" or prev["type"] == ")") and next_ch_la_1 is not None and next_ch_la_2.isdigit()):
+                if (prev and (prev["type"] == "beanlit" or prev["type"] == "id" or prev["type"] == ")")
+                        and next_ch_la_1 is not None and next_ch_la_2.isdigit()
+                        and next_ch_la_1 != "="):  
                     push("-", "-", start_col)
                     pos += 1
                     column += 1

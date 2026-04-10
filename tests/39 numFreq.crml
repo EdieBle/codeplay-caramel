@@ -1,0 +1,35 @@
+bean cup() [
+	bean x, y_0, y, j, max_freq, f
+	bean count_arr[10]
+	
+	batter@x("Input a Value to get the frequency of the numbers: ")
+	whilehot(x != 0) {
+		y = x % 10
+		x = x / 10
+		j = x - y
+		~~ glaze("Divided by 10: " + x + "\n" + "Remainder: " + y + "\n" + "Leftover: " + j + "\n\n")
+		count_arr[y] = count_arr[y] + 1
+		
+	}	
+	
+    ~~ Find max frequency
+    max_freq = 0
+    pour(bean i = 0; i < 10; i++) {
+        ifbrew(count_arr[i] > max_freq) {
+            max_freq = count_arr[i]
+        }
+    }
+    
+    ~~ Print by descending frequency
+    f = max_freq
+    whilehot(f > 0) {
+        pour(bean d = 0; d < 10; d++) {
+            ifbrew(count_arr[d] == f) {
+                glaze(d + " - " + f + "\n")
+            }
+        }
+        f = f - 1
+    }
+    
+	refill? 0
+]
