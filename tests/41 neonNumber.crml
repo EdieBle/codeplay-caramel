@@ -1,0 +1,19 @@
+bean cup() [
+	bean x, y, j, sum_of_arr
+	
+	batter@x("Input a Value to check if it is a neon number: ")
+	j = x * x
+	whilehot(j != 0) {
+		y = j % 10
+		j = j / 10
+		~~ glaze("Divided by 10: " + j + "\n" + "Remainder: " + y + "\n\n")
+		sum_of_arr += y
+	}
+	
+	ifbrew(sum_of_arr == x) {
+		glaze("Result: " + sum_of_arr + " is a neon number!")
+	} elspress {
+		glaze("Result: " + sum_of_arr + " is not a neon number!")
+	}
+	refill? 0
+]

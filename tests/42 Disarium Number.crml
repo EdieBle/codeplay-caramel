@@ -1,0 +1,39 @@
+recipe bean power(bean base, bean exp) [
+    ifbrew (exp == 0) {
+        refill? (1)
+    }
+    refill? (base * power(base, exp - 1))
+]
+
+recipe bean disarium_sum(bean num, bean pos) [
+    ifbrew (num == 0) {
+        refill? (0)
+    }
+    bean digit = num % 10
+    bean rest = num - digit
+    refill? (power(digit, pos) + disarium_sum(rest / 10, pos - 1))
+]
+
+bean cup() [
+    bean x, x1, y, counter, result
+
+    batter@x("Input a Value to check if it is a Disarium number: ")
+    x1 = x
+
+    ~~ count digits
+    whilehot(x != 0) {
+        y = x % 10
+        x = x / 10
+        counter++
+    }
+
+    result = disarium_sum(x1, counter)
+
+    ifbrew (result == x1) {
+        glaze("Input: " + x1 + " IS a Disarium number!\n")
+    } elspress {
+        glaze("Input: " + x1 + " is NOT a Disarium number!\n")
+    }
+
+    refill? 0
+]

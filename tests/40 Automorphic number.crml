@@ -1,0 +1,39 @@
+bean cup() [
+    bean x, x1, y, j, counter
+    bean match, rem_x, rem_j
+    
+    batter@x("Input a Value to check if it is an automorphic number: ")
+    x1 = x
+    
+    ~~ count digits
+    whilehot(x != 0) {
+        y = x % 10
+        x = x / 10
+        counter++
+    }
+    
+    ~~ square the input
+    j = x1 * x1
+    
+    ~~ compare last 'counter' digits
+    rem_x = x1
+    rem_j = j
+    match = 1
+    pour(bean start = 0; start < counter; start++) {
+        bean dx = rem_x % 10
+        bean dj = rem_j % 10
+        ifbrew(dx != dj) {
+            match = 0
+        }
+        rem_x = rem_x / 10
+        rem_j = rem_j / 10
+    }
+    
+    ifbrew(match == 1) {
+        glaze(x1 + " is an automorphic number\n")
+    } elspress {
+        glaze(x1 + " is NOT an automorphic number\n")
+    }
+    
+    refill? 0
+]
