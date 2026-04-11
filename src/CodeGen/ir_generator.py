@@ -125,6 +125,12 @@ class IRGenerator:
         self._var_types = {}          # var_name -> caramel_type
         self._current_func = None     # track current function scope
         self._loop_stack = []         # stack of (continue_label, break_label)
+        
+        # handles the cases for shadowing variables in parent to child stuff in for/while and if/elsif/else cases
+        self._scope_depth = 0               
+        self._shadow_map = {}                
+        self._shadow_stack = [] 
+        
         self._errors = []
 
     # ------------------------------------------------------------------
@@ -311,6 +317,8 @@ class IRGenerator:
         if id_tok and dtype:
             var_name = id_tok.value
             self._var_types[var_name] = dtype
+
+            print(f"[DTYPE_DEC] registered '{var_name}' as '{dtype}' in _var_types")
             self._emit("DECLARE", dest=var_name, type=dtype)
 
             # process the tail (opt_assign, array, etc.)
@@ -516,6 +524,7 @@ class IRGenerator:
         for i, child in enumerate(children):
             if self._is_token(child) and child.type == "ID":
                 var_name = child.value
+                var_name = self._shadow_map.get(var_name, var_name)
                 for c2 in children[i + 1:]:
                     if self._is_node(c2) and c2.name == "blend_term_id_tail":
                         return self._visit_blend_term_id_tail(var_name, c2)
@@ -614,6 +623,7 @@ class IRGenerator:
             return
 
         var_name = id_tok.value
+        var_name = self._shadow_map.get(var_name, var_name)
         print(f"\n[DEBUG id_dec_stmt] var_name={var_name}")
         for child in self._get_children(node):
             print(f"  child: is_node={self._is_node(child)}, is_token={self._is_token(child)}, "
@@ -1026,6 +1036,7 @@ class IRGenerator:
             if self._is_token(child) and child.type == "ID":
                 var_name = child.value
                 # Check if next child is a tail (function call, array, member)
+                var_name = self._shadow_map.get(var_name, var_name)
                 tail = None
                 for c2 in children[i + 1:]:
                     if self._is_node(c2) and c2.name == "primary_id_tail":
@@ -1305,7 +1316,8 @@ class IRGenerator:
         targets = []
         for child in self._get_children(node):
             if self._is_token(child) and child.type == "ID":
-                targets.append(child.value)
+                name = child.value
+                targets.append(self._shadow_map.get(name, name))
             elif self._is_node(child) and child.name not in ("_empty", "input_val"):  # ← add input_val
                 targets.extend(self._collect_input_targets(child))
         return targets
@@ -1493,6 +1505,8 @@ class IRGenerator:
         end_label = self._new_label("POUR_END")
 
         self._loop_stack.append((update_label, end_label))
+        self._shadow_stack.append(dict(self._shadow_map))
+        self._scope_depth += 1
 
         children = self._get_children(node)
         init_node = None
@@ -1542,26 +1556,43 @@ class IRGenerator:
         self._emit("GOTO", dest=start_label)
         self._emit("LABEL", dest=end_label)
 
+
+        self._shadow_map = self._shadow_stack.pop()
+        self._scope_depth -= 1
         self._loop_stack.pop()
 
     def _visit_pour_init(self, node):
-        """Handle pour loop initialization: data_type ID = value"""
+        """Handle pour loop initialization: data_type ID = value | ID = value"""
         dtype = self._extract_dtype(node)
         id_tok = self._find_child_token(node, "ID")
         if id_tok and dtype:
             var_name = id_tok.value
+            # Shadow outer variable with scoped rename
+            if var_name in self._var_types:
+                print(f"[SHADOW] '{var_name}' found in _var_types, creating scoped rename")
+                scoped_name = f"_s{self._scope_depth}_{var_name}"
+                self._shadow_map[var_name] = scoped_name
+                var_name = scoped_name
+            else:
+                print(f"[SHADOW] '{var_name}' NOT found in _var_types: {list(self._var_types.keys())}")
             self._var_types[var_name] = dtype
             self._emit("DECLARE", dest=var_name, type=dtype)
-
-        # Find and evaluate the initial value
-        for child in self._get_children(node):
-            if self._is_node(child) and child.name in ("value", "expression",
-                                                         "assign_val"):
-                val = self._visit(child)
-                if val is not None and id_tok:
-                    self._emit("ASSIGN", dest=id_tok.value, arg1=val)
-            elif self._is_node(child) and child.name not in ("data_type", "_empty"):
-                self._visit(child)
+            # Emit initial assignment
+            for child in self._get_children(node):
+                if self._is_node(child) and child.name in ("value", "expression", "assign_val"):
+                    val = self._visit(child)
+                    if val is not None:
+                        self._emit("ASSIGN", dest=var_name, arg1=val)
+                    break
+        elif id_tok and not dtype:
+            # No type keyword, reuse existing outer variable
+            var_name = self._shadow_map.get(id_tok.value, id_tok.value)
+            for child in self._get_children(node):
+                if self._is_node(child) and child.name in ("value", "expression", "assign_val"):
+                    val = self._visit(child)
+                    if val is not None:
+                        self._emit("ASSIGN", dest=var_name, arg1=val)
+                    break
 
     def _visit_update(self, node):
         self._visit_children_all(node)
@@ -1578,6 +1609,7 @@ class IRGenerator:
         for i, child in enumerate(children):
             if self._is_token(child) and child.type == "ID":
                 var_name = child.value
+                var_name = self._shadow_map.get(var_name, var_name) 
                 # Check for tail
                 for c2 in children[i + 1:]:
                     if self._is_node(c2) and c2.name == "update_id_tail":
@@ -1590,6 +1622,7 @@ class IRGenerator:
                 for c2 in children[i + 1:]:
                     if self._is_token(c2) and c2.type == "ID":
                         var = c2.value
+                        var = self._shadow_map.get(var, var)
                         t = self._new_temp()
                         inc = 1 if child.type == "INCREMENT" else -1
                         self._emit("BINOP", dest=t, arg1=var, arg2=inc, binop="+")

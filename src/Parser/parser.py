@@ -2103,14 +2103,24 @@ class RDParser:
         ])
 
     def parse_pour_init(self):
-        """Parse rule: pour_init -> data_type ID = value (COMMA init)*"""
-        return self._node("pour_init", [
-            self.parse_data_type(),
-            self._expect("ID"),
-            self._expect("EQUALS"),
-            self.parse_value(),
-            self.parse_var_dec_const_tail()
-        ])
+        """Parse rule: pour_init -> data_type ID = value (COMMA init)*  | ID = value"""
+        t = self._current().type
+        if t in self.DATA_TYPE:
+            return self._node("pour_init", [
+                self.parse_data_type(),
+                self._expect("ID"),
+                self._expect("EQUALS"),
+                self.parse_value(),
+                self.parse_var_dec_const_tail()
+            ])
+        if t == "ID":
+            return self._node("pour_init", [
+                self._expect("ID"),
+                self._expect("EQUALS"),
+                self.parse_value(),
+                self.parse_var_dec_const_tail()
+            ])
+        self._error(self.DATA_TYPE | {"ID"})
 
     def parse_update(self):
         """Parse rule: update -> unit (COMMA unit)*"""

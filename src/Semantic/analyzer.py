@@ -621,6 +621,21 @@ class SemanticAnalyzer:
                         arr_size_token or id_token
                     )
 
+
+        if id_token:
+            # Check if this shadows an outer variable
+            outer = None
+            for scope in reversed(self.symbol_table.scopes[:-1]):  # all but current
+                if id_token.value in scope:
+                    outer = scope[id_token.value]
+                    break
+            if outer is not None:
+                self._error(
+                    "E001",
+                    f"'{id_token.value}' is already declared in an outer scope — "
+                    f"variable shadowing is not allowed in blocks",
+                    id_token
+                )
         self._visit_children(node)
         self.current_var_type = None
 
@@ -755,6 +770,25 @@ class SemanticAnalyzer:
                 line=err_line,
                 column=err_col
             ))
+
+    def _visit_input_stmt(self, node):
+        """Visit batter@ statement — check all target variables are declared."""
+        for child in node.children:
+            if not self._is_parse_node(child):
+                continue
+            if child.name == "input_args":
+                self._check_input_args(child)
+
+    def _check_input_args(self, node):
+        """Recursively check all input target IDs are declared."""
+        for child in node.children:
+            if not self._is_parse_node(child):
+                if hasattr(child, 'type') and child.type == "ID":
+                    if not self.symbol_table.lookup(child.value):
+                        self._error("E002", f"Undeclared identifier '{child.value}'", child)
+            else:
+                if child.name not in ("_empty", "input_val"):
+                    self._check_input_args(child)
 
     def _visit_if_cond(self, node):
         """Visit if condition: create block scope"""
