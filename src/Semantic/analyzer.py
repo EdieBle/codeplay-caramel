@@ -702,18 +702,13 @@ class SemanticAnalyzer:
         
         if dtype and var_name:
             print(f"[_visit_pour_init] DECLARING '{var_name}' as {dtype}")
-            if self.symbol_table.lookup(var_name):
-                self._error("E001 Redefinition Error:",
-                    f"'{var_name}' already declared in an outer scope, use a different name for the loop variable",
-                    node)
-            else:
-                sym = Symbol(
-                    var_name, "variable",
-                    dtype=dtype,
-                    scope_level=self.symbol_table.scope_level
-                )
-                sym.is_initialized = True
-                self.symbol_table.declare(var_name, sym)
+            sym = Symbol(
+                var_name, "variable",
+                dtype=dtype,
+                scope_level=self.symbol_table.scope_level
+            )
+            if not self.symbol_table.declare(var_name, sym):
+                self._error("E001", f"Redefinition of identifier '{var_name}'", node)
         
         self._visit_children(node)
     
