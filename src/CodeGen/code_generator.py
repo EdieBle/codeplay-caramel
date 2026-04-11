@@ -431,6 +431,12 @@ class CodeGenerator:
         dest = self._py_var(instr.dest)
         arr = self._py_var(instr.arg1)
         idx = self._py_val(instr.arg2)
+        is_2d = instr.extra.get("is_2d", False)
+        arr_decl = next((ins for ins in self.ir if ins.op == "ARR_DECLARE" and ins.dest == instr.arg1), None)
+        is_dynamic = arr_decl and arr_decl.extra.get("dims", [None])[0] == "***"
+        if is_dynamic or is_2d:
+            expand_with = "[]" if is_2d else self._get_default_for(instr.arg1)
+            self._emit(f"while len({arr}) <= {idx}: {arr}.append({expand_with})")
         self._emit(f"{dest} = {arr}[{idx}]")
 
     def _gen_MEMBER_ACC(self, instr):
@@ -1331,19 +1337,36 @@ class StructuredCodeGenerator:
             dest = self._py_var(instr.dest)
             arr = self._py_var(instr.arg1)
             idx_val = self._py_val(instr.arg2)
+            is_2d = instr.extra.get("is_2d", False)
+            # Find if source array is dynamic
+            arr_decl = next((ins for ins in self.ir if ins.op == "ARR_DECLARE" and ins.dest == instr.arg1), None)
+            is_dynamic = arr_decl and (arr_decl.extra.get("dims") in (["***"], ["***", "***"]) or 
+                                    arr_decl.extra.get("dims", [None])[0] == "***")
+            if is_dynamic or is_2d:
+                expand_with = "[]" if is_2d else self._get_default_for(instr.arg1)
+                self._emit(f"while len({arr}) <= {idx_val}: {arr}.append({expand_with})")
             self._emit(f"{dest} = {arr}[{idx_val}]")
 
         elif op == "ARR_STORE":
             arr = self._py_var(instr.dest)
             idx_val = self._py_val(instr.arg1)
             val = self._py_val(instr.arg2)
-            # Check if this is a *** (dynamic) array
-            arr_decl = next((ins for ins in self.ir if ins.op == "ARR_DECLARE" and ins.dest == instr.dest), None)
-            is_dynamic = arr_decl and arr_decl.extra.get("dims") == ["***"]
-            if is_dynamic:
-                self._emit(f"while len({arr}) <= {idx_val}: {arr}.append({self._get_default_for(instr.dest)})")
+            if instr.dest and str(instr.dest).startswith("_t"):
+                # Temp subarray from 2D load — auto-expand with default
+                # Find original array type by tracing back through ARR_LOAD
+                orig_type = None
+                for ins in self.ir:
+                    if ins.op == "ARR_LOAD" and ins.dest == instr.dest:
+                        orig_type = self._get_var_type(ins.arg1)
+                        break
+                default = {"churro": "''", "blend": '""', "temp": "False", "drip": "0.0"}.get(orig_type, "0")
+                self._emit(f"while len({arr}) <= {idx_val}: {arr}.append({default})")
                 self._emit(f"{arr}[{idx_val}] = {val}")
             else:
+                arr_decl = next((ins for ins in self.ir if ins.op == "ARR_DECLARE" and ins.dest == instr.dest), None)
+                is_dynamic = arr_decl and arr_decl.extra.get("dims", [None])[0] == "***"
+                if is_dynamic:
+                    self._emit(f"while len({arr}) <= {idx_val}: {arr}.append({self._get_default_for(instr.dest)})")
                 self._emit(f"{arr}[{idx_val}] = {val}")
 
         elif op == "MEMBER_ACC":

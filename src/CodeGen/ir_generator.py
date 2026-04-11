@@ -670,16 +670,37 @@ class IRGenerator:
             return
 
         # Array element assignment: [index] = value  (via id_bracket_tail)
-        if (self._is_token(first) and first.type == "OP_BRACKETS") or (self._is_node(first) and first.name == "OP_BRACKETS"):
+        if (self._is_token(first) and first.type == "OP_BRACKETS") or \
+        (self._is_node(first) and first.name == "OP_BRACKETS"):
             idx = self._extract_array_index_expr(tail_node)
             val = None
-            # The assignment is inside id_bracket_tail
+            col_idx = None
             for c in children:
                 if self._is_node(c) and c.name == "id_bracket_tail":
-                    val = self._visit_id_bracket_tail_rhs(c)
+                    # Check if id_bracket_tail has a nested [col] before the =
+                    ibt_children = self._get_children(c)
+                    ibt_first = ibt_children[0] if ibt_children else None
+                    if ibt_first and ((self._is_token(ibt_first) and ibt_first.type == "OP_BRACKETS") or
+                                    (self._is_node(ibt_first) and ibt_first.name == "OP_BRACKETS")):
+                        # 2D: extract col index then RHS
+                        for c2 in ibt_children:
+                            if self._is_node(c2) and c2.name == "array_index":
+                                col_idx = self._visit(c2)
+                                break
+                        val = self._visit_id_bracket_tail_rhs(c)
+                    else:
+                        val = self._visit_id_bracket_tail_rhs(c)
                     break
             if val is not None:
-                self._emit("ARR_STORE", dest=var_name, arg1=idx, arg2=val)
+                if col_idx is not None:
+                    # 2D store: triangle[row][col] = val
+                    # Get the row subarray first, then store into it
+                    t1 = self._new_temp()
+                    #  2D write, ARR_LOAD gets is_2d=True  
+                    self._emit("ARR_LOAD", dest=t1, arg1=var_name, arg2=idx, is_2d=True)
+                    self._emit("ARR_STORE", dest=t1, arg1=col_idx, arg2=val)
+                else:
+                    self._emit("ARR_STORE", dest=var_name, arg1=idx, arg2=val)
             return
 
         # Compound assignment: +=, -=, *=, /= (first child is assign_op node)
@@ -1122,10 +1143,26 @@ class IRGenerator:
             self._emit("CALL", dest=t, arg1=var_name, arg_count=len(args))
             return t
 
-        # Array access: OP_BRACKETS index CL_BRACKETS
+        # Array access: OP_BRACKETS index CL_BRACKETS now with 2d support! hopefully.
         if (self._is_node(first) and first.name == "OP_BRACKETS") or \
-           (self._is_token(first) and first.type == "OP_BRACKETS"):
+        (self._is_token(first) and first.type == "OP_BRACKETS"):
             idx = self._extract_array_index(tail_node)
+            # Check for second dimension via arr_call_tail
+            col_idx = None
+            for c in children:
+                if self._is_node(c) and c.name == "arr_call_tail":
+                    for c2 in self._get_children(c):
+                        if self._is_node(c2) and c2.name == "array_index":
+                            col_idx = self._visit(c2)
+                            break
+                    break
+            if col_idx is not None:
+                t1 = self._new_temp()
+                # 2D read, first ARR_LOAD gets is_2d=True
+                self._emit("ARR_LOAD", dest=t1, arg1=var_name, arg2=idx, is_2d=True)
+                t2 = self._new_temp()
+                self._emit("ARR_LOAD", dest=t2, arg1=t1, arg2=col_idx)
+                return t2
             t = self._new_temp()
             self._emit("ARR_LOAD", dest=t, arg1=var_name, arg2=idx)
             return t
@@ -2140,6 +2177,13 @@ class IRGenerator:
                 if r is not None:
                     return r
         return 0
+
+    def _extract_array_index_from_arr_call_tail(self, node):
+        """Extract index from arr_call_tail node."""
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name == "array_index":
+                return self._visit(child)
+        return None
 
     # ------------------------------------------------------------------
     # Pre-unary declarations
