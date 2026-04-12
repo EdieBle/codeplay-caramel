@@ -1,0 +1,46 @@
+recipe temp perfect_num (bean n)[
+	bean sum = 0
+	pour (bean counter = 1; counter < n; counter++) {
+		ifbrew (n % counter == 0){
+			sum += counter
+		} 
+	}
+    refill? (sum == n)
+]
+
+bean cup() [
+    bean n = 0 
+	bean i = 1 
+	bean first = 1
+
+    glaze("Input a number to determine if it is a perfect number or not: ")
+    batter@ n
+	
+	~~ Control to only allow input 1 as starting input
+    ifbrew (n <= 0) {
+        glaze("Error: Number must be at least 1\n")
+        refill? 0
+    }
+
+	glaze(n + " = ")
+	whilehot (i <= n/2) {
+		ifbrew (n % i == 0) { 
+			ifbrew(first == 0) {
+				glaze(" + ")
+			}
+			glaze(i)
+			first = 0
+		}
+		i++
+	}
+	glaze("\n")
+
+	~~ This is where you call the perfect_num function to check if n is a perfect number
+    ifbrew (perfect_num(n) == hot) {
+		glaze(n + " is a perfect number.")
+	} elspress {
+			glaze(n + " is not a perfect number.")
+	}
+    glaze("\n")
+    refill? 0
+]
