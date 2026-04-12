@@ -1,0 +1,34 @@
+recipe temp is_prime(bean n) [
+    ifbrew (n <= 1) {
+        refill? (cold)
+    }
+    pour(bean i = 2; i < n; i++) {
+        ifbrew (n % i == 0) {
+            refill? (cold)
+        }
+    }
+    refill? (hot)
+]
+
+bean cup() [
+    bean n = 0
+
+    glaze("Input a number: ")
+    batter@ n
+
+    ifbrew (n < 2) {
+        glaze("Error: number must be at least 2\n")
+        refill? 0
+    }
+
+    glaze("Prime numbers from 1 to " + n + " : ")
+	~~ Calculate the prime numbers ranging from 1 to N
+    pour(bean i = 1; i <= n; i++) {
+        ifbrew (is_prime(i)) {
+            glaze(i)
+            glaze(" ")
+        }
+    }
+    glaze("\n")
+    refill? 0
+]
