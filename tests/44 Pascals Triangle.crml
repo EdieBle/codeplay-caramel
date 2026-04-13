@@ -1,0 +1,49 @@
+recipe bean power(bean base, bean exp) [
+    ifbrew (exp == 0) {
+        refill? (1)
+    }
+    refill? (base * power(base, exp - 1))
+]
+
+bean cup() [
+    bean n = 0
+    bean triangle[***][***] = [[], []]
+    bean i, j, spaces
+
+    batter@n("Enter Pascal Triangle depth: ")
+
+    ifbrew (n <= 0) {
+        glaze("Error: depth must be at least 1\n")
+        refill? 0
+    }
+
+    ~~ Build triangle values
+    pour(bean row = 0; row < n; row++) {
+        pour(bean col = 0; col <= row; col++) {
+            ifbrew (col == 0 || col == row) {
+                triangle[row][col] = 1
+            } elspress {
+                triangle[row][col] = triangle[row - 1][col - 1] + triangle[row - 1][col]
+            }
+        }
+    }
+
+    ~~ Print triangle
+    pour(bean row = 0; row < n; row++) {
+        ~~ Print leading spaces for pyramid shape
+        spaces = n - row - 1
+        pour(bean s = 0; s < spaces; s++) {
+            glaze(" ")
+        }
+        ~~ Print values in this row
+        pour(bean col = 0; col <= row; col++) {
+            glaze(triangle[row][col])
+            ifbrew (col < row) {
+                glaze(" ")
+            }
+        }
+        glaze("\n")
+    }
+
+    refill? 0
+]
