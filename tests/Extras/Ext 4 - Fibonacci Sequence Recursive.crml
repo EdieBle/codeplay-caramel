@@ -1,0 +1,27 @@
+recipe bean fibo(bean n) [
+    ifbrew (n == 0) {
+        refill? (0)
+    }
+    ifbrew (n == 1) {
+        refill? (1)
+    }
+    refill? (fibo(n - 1) + fibo(n - 2))
+]
+
+bean cup() [
+    bean n = 0
+    bean result = 0
+
+    glaze("Enter a number: ")
+    batter@n
+
+    ifbrew (n < 0) {
+        glaze("Error: n must be non-negative\n")
+        refill? 0
+    }
+
+    result = fibo(n)
+    glaze("Fibonacci(" + n + ") = " + result + "\n")
+
+    refill? 0
+]
