@@ -1,0 +1,31 @@
+recipe bean rec_pow(bean base, bean exp)[
+	ifbrew(exp == 1) {
+		refill? (base)
+	}
+	refill? (base * rec_pow(base, exp-1))
+]
+
+recipe bean rec_sumofsq(bean counter) [
+	~~glaze("\nsum of squares: " + nxtval)
+	bean nxtval = rec_pow(counter, 2)
+	ifbrew(counter == 0) {
+		refill? (counter)
+	}
+	refill? (nxtval + rec_sumofsq(counter-1))
+]
+
+bean cup() [
+	bean x, y, z, z1
+	batter@x("INPUT VALUE FOR SUM OF SQUARES AND POWER: ")
+
+	~~ glaze("\n" + rec_sumofsq(x) + "\n")
+	glaze("\n================= SUM OF SQUARES AND POWER TO 3 =================\n")
+	glaze("n\t|\tn^2\t|\tn^3\t|\tSum of Squares\t|")
+	pour(bean j = 0;j<=x; j++) {
+		y = rec_pow(j, 2)
+		z = rec_pow(j, 3)
+		z1 = rec_sumofsq(j)
+		glaze("\n"+j + "\t|\t"+y+"\t|\t"+z+"\t|\t"+z1+"\t\t|")
+	}	
+	refill? 0
+]
