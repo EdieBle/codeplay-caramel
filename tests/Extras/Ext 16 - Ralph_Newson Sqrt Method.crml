@@ -1,0 +1,34 @@
+recipe drip mathabs(drip n) [
+    ifbrew(n < 0.0) {
+        refill? (n * -1.0)
+    }
+    refill? (n)
+]
+
+recipe drip sqrt(bean n) [
+    ifbrew(n == 0 || n == 1) {
+        refill? (n)
+    }
+    drip fn = n
+    drip guess = fn / 2.0
+    drip diff = guess * guess - fn
+    whilehot(mathabs(diff) > 0.001) {
+       	guess = (guess + (fn / guess)) / 2.0
+        diff = guess * guess - fn
+    }
+    refill? (guess)
+]
+
+bean cup() [
+    bean n
+    drip square_root
+    glaze("Enter a number: ")
+    batter@n
+    ifbrew(n < 0) {
+        glaze("Error: cannot take square root of negative number\n")
+        refill? 0
+    }
+    square_root = sqrt(n)
+    glaze("The square root of " + n + " is " + square_root + "\n")
+    refill? 0
+]
