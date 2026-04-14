@@ -1,0 +1,22 @@
+recipe bean checker(bean n, bean base)[ 
+	ifbrew(n*n == base){
+		refill? (n)
+	}
+	ifbrew (n*n > base){
+		refill? (-1)
+	}
+	refill? (checker(n+1, base))
+]
+
+recipe bean sqrt(bean n)[
+	refill? (checker(1, n))
+]
+
+bean cup() [
+  bean n, square_root
+	glaze("Enter a number: ")
+	batter@ n
+	square_root = sqrt(n)
+	glaze("The square root of " + n + " is " + square_root)
+  refill? 0
+]
