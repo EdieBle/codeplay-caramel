@@ -380,13 +380,14 @@ class SemanticAnalyzer:
                     break
             
             #debug
-            print(f"[RECIPE '{func_name}'] scope before visit_children: {list(self.symbol_table.scopes[-1].keys())}")
+            # print(f"[RECIPE '{func_name}'] scope before visit_children: {list(self.symbol_table.scopes[-1].keys())}")
             self._visit_children(node)
 
             self.current_function = prev_function
             self.symbol_table.pop_scope()
         else:
-            print(f"[RECIPE '{func_name}'] scope before visit_children: {list(self.symbol_table.scopes[-1].keys())}")
+            # debug
+            # print(f"[RECIPE '{func_name}'] scope before visit_children: {list(self.symbol_table.scopes[-1].keys())}")
             self._visit_children(node)
             
     def _visit_sift_arg(self, node):
@@ -445,9 +446,16 @@ class SemanticAnalyzer:
     
     def _visit_empty_def(self, node):
         """Visit empty_def: empty ID (params) { body refill }"""
-        func_name = self._extract_name_from_node(node, depth=2)
-        
+        func_name = None
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                func_name = child.value
+                break
+
         if func_name:
+            if func_name == "sift":
+                self._error("E_SIFT_RES", "'sift' is a reserved built-in and cannot be used as a function name", node)
+
             symbol = Symbol(
                 func_name,
                 "function",
@@ -455,28 +463,38 @@ class SemanticAnalyzer:
                 scope_level=self.symbol_table.scope_level,
                 return_type="void"
             )
-        
-        if func_name == "sift":
-            self._error("E_SIFT_RES", "'sift' is a reserved built-in and cannot be used as a function name", "sift")
-            
+
             if not self.symbol_table.declare(func_name, symbol):
                 self.errors.append(SemanticError(
                     "E001",
                     f"Redefinition of function '{func_name}'",
                     line=getattr(node, 'line', None)
                 ))
-            
+
             self.symbol_table.push_scope()
             prev_function = self.current_function
             self.current_function = func_name
-            
+
+            # Register parameters before visiting body
+            for child in node.children:
+                if self._is_parse_node(child) and child.name == "parameter":
+                    for param_name, param_type in self._extract_parameters(child):
+                        param_symbol = Symbol(
+                            param_name, "variable",
+                            dtype=param_type,
+                            scope_level=self.symbol_table.scope_level,
+                        )
+                        param_symbol.is_initialized = True
+                        self.symbol_table.declare(param_name, param_symbol)
+                    break
+
             self._visit_children(node)
-            
+
             self.current_function = prev_function
             self.symbol_table.pop_scope()
         else:
             self._visit_children(node)
-    
+
     # Classes
     def _visit_crema_def(self, node):
         """Visit crema_def: crema ID { body }"""
