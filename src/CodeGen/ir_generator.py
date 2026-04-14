@@ -2073,22 +2073,50 @@ class IRGenerator:
         pass
 
     def _collect_arr_init_values(self, node):
-        """Collect initial values from arr_dec_dim → arr_cont_1d → arr_elem."""
+        """Collect initial values from arr_dec_dim."""
+        # Check if this is a 2D initializer (arr_cont_2d inside arr_dec_dim)
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name == "arr_cont_2d":
+                return self._collect_arr_init_values_2d(child)
+        # 1D path — collect flat list
         values = []
         for child in self._get_children(node):
             if self._is_node(child) and child.name == "arr_cont_1d":
+                values.extend(self._collect_arr_init_values_1d(child))
+            elif self._is_node(child) and child.name not in (
+                "_empty", "OP_BRACKETS", "CL_BRACKETS", "COMMA", "EQUALS", "arr_dec_dim"
+            ):
                 values.extend(self._collect_arr_init_values(child))
-            elif self._is_node(child) and child.name == "ext_arr_elem":
-                values.extend(self._collect_arr_init_values(child))
-            elif self._is_node(child) and child.name == "arr_elem":
+        return values
+
+    def _collect_arr_init_values_1d(self, node):
+        """Collect a flat list of values from arr_cont_1d."""
+        values = []
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name == "arr_elem":
                 val = self._visit_arr_elem(child)
                 if val is not None:
                     values.append(val)
-            elif self._is_node(child) and child.name not in (
-                "_empty", "OP_BRACKETS", "CL_BRACKETS", "COMMA", "EQUALS"
-            ) and child.name not in ("arr_dec_dim",):
-                values.extend(self._collect_arr_init_values(child))
+            elif self._is_node(child) and child.name == "ext_arr_elem":
+                for ec in self._get_children(child):
+                    if self._is_node(ec) and ec.name == "arr_elem":
+                        val = self._visit_arr_elem(ec)
+                        if val is not None:
+                            values.append(val)
         return values
+
+    def _collect_arr_init_values_2d(self, node):
+        """Collect a list of row lists from arr_cont_2d."""
+        rows = []
+        # First two rows are direct OP_BRACKETS...opt_arr_elems...CL_BRACKETS
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name == "opt_arr_elems":
+                rows.append(self._collect_arr_init_values_1d(child))
+            elif self._is_node(child) and child.name == "arr_cont_2d_tail":
+                for tc in self._get_children(child):
+                    if self._is_node(tc) and tc.name == "opt_arr_elems":
+                        rows.append(self._collect_arr_init_values_1d(tc))
+        return rows
 
     def _visit_arr_cont_1d(self, node):
         self._visit_children_all(node)
