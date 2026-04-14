@@ -633,6 +633,8 @@ class SemanticAnalyzer:
                                         col_size = int(sc.value)
                             if self._is_parse_node(dc) and dc.name == "arr_cont_1d":
                                 arr_init_count = self._count_arr_elements_1d(dc)
+                                self._check_arr_element_types(dc, dtype, id_token)
+
                             elif self._is_parse_node(dc) and dc.name == "arr_cont_2d":
                                 if is_2d and col_size is not None and arr_size is not None:
                                     # Check row count and each row's element count separately
@@ -1225,6 +1227,28 @@ class SemanticAnalyzer:
         
         return None
     
+    def _check_arr_element_types(self, arr_cont_node, expected_dtype, id_token):
+        """Check each element in a 1D array initializer matches the declared type."""
+        for child in arr_cont_node.children:
+            if self._is_parse_node(child) and child.name == "arr_elem":
+                inferred = self._infer_value_type(child)
+                if inferred and inferred != expected_dtype:
+                    self._error(
+                        "E_ARR_TYPE",
+                        f"Array of type '{expected_dtype}' cannot contain '{inferred}' value",
+                        child
+                    )
+            elif self._is_parse_node(child) and child.name == "ext_arr_elem":
+                for ec in child.children:
+                    if self._is_parse_node(ec) and ec.name == "arr_elem":
+                        inferred = self._infer_value_type(ec)
+                        if inferred and inferred != expected_dtype:
+                            self._error(
+                                "E_ARR_TYPE",
+                                f"Array of type '{expected_dtype}' cannot contain '{inferred}' value",
+                                ec
+                            )
+
     def _extract_var_name(self, node):
         """Extract variable name from declaration node."""
         if not hasattr(node, 'children'):
