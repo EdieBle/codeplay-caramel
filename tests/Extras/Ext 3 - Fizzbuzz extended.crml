@@ -1,23 +1,33 @@
 bean cup() [
-	bean fizzinp
+	bean fizzinp, countfizz, countbuzz, countfbuzz, countwhiz
 	batter@fizzinp("Insert Value for FizzBuzz Program: ")
 	
 	glaze("============= Fizzbuzz result from 1 to your input =============\n")
 	pour(bean j = 1; j <= fizzinp; j++) {
 		ifbrew(j % 3 == 0 && j % 5 == 0 && j % 7 == 0) {
 			glaze("Whiz\n")
+			countwhiz++
 			skip
 		} elifroth (j % 3 == 0 && !(j % 5 == 0)) { 
 			glaze("Fizz\n")
+			countfizz++
 			skip	
 		} elifroth (!(j % 3 == 0) && j % 5 == 0) {
 			glaze("Buzz\n")
+			countbuzz++
 			skip
 		} elifroth (j % 3 == 0 && j % 5 == 0) {
 			glaze("FizzBuzz\n")
+			countfbuzz++
 			skip
 		}
 		glaze(j + "\n")
 	}
+	
+	glaze("\n\n====================== SUMMARY ======================\n\n")
+	glaze("Fizz Count: \t\t" + countfizz + "\n")
+	glaze("Buzz Count: \t\t" + countbuzz + "\n")
+	glaze("Whiz Count: \t\t" + countwhiz + "\n")
+	glaze("FizzBuzz Count: \t" + countfbuzz + "\n")
   refill? 0
 ]
