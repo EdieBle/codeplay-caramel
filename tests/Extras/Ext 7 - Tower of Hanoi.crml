@@ -1,10 +1,12 @@
 empty tow_of_hanoi(bean n, blend source, blend target, blend auxilliary) [
 	ifbrew (n == 1) {
 		glaze("Move disk " + n +" from " + source + " to " + target + "\n")
+		refill? 0
 	}
 	tow_of_hanoi(n-1, source, auxilliary, target)
-	glaze("Move disk "+n+"from "+source+" to "+target)
+	glaze("Move disk "+n+" from "+source+" to "+target+ "\n")
 	tow_of_hanoi(n-1, auxilliary, target, source)
+	refill?
 ]
 
 recipe bean rec_pow(bean base, bean exp)[
