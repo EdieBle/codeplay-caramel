@@ -1,0 +1,43 @@
+bean cup() [
+  	bean inpx, sum, prod = 1, inst
+	batter@inpx("Input a value: ")
+
+	glaze("\n=============== Number Properties Checker ===============\n")
+	~~ Odd/even
+	ifbrew(inpx % 2 == 0) {
+		glaze("Even/Odd: Even\n")
+	} elspress {
+		glaze("Even/Odd: Odd\n")
+	}
+
+	~~ Sign check
+	ifbrew(inpx * -1 <= -1) {
+		glaze("Sign: Positive\n")
+	} elifroth(inpx * -1 >= 1) {
+		glaze("Sign: Negative\n") 
+	} elifroth(inpx * -1 == 0) {
+		glaze("Sign: Zero\n")
+	}
+
+	~~ sum of all digits from 1 to inpx
+	pour(inst = 0; inst <= inpx; inst+=1) {
+		sum += inst
+		ifbrew(inst == inpx) { 
+			glaze("Sum 1 to " + inpx + ": " + sum + "\n")
+			snap
+		}
+	}
+
+	~~ product of all digits from 1 to inpx
+	pour(inst = 1; inst <= inpx; inst+=1) {
+		prod*=inst
+		ifbrew(inst == inpx) { 
+			glaze("Product 1 to " + inpx + ": " + prod)
+			snap
+		}
+	}
+
+
+
+  	refill? 0
+]

@@ -1,0 +1,12 @@
+bean cup() [
+	bean fahren, kelv
+	
+	glaze("======================== Temperature Table ========================\n")
+	glaze("\tCelsius\t\t|\tFahrenheit\t|\tKelvin\n")
+	pour(bean cel = 0; cel <= 100; cel += 10) {
+		fahren = (cel * 9/5) + 32
+		kelv = cel + 273
+		glaze("\t" +cel+ "\t\t|\t" +fahren+ "\t\t|\t" + kelv + "\n")
+	}
+  refill? 0
+]

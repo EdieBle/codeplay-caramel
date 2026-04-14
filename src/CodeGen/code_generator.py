@@ -1167,18 +1167,20 @@ class StructuredCodeGenerator:
                             bi += 1
                             continue
                         if instr_i.op == "BINOP":
-                            # Capture BINOP for next elif condition inline
                             b_instr = instr_i
-                            a = self._py_val(b_instr.arg1)
-                            b = self._py_val(b_instr.arg2)
+                            raw_a = self._py_var(b_instr.arg1) if isinstance(b_instr.arg1, str) else self._py_val(b_instr.arg1)
+                            raw_b = self._py_var(b_instr.arg2) if isinstance(b_instr.arg2, str) else self._py_val(b_instr.arg2)
+                            a = self._elif_binops.get(raw_a, raw_a)  # ← substitute if known
+                            b = self._elif_binops.get(raw_b, raw_b)  # ← substitute if known
                             binop = b_instr.extra.get("binop", "+")
+                            dest = self._py_var(b_instr.dest)
                             if binop == "&&":
                                 expr = f"_caramel_to_bool({a}) and _caramel_to_bool({b})"
                             elif binop == "||":
                                 expr = f"_caramel_to_bool({a}) or _caramel_to_bool({b})"
                             else:
                                 expr = f"{a} {binop} {b}"
-                            self._elif_binops[self._py_var(b_instr.dest)] = expr
+                            self._elif_binops[dest] = expr
                             bi += 1
                             continue
                         # Non-elif content after last elif → else block
