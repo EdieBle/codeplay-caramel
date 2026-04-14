@@ -1,0 +1,30 @@
+empty tow_of_hanoi(bean n, blend source, blend target, blend auxilliary) [
+	ifbrew (n == 1) {
+		glaze("Move disk " + n +" from " + source + " to " + target + "\n")
+	}
+	tow_of_hanoi(n-1, source, auxilliary, target)
+	glaze("Move disk "+n+"from "+source+" to "+target)
+	tow_of_hanoi(n-1, auxilliary, target, source)
+]
+
+recipe bean rec_pow(bean base, bean exp)[
+	ifbrew(exp == 1) {
+		refill? (base)
+	}
+	refill? (base * rec_pow(base, exp-1))
+]
+
+bean cup() [
+	bean n
+	whilehot(n <= 0) {
+		batter@n("Input number of disks: ")
+		ifbrew(n <= 0) {
+			glaze("\nInput a positive non-zero value!\n")
+		}
+	}
+	glaze("\n========Solution for " + n + " disk/s========\n\n")
+	tow_of_hanoi(n, "A", "C", "B")
+	
+	glaze("Minimum number of moves: " + (rec_pow(2, n) - 1))
+	refill? 0
+]

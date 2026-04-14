@@ -697,10 +697,17 @@ class RDParser:
         """Parse rule: id_dec_tail -> = value | . ID tail | [idx] tail | postfix_op"""
         t = self._current().type
         if t in {"EQUALS", "EQUAL_PLUS", "EQUAL_MINUS", "EQUAL_ASTERISK", "EQUAL_DIVIDE"}:
-                return self._node("id_dec_tail", [
-                    self.parse_assign_op(),
-                    self.parse_assign_val()
-                ])
+            return self._node("id_dec_tail", [
+                self.parse_assign_op(),
+                self.parse_assign_val()
+            ])
+        if t == "OP_PAREN" and self._allow_function_calls:  
+            return self._node("id_dec_tail", [
+                self._expect("OP_PAREN"),
+                self.parse_function_args(),
+                self.parse_function_args_tail(),
+                self._expect("CL_PAREN")
+            ])
         if t == "DOT_ACC":
             return self._node("id_dec_tail", [
                 self._expect("DOT_ACC"),
@@ -718,7 +725,7 @@ class RDParser:
             return self._node("id_dec_tail", [self.parse_unary_op()])
         self._error({
             "EQUALS", "EQUAL_PLUS", "EQUAL_MINUS", "EQUAL_ASTERISK", "EQUAL_DIVIDE",
-            "DOT_ACC", "OP_BRACKETS", "INCREMENT", "DECREMENT"
+             "OP_PAREN", "DOT_ACC", "OP_BRACKETS", "INCREMENT", "DECREMENT"
         })
 
     def parse_assign_val(self):
@@ -1555,8 +1562,6 @@ class RDParser:
 
     def parse_empty_body(self):
         """Parse rule: empty_body -> (statement)* | λ
-
-        Stops before REFILL so the mandatory refill? can be parsed separately.
         """
         children = []
         while self._is_start_statement() and self._current().type != "REFILL":
