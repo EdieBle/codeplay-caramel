@@ -1399,34 +1399,35 @@ class StructuredCodeGenerator:
             var = name[6:] if name.startswith("order.") else name
 
 
-            if init_vals:  # Purpose of this is to throw the default especially when the value is fixed.
-                if len(dims) == 1 and dims[0] != "***":
-                    if isinstance(dims[0], int) and len(init_vals) < dims[0]:
-                        # Known size, pad at compile time
-                        padded = list(init_vals) + [default] * (dims[0] - len(init_vals))
-                        self._emit(f"{var} = {padded}")
-                    elif not isinstance(dims[0], int):
-                        # Variable size — emit init values then pad to runtime size
-                        self._emit(f"{var} = {list(init_vals)}")
-                        self._emit(f"while len({var}) < {dims[0]}: {var}.append({default})")
-                    else:
-                        self._emit(f"{var} = {init_vals}")
-
-            elif len(dims) == 1:
-                if dims[0] == "***":
-                    self._emit(f"{var} = []")
-                else:
-                    self._emit(f"{var} = [{default}] * {dims[0]}")
-            elif len(dims) == 2:
+            if len(dims) == 2:
                 r, c = dims[0], dims[1]
-                if r == "***" and c == "***":
-                    self._emit(f"{var} = []")  # fully dynamic, rows added on demand
-                elif r == "***":
-                    self._emit(f"{var} = []")  # dynamic rows, each row has fixed cols when added
-                elif c == "***":
-                    self._emit(f"{var} = [[] for _ in range({r})]")  # fixed rows, dynamic cols
+                if r == "***" or c == "***":
+                    self._emit(f"{var} = []")
+                elif init_vals and isinstance(init_vals[0], list):
+                    padded = []
+                    for row in init_vals:
+                        padded_row = list(row) + [default] * (c - len(row)) if isinstance(c, int) else list(row)
+                        padded.append(padded_row)
+                    while isinstance(r, int) and len(padded) < r:
+                        padded.append([default] * (c if isinstance(c, int) else 0))
+                    self._emit(f"{var} = {padded}")
                 else:
                     self._emit(f"{var} = [[{default}] * {c} for _ in range({r})]")
+            elif len(dims) == 1:
+                d = dims[0]
+                if d == "***":
+                    self._emit(f"{var} = []")
+                elif init_vals:
+                    if isinstance(d, int) and len(init_vals) < d:
+                        padded = list(init_vals) + [default] * (d - len(init_vals))
+                        self._emit(f"{var} = {padded}")
+                    elif not isinstance(d, int):
+                        self._emit(f"{var} = {list(init_vals)}")
+                        self._emit(f"while len({var}) < {d}: {var}.append({default})")
+                    else:
+                        self._emit(f"{var} = {list(init_vals)}")
+                else:
+                    self._emit(f"{var} = [{default}] * {d}")
             else:
                 self._emit(f"{var} = []")
 

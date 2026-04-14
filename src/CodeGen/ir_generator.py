@@ -373,6 +373,10 @@ class IRGenerator:
                             for sc in self._get_children(dc):
                                 if self._is_token(sc) and sc.type == "BEANLIT":
                                     col_size = int(sc.value)
+                                elif self._is_token(sc) and sc.type == "FLEX_ASTERISK":
+                                    col_size = "***"
+                                elif self._is_token(sc) and sc.type == "ID":
+                                    col_size = sc.value
 
             for instr in reversed(self.instructions):
                 if instr.op == "DECLARE":
