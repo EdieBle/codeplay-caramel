@@ -669,9 +669,11 @@ class SemanticAnalyzer:
 
 
         if id_token:
-            # Check if this shadows an outer variable
+            # Only block shadowing within the same function, global scope which is in scope[0] will is always be allowed to be shadowed
             outer = None
-            for scope in reversed(self.symbol_table.scopes[:-1]):  # all but current
+            # Search all scopes EXCEPT global (scopes[0]) when inside a function
+            search_scopes = self.symbol_table.scopes[1:-1] if self.current_function else self.symbol_table.scopes[:-1]
+            for scope in reversed(search_scopes):
                 if id_token.value in scope:
                     outer = scope[id_token.value]
                     break
