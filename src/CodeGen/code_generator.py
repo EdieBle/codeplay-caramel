@@ -125,6 +125,8 @@ class CodeGenerator:
         try:
             exec(code, exec_globals)
         except Exception as e:
+            print(f"[ANALYSIS CRASH] {e}")
+            traceback.print_exc()
             error = f"{type(e).__name__}: {e}"
             tb = traceback.format_exc()
             captured_err.write(tb)
@@ -629,6 +631,8 @@ class StructuredCodeGenerator:
         try:
             exec(code, exec_globals)
         except Exception as e:
+            print(f"[ANALYSIS CRASH] {e}")
+            traceback.print_exc()
             error = f"{type(e).__name__}: {e}"
 
         return {
@@ -1364,10 +1368,18 @@ class StructuredCodeGenerator:
                 self._emit(f"{dest} = _inp.lower() in (\"hot\", \"true\", \"1\")")
             else:
                 self._emit(f"{dest} = _caramel_input({prompt_arg})")
-
         elif op == "RETURN":
             if instr.arg1 is not None:
-                self._emit(f"return {self._py_val(instr.arg1)}")
+                val = self._py_val(instr.arg1)
+                rtype = instr.extra.get("return_type")
+                if rtype == "drip":
+                    self._emit(f"return float({val})")
+                elif rtype == "bean":
+                    self._emit(f"return int({val})")
+                elif rtype == "temp":
+                    self._emit(f"return bool({val})")
+                else:
+                    self._emit(f"return {val}")
             else:
                 self._emit("return")
 

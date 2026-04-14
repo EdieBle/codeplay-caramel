@@ -125,6 +125,7 @@ class IRGenerator:
         self._var_types = {}          # var_name -> caramel_type
         self._current_func = None     # track current function scope
         self._loop_stack = []         # stack of (continue_label, break_label)
+        self._current_return_type = None
         
         # handles the cases for shadowing variables in parent to child stuff in for/while and if/elsif/else cases
         self._scope_depth = 0               
@@ -143,6 +144,16 @@ class IRGenerator:
             return []
         self._visit(self.ast)
 
+        # print("[IR_GEN] Starting generation")
+        # if not self.ast:
+        #     return []
+        # try:
+        #     self._visit(self.ast)
+        # except Exception as e:
+        #     import traceback
+        #     print(f"[IR_GEN CRASH] {e}")
+        #     traceback.print_exc()
+        #     return self.instructions
         # debug
         for i, instr in enumerate(self.instructions):
             print(f"[{i:03}] {instr}")
@@ -1874,16 +1885,23 @@ class IRGenerator:
         id_tok = self._find_child_token(node, "ID")
         func_name = id_tok.value if id_tok else "_anon"
 
+        # Extract return type from recipe_ret_type 
+        dtype = None
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name == "recipe_ret_type":
+                dtype = self._extract_dtype(child)
+                break
+
         self._emit("FUNC_BEGIN", dest=func_name)
         prev_func = self._current_func
+        prev_return_type = self._current_return_type
         self._current_func = func_name
+        self._current_return_type = dtype
 
-        # Process parameters
         for child in self._get_children(node):
             if self._is_node(child) and child.name == "parameter":
                 self._visit_parameter(child)
 
-        # Process body
         for child in self._get_children(node):
             if self._is_node(child) and child.name in ("recipe_body", "empty_body"):
                 self._visit(child)
@@ -1891,6 +1909,7 @@ class IRGenerator:
                 self._visit_refill_final(child)
 
         self._current_func = prev_func
+        self._current_return_type = prev_return_type
         self._emit("FUNC_END", dest=func_name)
 
     def _visit_recipe_body(self, node):
@@ -1994,7 +2013,7 @@ class IRGenerator:
                 r = self._visit(child)
                 if r is not None:
                     val = r
-        self._emit("RETURN", arg1=val)
+        self._emit("RETURN", arg1=val, return_type=self._current_return_type)
 
     def _visit_refill_final(self, node):
         """Handle refill? statement in recipe functions."""
@@ -2006,7 +2025,7 @@ class IRGenerator:
                 r = self._visit(child)
                 if r is not None:
                     val = r
-        self._emit("RETURN", arg1=val)
+        self._emit("RETURN", arg1=val, return_type=self._current_return_type)
 
     def _visit_refill_arg(self, node):
         for child in self._get_children(node):
