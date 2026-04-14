@@ -1398,8 +1398,20 @@ class StructuredCodeGenerator:
             default = {"churro": "''", "blend": '""', "temp": "False", "drip": "0.0"}.get(dtype, "0")
             var = name[6:] if name.startswith("order.") else name
 
-            if init_vals:
-                self._emit(f"{var} = {init_vals}")
+
+            if init_vals:  # Purpose of this is to throw the default especially when the value is fixed.
+                if len(dims) == 1 and dims[0] != "***":
+                    if isinstance(dims[0], int) and len(init_vals) < dims[0]:
+                        # Known size, pad at compile time
+                        padded = list(init_vals) + [default] * (dims[0] - len(init_vals))
+                        self._emit(f"{var} = {padded}")
+                    elif not isinstance(dims[0], int):
+                        # Variable size — emit init values then pad to runtime size
+                        self._emit(f"{var} = {list(init_vals)}")
+                        self._emit(f"while len({var}) < {dims[0]}: {var}.append({default})")
+                    else:
+                        self._emit(f"{var} = {init_vals}")
+
             elif len(dims) == 1:
                 if dims[0] == "***":
                     self._emit(f"{var} = []")

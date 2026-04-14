@@ -361,7 +361,10 @@ class IRGenerator:
                         if self._is_token(c2) and c2.type == "BEANLIT":
                             arr_size = int(c2.value)
                         elif self._is_token(c2) and c2.type == "FLEX_ASTERISK":
-                            arr_size = "***" 
+                            arr_size = "***"
+                        elif self._is_token(c2) and c2.type == "ID":
+                            # Variable size — store name, code generator will reference it
+                            arr_size = c2.value
                 if self._is_node(child) and child.name == "arr_dec_dim":
                     init_vals = self._collect_arr_init_values(child)
                     # Check for 2D: arr_dec_dim starts with OP_BRACKETS + arr_size_val

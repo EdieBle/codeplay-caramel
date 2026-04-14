@@ -585,6 +585,31 @@ class SemanticAnalyzer:
                 if not (self._is_parse_node(child) and child.name == "dtype_id_tail"):
                     continue
                 for tc in child.children:
+                    if self._is_parse_node(tc) and tc.name == "arr_size_val":
+                        for sc in tc.children:
+                            if not self._is_parse_node(sc) and hasattr(sc, 'type'):
+                                if sc.type == "BEANLIT":
+                                    arr_size = int(sc.value)
+                                    arr_size_token = sc
+                                elif sc.type == "FLEX_ASTERISK":
+                                    arr_size = "***"
+                                elif sc.type == "ID":
+                                    sym = self.symbol_table.lookup(sc.value)
+                                    if sym is None:
+                                        self._error(
+                                            "E_ARR_SIZE",
+                                            f"Undeclared identifier '{sc.value}' used as array size",
+                                            sc
+                                        )
+                                    elif sym.dtype not in ("bean",):
+                                        self._error(
+                                            "E_ARR_SIZE",
+                                            f"Array size must be a whole number (bean), got '{sym.dtype}' for '{sc.value}'",
+                                            sc
+                                        )
+                                    else:
+                                        arr_size = sc.value  # valid bean variable
+                    
                     if (self._is_parse_node(tc) and tc.name == "OP_BRACKETS") or \
                        (not self._is_parse_node(tc) and hasattr(tc, 'type') and tc.type == "OP_BRACKETS"):
                         is_array = True
@@ -594,6 +619,7 @@ class SemanticAnalyzer:
                                 arr_size = int(sc.value)
                                 arr_size_token = sc
                     if self._is_parse_node(tc) and tc.name == "arr_dec_dim":
+                        
                         # Detect 2D: arr_dec_dim starts with OP_BRACKETS + arr_size_val
                         col_size = None
                         is_2d = False
