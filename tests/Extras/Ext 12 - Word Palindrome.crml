@@ -1,0 +1,34 @@
+recipe temp is_palin(blend word)[ 
+	
+	bean length = sift(word)
+  	bean left = 0, right = length - 1
+	churro a, b
+	
+	ifbrew (length <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+
+	whilehot (left < right){	
+		a = word[left]
+        b = word[right]
+        ifbrew (a != b) {
+			refill? (cold)
+		}
+		left += 1
+		right -= 1
+	}
+	refill? (hot)
+]
+bean cup() [
+	blend word
+	glaze("Enter a word/character to: ")
+	batter@ word
+	temp results = is_palin(word)
+	ifbrew (results == hot) {
+		glaze(word + " is a palindrome!")
+	} elspress {
+		glaze(word + " is not a palindrome!")
+	}
+  refill? 0
+]
