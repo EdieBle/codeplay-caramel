@@ -184,6 +184,43 @@ class CodeGenerator:
         self._emit_raw("def _caramel_input(prompt=''):")
         self._emit_raw("    return input(prompt)")
         self._emit_raw("")
+        
+        self._emit_raw("class _CaramelEarlyExit(Exception):")
+        self._emit_raw("    pass")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_input_bean(prompt=''):")
+        self._emit_raw("    raw = input(prompt).strip()")
+        self._emit_raw("    neg = raw.startswith('-')")
+        self._emit_raw("    digits = raw[1:] if neg else raw")
+        self._emit_raw("    if not digits.isdigit() or len(digits) > 10 or (neg and digits == '0'):")
+        self._emit_raw("        print('INVALID INPUT')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    return int(raw)")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_input_drip(prompt=''):")
+        self._emit_raw("    raw = input(prompt).strip()")
+        self._emit_raw("    neg = raw.startswith('-')")
+        self._emit_raw("    body = raw[1:] if neg else raw")
+        self._emit_raw("    if '.' in body:")
+        self._emit_raw("        parts = body.split('.')")
+        self._emit_raw("        if len(parts) != 2:")
+        self._emit_raw("            print('INVALID INPUT')")
+        self._emit_raw("            raise _CaramelEarlyExit()")
+        self._emit_raw("        whole, frac = parts[0], parts[1]")
+        self._emit_raw("    else:")
+        self._emit_raw("        whole, frac = body, ''")
+        self._emit_raw("    if not whole.isdigit() or (frac and not frac.isdigit()):")
+        self._emit_raw("        print('INVALID INPUT')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    if len(whole) > 10 or len(frac) > 10:")
+        self._emit_raw("        print('INVALID INPUT')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    if neg and float(body) == 0.0:")
+        self._emit_raw("        print('INVALID INPUT')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    return float(raw)")
+        self._emit_raw("")
+        
         self._emit_raw("def _caramel_print(*args, end='\\n'):")
         self._emit_raw("    parts = []")
         self._emit_raw("    for a in args:")
@@ -209,7 +246,10 @@ class CodeGenerator:
         self._emit_raw("")
         self._emit_raw("# --- Entry point ---")
         self._emit_raw("if __name__ == '__main__' or True:")
-        self._emit_raw("    _main_cup()")
+        self._emit_raw("    try:")
+        self._emit_raw("        _main_cup()")
+        self._emit_raw("    except _CaramelEarlyExit:")
+        self._emit_raw("        pass")
 
     # ------------------------------------------------------------------
     # Main Translation Loop
@@ -383,9 +423,9 @@ class CodeGenerator:
         prompt = instr.extra.get("prompt") or ""
         prompt_arg = f"{prompt}" if prompt else "''"
         if dtype == "bean":
-            self._emit(f"{dest} = int(_caramel_input({prompt_arg}))")
+            self._emit(f"{dest} = _caramel_input_bean({prompt_arg})")
         elif dtype == "drip":
-            self._emit(f"{dest} = float(_caramel_input({prompt_arg}))")
+            self._emit(f"{dest} = _caramel_input_drip({prompt_arg})")
         elif dtype == "temp":
             self._emit(f'_inp = _caramel_input({prompt_arg})')
             self._emit(f'{dest} = _inp.lower() in ("hot", "true", "1")')
@@ -718,6 +758,43 @@ class StructuredCodeGenerator:
         self._emit_raw("def _caramel_input(prompt=''):")
         self._emit_raw("    return input(prompt)")
         self._emit_raw("")
+        
+        self._emit_raw("class _CaramelEarlyExit(Exception):")
+        self._emit_raw("    pass")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_input_bean(prompt=''):")
+        self._emit_raw("    raw = input(prompt).strip()")
+        self._emit_raw("    neg = raw.startswith('-')")
+        self._emit_raw("    digits = raw[1:] if neg else raw")
+        self._emit_raw("    if not digits.isdigit() or len(digits) > 10 or (neg and digits == '0'):")
+        self._emit_raw("        print('INVALID INPUT')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    return int(raw)")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_input_drip(prompt=''):")
+        self._emit_raw("    raw = input(prompt).strip()")
+        self._emit_raw("    neg = raw.startswith('-')")
+        self._emit_raw("    body = raw[1:] if neg else raw")
+        self._emit_raw("    if '.' in body:")
+        self._emit_raw("        parts = body.split('.')")
+        self._emit_raw("        if len(parts) != 2:")
+        self._emit_raw("            print('INVALID INPUT')")
+        self._emit_raw("            raise _CaramelEarlyExit()")
+        self._emit_raw("        whole, frac = parts[0], parts[1]")
+        self._emit_raw("    else:")
+        self._emit_raw("        whole, frac = body, ''")
+        self._emit_raw("    if not whole.isdigit() or (frac and not frac.isdigit()):")
+        self._emit_raw("        print('INVALID INPUT')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    if len(whole) > 10 or len(frac) > 10:")
+        self._emit_raw("        print('INVALID INPUT')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    if neg and float(body) == 0.0:")
+        self._emit_raw("        print('INVALID INPUT')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    return float(raw)")
+        self._emit_raw("")
+        
         self._emit_raw("def _caramel_print(*args, end='\\n'):")
         self._emit_raw("    parts = []")
         self._emit_raw("    for a in args:")
@@ -738,7 +815,10 @@ class StructuredCodeGenerator:
     def _emit_footer(self):
         self._emit_raw("")
         self._emit_raw("# --- Entry point ---")
-        self._emit_raw("_main_cup()")
+        self._emit_raw("try:")
+        self._emit_raw("    _main_cup()")
+        self._emit_raw("except _CaramelEarlyExit:")
+        self._emit_raw("    pass")
 
     # ------------------------------------------------------------------
     # Structured Translation
@@ -1271,9 +1351,9 @@ class StructuredCodeGenerator:
             prompt = instr.extra.get("prompt") or ""
             prompt_arg = f"{prompt}" if prompt else "''"
             if dtype == "bean":
-                self._emit(f"{dest} = int(_caramel_input({prompt_arg}))")
+                self._emit(f"{dest} = _caramel_input_bean({prompt_arg})")
             elif dtype == "drip":
-                self._emit(f"{dest} = float(_caramel_input({prompt_arg}))")
+                self._emit(f"{dest} = _caramel_input_drip({prompt_arg})")
             elif dtype == "temp":
                 self._emit(f"_inp = _caramel_input({prompt_arg})")
                 self._emit(f"{dest} = _inp.lower() in (\"hot\", \"true\", \"1\")")

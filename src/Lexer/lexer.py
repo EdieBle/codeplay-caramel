@@ -699,6 +699,75 @@ def tokenize(code):
         column = end_col
 
     print("\n=== OUTER LOOP COMPLETE | DFA scan finished successfully ===\n")
+
+    tokens = _validate_numeric_tokens(tokens)
+
+    return tokens
+
+
+_NEG_ZERO_BEAN_RE = __import__("re").compile(r"^-0+$")
+_NEG_ZERO_DRIP_RE = __import__("re").compile(r"^-0+\.0+$")
+_TEN_DIGIT_RUN_RE = __import__("re").compile(r"-?\d{10}")
+
+
+def _count_digits(s):
+    return sum(1 for c in s if c.isdigit())
+
+
+def _validate_numeric_tokens(tokens):
+    """Post-tokenization pass that:
+
+    - Rejects `-0` / `-0.0...` (negative zero) for both bean and drip literals.
+      Negative numeric literals arrive from the DFA as a single `beanlit` /
+      `driplit` token whose lexeme already includes the leading `-`.
+    - Enforces the 10-digit (bean) and 10.10-digit (drip) limits. The DFA
+      structurally caps valid literals at those limits, so any `beanlit` /
+      `driplit` that *slips through* with too many digits is rewritten to
+      ERROR here. Over-limit inputs already surface as `ERROR` tokens with
+      a generic "Incomplete Token" message; when the lexeme clearly matches
+      the 10-digit cap pattern, replace the message with the explicit
+      digit-limit reason.
+    """
+    for tok in tokens:
+        ttype = tok.get("type")
+        lex = tok.get("lexeme", "")
+
+        if ttype == "beanlit":
+            if _NEG_ZERO_BEAN_RE.match(lex):
+                tok["type"] = "ERROR"
+                tok["message"] = "Negative zero (-0) is not allowed for 'bean' literals"
+                continue
+            if _count_digits(lex) > 10:
+                tok["type"] = "ERROR"
+                tok["message"] = "Integer 'bean' literal exceeds 10-digit limit"
+
+        elif ttype == "driplit":
+            if _NEG_ZERO_DRIP_RE.match(lex):
+                tok["type"] = "ERROR"
+                tok["message"] = "Negative zero (-0.0) is not allowed for 'drip' literals"
+                continue
+            if "." in lex:
+                whole, frac = lex.split(".", 1)
+            else:
+                whole, frac = lex, ""
+            whole_digits = whole.lstrip("-")
+            if len(whole_digits) > 10 or len(frac) > 10:
+                tok["type"] = "ERROR"
+                tok["message"] = "Float 'drip' literal exceeds 10.10-digit limit"
+
+        elif ttype == "ERROR" and tok.get("message") == "Incomplete Token":
+            # Upgrade the generic incomplete-token message when the lexeme
+            # already consumed the DFA's 10-digit cap — the real cause is
+            # digit overflow, not an incomplete token.
+            if "." in lex:
+                whole, frac = lex.split(".", 1)
+                whole_digits = whole.lstrip("-")
+                if len(whole_digits) == 10 or len(frac) == 10:
+                    tok["message"] = "Float 'drip' literal exceeds 10.10-digit limit"
+            else:
+                if _count_digits(lex) == 10:
+                    tok["message"] = "Integer 'bean' literal exceeds 10-digit limit"
+
     return tokens
 
 def tokens_to_lark(tokens):
