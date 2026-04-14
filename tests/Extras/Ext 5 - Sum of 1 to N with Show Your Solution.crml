@@ -1,0 +1,24 @@
+bean cup() [
+  bean num, sum = 0
+  bean nums[***]
+	glaze("Sum of 1 to n Machine Problem\n")
+	glaze("Enter a number: ")
+	batter@num
+	
+	pour(bean i=0; i < num; i++) {
+		nums[i] = i+1
+	}
+
+	pour(bean i = 0; i < num; i++){
+		glaze(nums[i])
+		sum += nums[i]
+		ifbrew(i < num - 1) { 
+			glaze(" + " )
+		}
+	}
+	
+	glaze(" = " + sum)
+	glaze("\nThe sum of 1 to " + num + " = " + sum)
+
+  refill? 0
+]
