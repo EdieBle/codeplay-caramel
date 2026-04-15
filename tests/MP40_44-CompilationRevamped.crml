@@ -1,0 +1,243 @@
+~~ HELPER FUNCTIONS
+recipe temp is_prime (bean n) [ 
+	ifbrew (n <= 1) { 
+		refill? (cold)
+	}
+
+	pour (bean i=2; i < n; i++) {
+		ifbrew (n % i == 0) { 
+			refill? (cold)
+		}
+	}
+	refill? (hot)
+]
+
+recipe bean power(bean base, bean exp) [
+    ifbrew (exp == 0) {
+        refill? (1)
+    }
+    refill? (base * power(base, exp - 1))
+]
+
+recipe bean disarium_sum(bean num, bean pos) [
+    ifbrew (num == 0) {
+        refill? (0)
+    }
+    bean digit = num % 10
+    bean rest = num - digit
+    refill? (power(digit, pos) + disarium_sum(rest / 10, pos - 1))
+]
+
+~~ MAIN FUNCTIONS
+empty pascal() [
+	bean n = 0
+    	bean triangle[***][***] = [[], []]
+    	bean i, j, spaces
+	
+	glaze("\n\n===============PASCAL TRIANGLE===============")
+    whilehot(n<=0) {
+		batter@n("\nEnter Pascal Triangle depth: ")
+    	ifbrew (n <= 0) {
+        	glaze("\nError: depth must be at least 1\n\n")
+    	}
+	}
+
+    	~~ Build triangle values
+    	pour(bean row = 0; row < n; row++) {
+        	pour(bean col = 0; col <= row; col++) {
+            	ifbrew (col == 0 || col == row) {
+                	triangle[row][col] = 1
+            	} elspress {
+                	triangle[row][col] = triangle[row - 1][col - 1] + triangle[row - 1][col]
+            	}
+        }
+    	}
+
+    	~~ Print triangle
+    	pour(bean row = 0; row < n; row++) {
+        	~~ Print leading spaces for pyramid shape
+        	spaces = n - row - 1
+        	pour(bean s = 0; s < spaces; s++) {
+			glaze(" ")
+        	}
+        	~~ Print values in this row
+        	pour(bean col = 0; col <= row; col++) {
+            		glaze(triangle[row][col])
+            		ifbrew (col < row) {
+                		glaze(" ")
+            		}
+        	}
+        	glaze("\n")
+    	}
+		glaze("\n")
+	refill?
+]
+
+empty emirp() [
+	bean n = -1, reverse_num = 0
+	glaze("\n\n===============EMIRP NUMBER===============")
+	whilehot (n <= 0) {
+		batter@n("\nInput a number: ")
+		ifbrew(n<=0) {
+			glaze("\nInvalid Input!\n")
+		}
+	}
+
+	glaze(n + " - ")
+	~~ Reverses the input number
+	whilehot (n > 0){
+		reverse_num *= 10
+		reverse_num += n % 10 
+		n /= 10
+	}
+	
+	~~ Checks the reversed number if it is a prime number or not
+	ifbrew(is_prime(reverse_num) == hot) {
+		glaze(reverse_num + " is a prime number.\n\n")
+	} elspress {
+		glaze (reverse_num + " is not a prime number.\n\n")
+	}
+	refill?
+]
+
+empty disarium() [
+	bean x, x1, y, counter, result
+	
+	glaze("\n\n===============DISARIUM NUMBER===============")
+	whilehot (x < 0) {
+   		batter@x("\nInput a Value to check if it is a Disarium number: ")
+		ifbrew(x<0) {
+			glaze("\nInvalid Input!\n")
+		}
+	}
+    x1 = x
+
+    	~~ count digits
+   	 whilehot(x != 0) {
+       		y = x % 10
+        	x = x / 10
+        	counter++
+    	}
+
+    	result = disarium_sum(x1, counter)
+
+    	ifbrew (result == x1) {
+      	  glaze("\nInput: " + x1 + " IS a Disarium number!\n\n")
+    	} elspress {
+    	    glaze("\nInput: " + x1 + " is NOT a Disarium number!\n\n")
+    	}
+	
+	refill?
+]
+
+empty neon() [
+	bean x = -1, y, j, sum_of_arr
+	
+	glaze("\n\n===============NEON NUMBER===============")
+	whilehot (x < 0) {
+		batter@x("\nInput a Value to check if it is a neon number: ")
+		ifbrew(x<0) {
+			glaze("\nInvalid Input!\n")
+		}
+	}
+	j = x * x
+	whilehot(j != 0) {
+		y = j % 10
+		j = j / 10
+		~~ glaze("Divided by 10: " + j + "\n" + "Remainder: " + y + "\n\n")
+		sum_of_arr += y
+	}
+	
+	ifbrew(sum_of_arr == x) {
+		glaze("Result: " + sum_of_arr + " is a neon number!\n\n")
+	} elspress {
+		glaze("Result: " + sum_of_arr + " is not a neon number!\n\n")
+	}
+	refill?
+]
+
+empty automorph() [
+	bean x, x1, y, j, counter
+    bean match, rem_x, rem_j
+    
+	glaze("\n\n===============AUTOMORPHIC NUMBER===============")
+	whilehot (x<=0){
+    	batter@x("\nInput a Value to check if it is an automorphic number: ")
+		ifbrew(x<=0) {
+			glaze("\nInvalid Input!\n")
+		}
+	}
+    x1 = x
+    
+    ~~ count digits
+    whilehot(x != 0) {
+        y = x % 10
+        x = x / 10
+        counter++
+    }
+    
+    ~~ square the input
+    j = x1 * x1
+    
+    ~~ compare last 'counter' digits
+    rem_x = x1
+    rem_j = j
+    match = 1
+    pour(bean start = 0; start < counter; start++) {
+        bean dx = rem_x % 10
+        bean dj = rem_j % 10
+        ifbrew(dx != dj) {
+            match = 0
+        }
+        rem_x = rem_x / 10
+        rem_j = rem_j / 10
+    }
+    
+    ifbrew(match == 1) {
+        glaze(x1 + " is an automorphic number\n\n")
+    } elspress {
+        glaze(x1 + " is NOT an automorphic number\n\n")
+    }
+	refill?
+]
+
+
+bean cup() [
+	bean choice = -1
+	whilehot (choice!=0) {
+		glaze("===================MP 40 TO 44 (Automorphic, Neon, Disarium, Emirp, Pascal)===================\n")
+		glaze("\t 1. Automorphic\n")
+		glaze("\t 2. Neon\n")
+		glaze("\t 3. Disarium\n")
+		glaze("\t 4. Emirp\n")
+		glaze("\t 5. Pascal's Triangle\n")
+		glaze("\t 0. Exit\n")
+		batter@choice("Input your choice: ")
+		ifbrew(choice < 0 || choice > 5) {
+			glaze("\nInvalid Input!\n")
+		}
+
+		ifbrew(choice == 0) {
+			glaze("\nExiting program...\n")
+		}
+	
+		flavour(choice) {
+			syrup 1:
+				automorph()
+				snap
+			syrup 2:
+				neon()
+				snap
+			syrup 3:
+				disarium()
+				snap
+			syrup 4:
+				emirp()
+				snap
+			syrup 5:
+				pascal()
+				snap
+		}
+	}
+    refill? 0
+]		
