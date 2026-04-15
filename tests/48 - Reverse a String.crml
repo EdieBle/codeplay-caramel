@@ -1,0 +1,15 @@
+bean cup() [
+  	blend word
+	bean reversed 
+	glaze("=== REVERSE THE STRING ===\n")
+	glaze("Enter a word: ")
+	batter@word
+	
+	reversed = sift(word) - 1
+	
+	~~ Reverse the word
+	pour(bean i = reversed; i >= 0; i--) { 
+		glaze(word[i])
+	}
+  refill? 0
+]

@@ -1,0 +1,25 @@
+bean cup() [
+	bean hour = -1, min, sec
+	blend time
+	whilehot(hour < 0 || hour > 24) {
+		batter@hour, min, sec("Input Military Time (HH/MM/SS): ")
+		ifbrew(hour < 0 || hour > 24) {
+			glaze("Invalid Hour input! Try again!\n")
+		}
+		ifbrew(min < 0 || min > 60) {
+			glaze("Invalid Minute Input! Try again!\n")
+		}
+		ifbrew(sec < 0 || sec > 60) {
+			glaze("Invalid Second Input! Try again!\n\n")
+		}
+	}
+
+	ifbrew (hour > 12) {
+		hour -= 12
+		time = "PM"
+	} elspress {
+		time = "AM"
+	}
+	glaze("Converted Time: " + hour+":"+min+":"+sec+" "+time)
+	refill? 0
+]
