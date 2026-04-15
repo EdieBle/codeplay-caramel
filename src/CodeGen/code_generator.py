@@ -963,13 +963,19 @@ class StructuredCodeGenerator:
         if not is_loop_label:
             return None
 
-        # Find a GOTO back to this label
+        # Find the LAST GOTO back to this label (the actual back-edge)
+        back_edge = None
         for j in range(label_idx + 1, min(label_idx + 200, len(self.ir))):
             if self.ir[j].op == "GOTO" and self.ir[j].dest == start_label:
-                # The LABEL after the GOTO is the end
-                if j + 1 < len(self.ir) and self.ir[j + 1].op == "LABEL":
-                    return j + 1  # ← returns the END label index
-                return j
+                back_edge = j
+            # Stop at FUNC boundaries
+            if self.ir[j].op in ("FUNC_BEGIN", "FUNC_END"):
+                break
+
+        if back_edge is not None:
+            if back_edge + 1 < len(self.ir) and self.ir[back_edge + 1].op == "LABEL":
+                return back_edge + 1
+            return back_edge
         return None
 
     def _gen_while_loop(self, start, end):
@@ -988,7 +994,6 @@ class StructuredCodeGenerator:
         for j in range(start + 1, end + 1):
             if j < len(self.ir) and self.ir[j].op == "GOTO" and self.ir[j].dest == start_label_name:
                 back_goto_idx = j
-                break
 
         # Emit condition computation before the while header
         if cond_idx:
@@ -1037,6 +1042,10 @@ class StructuredCodeGenerator:
                 if instr_i.dest and "END" in instr_i.dest:
                     self._emit("break")
                     has_body = True
+                elif instr_i.dest and instr_i.dest == start_label_name:
+                    self._emit("continue")
+                    has_body = True
+                # other GOTOs (IF_END, ELSE etc.) are structural, skip silently
                 bi += 1
                 continue
 
