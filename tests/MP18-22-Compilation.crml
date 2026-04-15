@@ -1,0 +1,245 @@
+bean arr[6] = [0, 0, 0, 0, 0, 0]
+bean duparr[20] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+bean n = 0
+bean choice = 0
+bean tmp = 0
+bean val = 0
+bean sortchoice = 0
+bean sum = 0
+bean num = 0
+bean running = 1
+bean count = 0
+bean found = 0
+bean dupcount = 0
+bean subchoice = 0
+bean dummy = 0
+
+recipe bean printnums(bean n, bean curr) [
+    ifbrew (curr <= n) {
+        glaze(curr)
+        glaze(" ")
+        bean dummy = printnums(n, curr + 1)
+    }
+    refill? (0)
+]
+
+recipe bean count_dig(bean num) [
+    ifbrew (num == 0) {
+        refill? (0)
+    }
+    bean rem = num % 10
+    bean rest = num - rem
+    refill? (count_dig(rest / 10) + 1)
+]
+
+bean cup() [
+    glaze("=== 18 - 22 CARAMEL MENU ===\n")
+    glaze("1. Print N Numbers(18)\n")
+    glaze("2. Array Sort(19)\n")
+    glaze("3. Count Digits(20)\n")
+    glaze("4. Sum of Positive Integers(21)\n")
+    glaze("5. Duplicate / Triplicate(22)\n")
+    glaze("Enter choice: ")
+    batter@ choice
+
+    flavour(choice) {
+        syrup 1:
+            glaze("Input a number: ")
+            batter@ n
+            ifbrew (n <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            dummy = printnums(n, 1)
+            glaze("\n")
+            snap
+
+        syrup 2:
+            glaze("Input the number of elements: ")
+            batter@ n
+            ifbrew (n <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            ifbrew (n > 6) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            pour (bean i = 0; i < n; i++) {
+                glaze("element - ")
+                glaze(i)
+                glaze(" : ")
+                batter@ val
+                order.arr[i] = val
+            }
+            glaze("1. Ascending\n")
+            glaze("2. Descending\n")
+            glaze("Enter choice: ")
+            batter@ sortchoice
+            ifbrew (sortchoice < 1) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            ifbrew (sortchoice > 2) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            pour (bean i = 0; i < n - 1; i++) {
+                pour (bean j = 0; j < n - i - 1; j++) {
+                    ifbrew (sortchoice == 1) {
+                        ifbrew (order.arr[j] > order.arr[j + 1]) {
+                            tmp = order.arr[j]
+                            order.arr[j] = order.arr[j + 1]
+                            order.arr[j + 1] = tmp
+                        }
+                    }
+                    elspress {
+                        ifbrew (order.arr[j] < order.arr[j + 1]) {
+                            tmp = order.arr[j]
+                            order.arr[j] = order.arr[j + 1]
+                            order.arr[j + 1] = tmp
+                        }
+                    }
+                }
+            }
+            glaze("Sorted array: ")
+            pour (bean i = 0; i < n; i++) {
+                glaze(order.arr[i])
+                glaze(" ")
+            }
+            glaze("\n")
+            snap
+
+        syrup 3:
+            glaze("Input a number: ")
+            batter@ n
+            ifbrew (n <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            count = count_dig(n)
+            glaze("The number of digits in the number is: ")
+            glaze(count)
+            glaze("\n")
+            snap
+
+        syrup 4:
+            running = 1
+            sum = 0
+            glaze("Enter integers (0 to stop):\n")
+            whilehot (running > 0) {
+                glaze("Enter a number: ")
+                batter@ num
+                ifbrew (num == 0) {
+                    running = 0
+                }
+                ifbrew (num > 0) {
+                    sum = sum + num
+                }
+            }
+            glaze("Sum of positive integers: ")
+            glaze(sum)
+            glaze("\n")
+            snap
+
+        syrup 5:
+            glaze("1. Duplicate\n")
+            glaze("2. Triplicate\n")
+            glaze("Enter choice (1 for Duplicate, 2 for Triplicate): ")
+            batter@ subchoice
+
+            flavour(subchoice) {
+                syrup 1:
+                    num = 0
+                    count = 0
+                    found = 0
+                    dupcount = 0
+                    glaze("Enter numbers (duplicate stops input):\n")
+                    whilehot (found == 0) {
+                        glaze("Enter a number: ")
+                        batter@ num
+                        ifbrew (num <= 0) {
+                            glaze("Error: Invalid Input\n")
+                            refill? 0
+                        }
+                        dupcount = 0
+                        pour (bean i = 0; i < count; i++) {
+                            val = order.duparr[i]
+                            ifbrew (val == num) {
+                                dupcount = dupcount + 1
+                            }
+                        }
+                        ifbrew (dupcount >= 1) {
+                            glaze("Duplicate found: ")
+                            glaze(num)
+                            glaze("\n")
+                            found = 1
+                        }
+                        ifbrew (found == 0) {
+                            order.duparr[count] = num
+                            count = count + 1
+                            ifbrew (count >= 20) {
+                                glaze("Maximum entries reached\n")
+                                found = 1
+                            }
+                        }
+                    }
+                    glaze("Total numbers entered: ")
+                    glaze(count)
+                    glaze("\n")
+                    snap
+
+                syrup 2:
+                    num = 0
+                    count = 0
+                    found = 0
+                    dupcount = 0
+                    glaze("Enter numbers (triplicate stops input):\n")
+                    whilehot (found == 0) {
+                        glaze("Enter a number: ")
+                        batter@ num
+                        ifbrew (num <= 0) {
+                            glaze("Error: Invalid Input\n")
+                            refill? 0
+                        }
+                        dupcount = 0
+                        pour (bean i = 0; i < count; i++) {
+                            val = order.duparr[i]
+                            ifbrew (val == num) {
+                                dupcount = dupcount + 1
+                            }
+                        }
+                        ifbrew (dupcount >= 2) {
+                            glaze("Triplicate found: ")
+                            glaze(num)
+                            glaze("\n")
+                            found = 1
+                        }
+                        ifbrew (found == 0) {
+                            order.duparr[count] = num
+                            count = count + 1
+                            ifbrew (count >= 20) {
+                                glaze("Maximum entries reached\n")
+                                found = 1
+                            }
+                        }
+                    }
+                    glaze("Total numbers entered: ")
+                    glaze(count)
+                    glaze("\n")
+                    snap
+
+                defoam:
+                    glaze("Error: Invalid Choice\n")
+                    snap
+            }
+            snap
+
+        defoam:
+            glaze("Error: Invalid Choice\n")
+            snap
+    }
+
+    refill? 0
+]
