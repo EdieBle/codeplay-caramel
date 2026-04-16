@@ -1,0 +1,349 @@
+~~ ==========================================
+~~ CARAMEL MACHINE PROBLEMS COLLECTION
+~~ ==========================================
+
+~~ 1. FACTORIAL
+recipe bean f1() [
+    bean n = 0
+    bean fact = 1
+    bean i = 0
+    
+    glaze("\n=== FACTORIAL ===\n")
+    glaze("Enter a positive integer: ")
+    batter@ n
+    
+    ifbrew (n < 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    
+    i = n
+    whilehot (i > 1) {
+        fact = fact * i
+        i = i - 1
+    }
+    
+    glaze("Factorial of ")
+    glaze(n)
+    glaze(" is ")
+    glaze(fact)
+    glaze("\n")
+    
+    refill? 0
+]
+
+~~ 2. PIN VALIDATOR
+recipe bean f2() [
+    bean pin = 0
+    bean valid = 0
+    bean tmp = 0
+    bean digit = 0
+    bean digits = 0
+    bean haseven = 0
+    bean hasodd = 0
+    bean rem = 0
+    bean even = 0
+    
+    glaze("\n=== PIN VALIDATOR ===\n")
+    glaze("Rules: 4-8 digits, must have even and odd digits\n")
+    
+    whilehot (valid == 0) {
+        glaze("Enter PIN: ")
+        batter@ pin
+        
+        ifbrew (pin <= 0) {
+            glaze("Error: Invalid Input\n")
+            refill? 0
+        }
+        
+        digits = 0
+        haseven = 0
+        hasodd = 0
+        tmp = pin
+        
+        whilehot (tmp > 0) {
+            digit = tmp % 10
+            rem = digit % 2
+            
+            ifbrew (rem == 0) {
+                haseven = 1
+            }
+            ifbrew (rem == 1) {
+                hasodd = 1
+            }
+            
+            digits = digits + 1
+            even = tmp - digit
+            tmp = even / 10
+        }
+        
+        ifbrew (digits < 4) {
+            glaze("Too short! Need at least 4 digits.\n")
+        }
+        ifbrew (digits > 8) {
+            glaze("Too long! Maximum 8 digits.\n")
+        }
+        ifbrew (digits >= 4) {
+            ifbrew (digits <= 8) {
+                ifbrew (haseven == 0) {
+                    glaze("Must contain at least one even digit.\n")
+                }
+                ifbrew (hasodd == 0) {
+                    glaze("Must contain at least one odd digit.\n")
+                }
+                ifbrew (haseven == 1) {
+                    ifbrew (hasodd == 1) {
+                        valid = 1
+                    }
+                }
+            }
+        }
+    }
+    
+    glaze("PIN accepted: ")
+    glaze(pin)
+    glaze("\n")
+    
+    refill? 0
+]
+
+~~ 3. NUMBER PALINDROME
+recipe bean f3() [
+    bean n = 0
+    bean num = 0
+    bean rev = 0
+    bean digit = 0
+    bean even = 0
+    bean prod = 0
+    
+    glaze("\n=== NUMBER PALINDROME ===\n")
+    glaze("Enter a positive integer: ")
+    batter@ n
+    
+    ifbrew (n <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    
+    num = n
+    whilehot (num > 0) {
+        digit = num % 10
+        prod = rev * 10
+        rev = prod + digit
+        even = num - digit
+        num = even / 10
+    }
+    
+    glaze(n)
+    ifbrew (n == rev) {
+        glaze(" is a palindrome\n")
+    }
+    ifbrew (n != rev) {
+        glaze(" is not a palindrome\n")
+    }
+    
+    refill? 0
+]
+
+~~ 4. WORD PALINDROME
+recipe bean f4() [
+    blend word
+    bean length, left, right, is_palin
+    churro a, b
+    
+    glaze("\n=== WORD PALINDROME ===\n")
+    glaze("Enter a word: ")
+    batter@word
+    
+    length = sift(word)
+    
+    ifbrew (length <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    
+    left = 0
+    right = length - 1
+    is_palin = 1
+    
+    whilehot (left < right) {
+        a = word[left]
+        b = word[right]
+        ifbrew (a != b) {
+            is_palin = 0
+            snap
+        }
+        left = left + 1
+        right = right - 1
+    }
+    
+    glaze("Word: ")
+    glaze(word)
+    glaze("\n")
+    
+    ifbrew (is_palin == 1) {
+        glaze("The word is a palindrome\n")
+    } elspress {
+        glaze("The word is not a palindrome\n")
+    }
+    
+    refill? 0
+]
+
+~~ 5. SORT STRING
+recipe bean f5() [
+    blend word 
+    churro choice, temp1
+    churro chars[***]
+    bean i, j
+    
+    glaze("\n=== SORT STRING ===\n")
+    batter@word("Enter a word: ")
+    batter@choice("Ascending (A) or Descending (D)?: ")
+
+    ~~ Convert string to array (assuming word indexing works, PRAY)
+    bean word_len = sift(word)
+    pour(bean i = 0; i < word_len; i++) {
+        chars[i] = word[i]
+    }
+
+    ~~ Bubble sort
+    pour(bean i = 0; i < word_len; i++) {
+        pour(bean j = 0; j < word_len - i - 1; j++) {
+            ifbrew (choice == "A" || choice == "a") {
+                ifbrew (chars[j] > chars[j + 1]) {
+                    temp1 = chars[j]
+                    chars[j] = chars[j + 1]
+                    chars[j + 1] = temp1
+                }
+            } 
+            elifroth (choice == "D" || choice == "d") {
+                ifbrew (chars[j] < chars[j + 1]) {
+                    temp1 = chars[j]
+                    chars[j] = chars[j + 1]
+                    chars[j + 1] = temp1
+                }
+            }
+        }
+    }
+    
+    ~~ Print result
+    glaze("Result: ")
+    pour(bean i = 0; i < word_len; i++) {
+        glaze(chars[i])
+    }
+    glaze("\n")
+    
+    refill? 0
+]
+
+~~ 6. ADDITION OF 2 MATRICES
+recipe bean f6() [
+    bean array_a[5]
+    bean array_b[5]
+    bean array_c[5]
+    
+    glaze("\n=== ADDITION OF 2 MATRICES ===\n")
+    ~~ Input Array A
+    glaze("Enter 5 numbers for Array A:\n")
+    pour(bean i = 0; i <= 4; i++) {
+        batter@array_a[i]
+    }
+    
+    ~~ Input Array B
+    glaze("Enter 5 numbers for Array B:\n")
+    pour(bean i = 0; i <= 4; i++) {
+        batter@array_b[i]
+    }
+   
+    ~~ Compute sum in Array C
+    pour(bean i = 0; i <= 4; i++) {
+        glaze("index value currently: " + i + "\n")
+        glaze("value of arr_a: " + array_a[i] + "\n")
+        glaze("value of arr_b: " + array_b[i] + "\n")
+        array_c[i] = array_a[i] + array_b[i]
+    }
+    
+    ~~ Display results
+    glaze("Array C (sum):\n")
+    pour(bean i = 0; i <= 4; i++) {
+        glaze("value of index: " + i + " is " + array_c[i] + "\n")
+        glaze(" ")
+    }
+    glaze("\n")
+    
+    refill? 0
+]
+
+
+~~ ==========================================
+~~ MAIN FUNCTION (MENU ROUTER)
+~~ ==========================================
+
+bean cup() [
+    bean keep_going = 1
+    churro choice = '0'
+    churro cont = 'y'
+    bean run = 0
+
+    glaze("==========================================\n")
+    glaze("   CARAMEL MACHINE PROBLEMS COLLECTION    \n")
+    glaze("==========================================\n")
+    
+    whilehot (keep_going == 1) {
+        
+        ~~ Display Menu
+        glaze("\n[ MAIN MENU ]\n")
+        glaze("1. Factorial\n")
+        glaze("2. PIN Validator\n")
+        glaze("3. Number Palindrome\n")
+        glaze("4. Word Palindrome\n")
+        glaze("5. Sort String\n")
+        glaze("6. Addition of 2 Matrices\n")
+        glaze("7. Exit Program\n")
+        
+        glaze("\nSelect a program to run: ")
+        batter@ choice
+
+        ~~ Switch Case Logic
+        flavour (choice) {
+            syrup '1':
+                run = f1()
+                snap
+            syrup '2':
+                run = f2()
+                snap
+            syrup '3':
+                run = f3()
+                snap
+            syrup '4':
+                run = f4()
+                snap
+            syrup '5':
+                run = f5()
+                snap
+            syrup '6':
+                run = f6()
+                snap
+            syrup '7':
+                keep_going = 0
+                snap
+            defoam:
+                glaze("Error: Invalid choice. Please select a valid option.\n")
+                snap
+        }
+
+        ~~ Continue Prompt
+        ifbrew (keep_going == 1) {
+            glaze("\nContinue? (y/n): ")
+            batter@ cont
+            
+            ifbrew (cont == 'n' || cont == 'N') {
+                keep_going = 0
+            }
+        }
+    }
+    
+    glaze("\nProgram Terminated. Goodbye!\n")
+    refill? 0
+]

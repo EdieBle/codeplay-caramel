@@ -1,0 +1,303 @@
+~~ This Program runs MP 1 to 4, 34, 35, 36, 37, 39
+
+recipe bean find_1st_cap(churro str, bean index, bean length) [
+    ifbrew (index >= length) {
+        refill? (-1)  ~~ Not found
+    }
+
+    ~~ Check if character is uppercase (ASCII 65-90)
+    ifbrew (str[index] >= 65 && str[index] <= 90) {
+        refill? (index)
+    }
+
+    refill? (find_1st_cap(str, index + 1, length))
+]
+
+
+recipe bean count_caps(churro str, bean index, bean length) [
+    ifbrew (index >= length) {
+        refill? (0)
+    }
+
+    ifbrew (str[index] >= 65 && str[index] <= 90) {
+        refill? (count_caps(str, index + 1, length) + 1)
+    }
+
+    refill? (count_caps(str, index + 1, length))
+]
+
+
+
+recipe bean factorial(bean n) [
+    ifbrew (n <= 1) {
+        refill? (1)
+    }
+    refill? (n * factorial(n - 1))
+]
+
+recipe bean digit_fact_sum(bean num) [
+    ifbrew (num == 0) {
+        refill? (0)
+    }
+    bean digit = num % 10
+    bean rest = num - digit
+    refill? (factorial(digit) + digit_fact_sum(rest / 10))
+]
+
+
+recipe temp perfect_num(bean n) [
+    bean sum = 0
+    pour (bean counter = 1; counter < n; counter++) {
+        ifbrew (n % counter == 0) {
+            sum += counter
+        }
+    }
+    refill? (sum == n)
+]
+
+
+~~ SUB-PROGRAM 1: Basic Arithmetic Operations
+
+empty run_arithmetic() [
+    bean a = 0
+    bean b = 0
+
+    glaze("=== Basic Arithmetic Operations ===\n")
+    glaze("Enter first number: ")
+    batter@ a
+    glaze("Enter second number: ")
+    batter@ b
+
+    ifbrew (b == 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+
+    bean sum = a + b
+    bean diff = a - b
+    bean prod = a * b
+    bean quot = a / b
+
+    glaze("Sum: ")
+    glaze(sum)
+    glaze("\n")
+    glaze("Difference: ")
+    glaze(diff)
+    glaze("\n")
+    glaze("Product: ")
+    glaze(prod)
+    glaze("\n")
+    glaze("Quotient: ")
+    glaze(quot)
+    glaze("\n")
+    refill?
+]
+
+
+~~ SUB-PROGRAM 2: First Capital Letter
+
+empty run_firstcap() [
+    churro text
+    bean length, result, i
+
+    glaze("=== First Capital Letter ===\n")
+    batter@text("Enter a string: ")
+    length = sift(text)
+
+    result = find_1st_cap(text, 0, length)
+
+    ifbrew (result != -1) {
+        glaze("First capital letter: ")
+        glaze(text[result])
+        glaze("\n")
+    } elspress {
+        glaze("No capital letter found\n")
+    }
+    refill?
+]
+
+
+~~ SUB-PROGRAM 3: Count Capital Letters
+
+empty run_countcaps() [
+    churro text
+    bean length, result, i
+
+    glaze("=== Count Capital Letters ===\n")
+    batter@text("Enter a string: ")
+    length = sift(text)
+
+    result = count_caps(text, 0, length)
+    glaze("Number of capital letters: ")
+    glaze(result)
+    glaze("\n")
+    refill?
+]
+
+~~ SUB-PROGRAM 4: Recursive Strong Number
+
+empty run_strongnum() [
+    bean n = 0
+    bean sum = 0
+
+    glaze("=== Recursive Strong Number ===\n")
+    glaze("Enter a number: ")
+    batter@ n
+
+    ifbrew (n <= 0) {
+        glaze("Error: please enter a positive number\n")
+        refill? 0
+    }
+
+    sum = digit_fact_sum(n)
+
+    ifbrew (sum == n) {
+        glaze(n)
+        glaze(" is a Strong Number\n")
+    } elspress {
+        glaze(n)
+        glaze(" is NOT a Strong Number\n")
+    }
+    refill?
+]
+
+
+~~ SUB-PROGRAM 5: Perfect Number
+
+empty run_perfectnum() [
+    bean n = 0
+    bean i = 1
+    bean first = 1
+
+    glaze("=== Perfect Number ===\n")
+    glaze("Input a number to determine if it is a perfect number or not: ")
+    batter@ n
+
+    ifbrew (n <= 0) {
+        glaze("Error: Number must be at least 1\n")
+        refill? 0
+    }
+
+    glaze(n + " = ")
+    whilehot (i <= n/2) {
+        ifbrew (n % i == 0) {
+            ifbrew (first == 0) {
+                glaze(" + ")
+            }
+            glaze(i)
+            first = 0
+        }
+        i++
+    }
+    glaze("\n")
+
+    ~~ Check if n is a perfect number
+    ifbrew (perfect_num(n) == hot) {
+        glaze(n + " is a perfect number.")
+    } elspress {
+        glaze(n + " is not a perfect number.")
+    }
+    glaze("\n")
+    refill?
+]
+
+
+~~ SUB-PROGRAM 6: Number Frequency
+
+empty run_numfreq() [
+    bean x, y_0, y, j, max_freq, f
+    bean count_arr[10]
+
+    batter@x("Input a Value to get the frequency of the numbers: ")
+    whilehot (x != 0) {
+        y = x % 10
+        x = x / 10
+        j = x - y
+        count_arr[y] = count_arr[y] + 1
+    }
+
+    ~~ Find max frequency
+    max_freq = 0
+    pour (bean i = 0; i < 10; i++) {
+        ifbrew (count_arr[i] > max_freq) {
+            max_freq = count_arr[i]
+        }
+    }
+
+    f = max_freq
+    whilehot (f > 0) {
+        pour (bean d = 0; d < 10; d++) {
+            ifbrew (count_arr[d] == f) {
+                glaze(d + " - " + f + "\n")
+            }
+        }
+        f = f - 1
+    }
+    refill?
+]
+
+
+~~ MAIN PROGRAM - Menu System
+
+bean cup() [
+    bean choice = 0
+    bean running = 1
+    blend answer
+
+    whilehot (running == 1) {
+
+        ~~ Step 1: Display menu
+        glaze("   MACHINE PROBLEMS SELECTOR\n")
+        glaze("Select a machine problem to run:\n\n")
+        glaze("1 - Basic Arithmetic Operations\n")
+        glaze("2 - First Capital Letter\n")
+        glaze("3 - Count Capital Letters\n")
+        glaze("4 - Recursive Strong Number\n")
+        glaze("5 - Perfect Number\n")
+        glaze("6 - Number Frequency\n")
+        glaze("\nEnter choice: ")
+
+        ~~ Step 2: Read user selection
+        batter@ choice
+
+        ~~ Step 3 & 4: Validate and dispatch to selected problem
+        ifbrew (choice == 1) {
+            run_arithmetic()
+        }
+        elifroth (choice == 2) {
+            run_firstcap()
+        }
+        elifroth (choice == 3) {
+            run_countcaps()
+        }
+        elifroth (choice == 4) {
+            run_strongnum()
+        }
+        elifroth (choice == 5) {
+            run_perfectnum()
+        }
+        elifroth (choice == 6) {
+            run_numfreq()
+        }
+        elspress {
+            ~~ Step 3: Invalid input handling
+            glaze("\nInvalid choice. Click any number to continue: ")
+			batter@choice
+        }
+
+        ~~ Step 5: After valid problem finishes, ask to run again
+        ifbrew (choice >= 1) {
+            ifbrew (choice <= 6) {
+                glaze("\nWould you like to choose another machine problem? (yes/no): ")
+                batter@ answer
+                ifbrew (answer == "no") {
+                    running = 0
+                }
+            }
+        }
+    }
+
+    glaze("\nGoodbye!\n")
+    refill? 0
+]
+		

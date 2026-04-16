@@ -1,0 +1,202 @@
+~~ 28. Get the Average of Students
+empty average() [ 
+	drip math[5]= [0.0, 0.0 , 0.0, 0.0, 0.0]
+	drip sci[5]= [0.0, 0.0 , 0.0, 0.0, 0.0]
+	drip eng[5]= [0.0, 0.0 , 0.0, 0.0, 0.0]
+	drip fil[5]= [0.0, 0.0 , 0.0, 0.0, 0.0]
+
+	drip score = 0
+	drip sum, sum_math, sum_sci, sum_eng, sum_fil
+	drip average_math, average_sci, average_eng, average_fil
+	glaze("===Math Quiz Scores===\n")
+	pour(bean i=0; i<5; i++){
+		glaze("Quiz ")
+		glaze(i + 1)
+		glaze(": ")
+		batter@ score
+		math[i] = score
+		sum_math = sum_math + score
+	}
+	
+	average_math = sum_math/5
+	glaze("[MATH] AVERAGE: " + average_math)
+	
+	glaze("\n\n===Science Quiz Scores===\n")
+	pour(bean i=0; i<5; i++){
+		glaze("Quiz ")
+		glaze(i + 1)
+		glaze(": ")
+		batter@ score
+		sci[i] = score
+		sum_sci = sum_sci + score
+	}
+	
+	average_sci = sum_sci/5
+	glaze("[SCIENCE] AVERAGE: " + average_sci)
+	
+	glaze("\n\n===English Quiz Scores===\n")
+	pour(bean i=0; i<5; i++){
+		glaze("Quiz ")
+		glaze(i + 1)
+		glaze(": ")
+		batter@ score
+		eng[i] = score
+		sum_eng = sum_eng + score
+	}
+
+	average_eng = sum_eng/5
+	glaze("[ENGLISH] AVERAGE: " + average_eng)
+
+	glaze("\n\n===Filipino Quiz Scores===\n")
+	pour(bean i=0; i<5; i++){
+		glaze("Quiz ")
+		glaze(i + 1)
+		glaze(": ")
+		batter@ score
+		fil[i] = score
+		sum_fil = sum_fil + score
+	}
+	average_fil = sum_fil/5
+	glaze("[FILIPINO] AVERAGE: " + average_fil)
+refill? 
+]
+
+~~ 29. Sum of Even and Average of Odd Numbers
+empty even_odd() [
+	 bean n, even_sum, odd_count
+    drip odd_sum, odd_avg
+    
+	glaze("Enter N: ")
+    batter@n
+    
+    even_sum = 0
+    odd_sum = 0.0
+    odd_count = 0
+    
+    pour(bean i = 1; i <= n; i++) {
+        ifbrew (i % 2 == 0) {
+            even_sum = even_sum + i
+        } elspress {
+            odd_sum = odd_sum + i
+            odd_count++
+        }
+    }
+    
+
+	glaze("odd_count: ")
+	glaze(odd_count)
+	glaze("\n")
+	glaze("odd_sum: ")
+	glaze(odd_sum)
+	glaze("\n")
+
+    ifbrew (odd_count > 0) {
+        odd_avg = odd_sum / odd_count
+    } elspress {
+        odd_avg = 0.0
+    }
+    
+    glaze("Sum of even numbers: ")
+    glaze(even_sum)
+    glaze("\n")
+    glaze("Average of odd numbers: ")
+    glaze(odd_avg)
+    glaze("\n")
+	refill?
+]
+
+
+~~ 30. GCD (Recursion)
+recipe bean gcd(bean a, bean b) [
+    ifbrew (b == 0) {
+        refill? (a)
+    }
+    refill? (gcd(b, a % b))
+]
+
+~~ 31. Largest Element in a Recursion
+bean arr[***]
+recipe bean find_max(bean n, bean current_max) [
+    ifbrew (n == 0) {
+        refill? (current_max)
+    }
+    
+    ifbrew (order.arr[n - 1] > current_max) {
+        current_max = order.arr[n - 1]
+    }
+    
+    refill? (find_max(n - 1, current_max))
+]
+
+~~ 32. LCM (Recursion)
+recipe bean lcm(bean a, bean b) [
+    refill? ((a * b) / gcd(a, b))
+]
+
+bean cup() [
+  bean choice, res_even_odd, even_odd_num, num1, num2, res_gcd, res_lcm, res_max, n
+	glaze("========= 28 TO 32 MACHINE PROBLEMS SELECTOR =========\n")
+	glaze("Enter your choice: ")
+	batter@ choice
+	
+	flavour(choice) {
+		~~ Get the Average of Students
+		syrup 1:
+			glaze("\n=====AVERAGE OF STUDENTS=====\n")
+			average()	
+			glaze("\n===================================================\n")
+		snap
+		
+		~~ Sum of Even Numbers and Average of Odd Numbers
+		syrup 2:
+			glaze("=====SUM OF EVEN NUMS AND AVERAGE OF ODD NUMS=====\n")
+			even_odd()
+			glaze("\n===================================================\n")
+		snap
+
+		~~ GCD (Recursion)
+		syrup 3: 
+			glaze("\n=====FINDING THE GCD=====\n")
+			glaze("Enter first number: ")
+    		batter@num1
+			glaze("Enter second number: ")
+    		batter@num2
+			res_gcd = gcd(num1, num2)
+			glaze("The GCD of " + num1 + " and " + num2 + " is " + res_gcd)
+			glaze("\n===========================================================\n")
+		snap
+	
+		~~ Largest Element in a Recursion
+		syrup 4: 
+			glaze("\n=====FINDING THE LARGEST ELEMENT IN ARRAY=====\n")
+			batter@n("How many element in an array? : ")
+    
+    		pour(bean i = 0; i < n; i++) {
+				glaze("Enter element " + i + ": ")
+        		batter@order.arr[i]
+    		}
+    
+   	 		res_max = find_max(n, order.arr[0])
+    
+    		glaze("Largest element: " + res_max + "\n")
+			glaze("\n===================================================\n")
+		snap
+
+		~~ LCM (Recursion)
+		syrup 5:
+			glaze("\n==============\t FINDING THE LCM \t==============\n")
+			glaze("Enter first number: ")
+    		batter@num1
+			glaze("Enter second number: ")
+    		batter@num2
+			res_lcm = lcm(num1, num2)
+			glaze("The GCD of " + num1 + " and " + num2 + " is " + res_lcm)
+			glaze("\n=======================================================\n")
+		snap
+
+		defoam: 
+			glaze("Invalid Input!") 
+		snap
+	}
+  refill? 0
+]

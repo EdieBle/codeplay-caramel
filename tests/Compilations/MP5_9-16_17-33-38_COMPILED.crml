@@ -1,0 +1,395 @@
+recipe drip circlearea(drip rad) [
+    drip area = 3.14159 * rad * rad
+    refill? (area)
+]
+
+recipe drip triarea(drip ba, drip he) [
+    drip area = 0.5 * ba * he
+    refill? (area)
+]
+
+recipe drip sqarea(drip si) [
+    drip area = si * si
+    refill? (area)
+]
+
+recipe drip rectarea(drip le, drip wi) [
+    drip area = le * wi
+    refill? (area)
+]
+
+
+recipe temp is_prime(bean n) [
+    ifbrew (n <= 1) {
+        refill? (cold)
+    }
+    pour (bean i = 2; i < n; i++) {
+        ifbrew (n % i == 0) {
+            refill? (cold)
+        }
+    }
+    refill? (hot)
+]
+
+empty run_multtable() [
+    bean rows = 0
+    bean cols = 0
+
+    glaze("=== Multiplication Table ===\n")
+    glaze("Enter number of rows: ")
+    batter@ rows
+    glaze("Enter number of columns: ")
+    batter@ cols
+
+    ifbrew (rows <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    ifbrew (cols <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+
+    pour (bean i = 1; i <= rows; i++) {
+        pour (bean j = 1; j <= cols; j++) {
+            glaze(i * j)
+            glaze("\t")
+        }
+        glaze("\n")
+    }
+    refill?
+]
+
+empty run_shapes() [
+    bean choice = 0
+    bean n = 0
+    bean length = 0
+    bean width = 0
+
+    glaze("=== Shape Drawer ===\n")
+    glaze("1. Triangle\n")
+    glaze("2. Inverted Triangle\n")
+    glaze("3. Square\n")
+    glaze("4. Rectangle\n")
+    glaze("Enter choice: ")
+    batter@ choice
+
+    flavour (choice) {
+        syrup 1:
+            glaze("Enter number of rows: ")
+            batter@ n
+            ifbrew (n <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            glaze("Triangle:\n")
+            pour (bean i = 1; i <= n; i++) {
+                pour (bean k = 1; k <= n - i; k++) {
+                    glaze(" ")
+                }
+                pour (bean j = 1; j <= i; j++) {
+                    glaze("* ")
+                }
+                glaze("\n")
+            }
+        snap
+        syrup 2:
+            glaze("Enter number of rows: ")
+            batter@ n
+            ifbrew (n <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            glaze("Inverted Triangle:\n")
+            pour (bean i = n; i >= 1; i -= 1) {
+                pour (bean k = 1; k <= n - i; k++) {
+                    glaze(" ")
+                }
+                pour (bean j = 1; j <= i; j++) {
+                    glaze("* ")
+                }
+                glaze("\n")
+            }
+        snap
+        syrup 3:
+            glaze("Enter number of rows: ")
+            batter@ n
+            ifbrew (n <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            glaze("Square:\n")
+            pour (bean i = 1; i <= n; i++) {
+                pour (bean j = 1; j <= n; j++) {
+                    glaze("* ")
+                }
+                glaze("\n")
+            }
+        snap
+        syrup 4:
+            glaze("Enter length: ")
+            batter@ length
+            ifbrew (length <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            glaze("Enter width: ")
+            batter@ width
+            ifbrew (width <= 0) {
+                glaze("Error: Invalid Input\n")
+                refill? 0
+            }
+            glaze("Rectangle:\n")
+            pour (bean i = 1; i <= length; i++) {
+                pour (bean j = 1; j <= width; j++) {
+                    glaze("* ")
+                }
+                glaze("\n")
+            }
+        snap
+        defoam:
+            glaze("Invalid choice\n")
+        snap
+    }
+    refill?
+]
+
+
+empty run_areanormal() [
+    bean choice = 0
+    drip radius = 0.0
+    drip base = 0.0
+    drip height = 0.0
+    drip side = 0.0
+    drip length = 0.0
+    drip width = 0.0
+    drip area = 0.0
+
+    glaze("=== Area Calculator (Normal) ===\n")
+    glaze("1. Circle\n")
+    glaze("2. Triangle\n")
+    glaze("3. Square\n")
+    glaze("4. Rectangle\n")
+    glaze("Enter choice: ")
+    batter@ choice
+
+    flavour (choice) {
+        syrup 1:
+            glaze("Enter radius: ")
+            batter@ radius
+            area = 3.14159 * radius * radius
+            glaze("Area: ")
+            glaze(area)
+            glaze("\n")
+        snap
+        syrup 2:
+            glaze("Enter base: ")
+            batter@ base
+            glaze("Enter height: ")
+            batter@ height
+            area = 0.5 * base * height
+            glaze("Area: ")
+            glaze(area)
+            glaze("\n")
+        snap
+        syrup 3:
+            glaze("Enter side: ")
+            batter@ side
+            area = side * side
+            glaze("Area: ")
+            glaze(area)
+            glaze("\n")
+        snap
+        syrup 4:
+            glaze("Enter length: ")
+            batter@ length
+            glaze("Enter width: ")
+            batter@ width
+            area = length * width
+            glaze("Area: ")
+            glaze(area)
+            glaze("\n")
+        snap
+        defoam:
+            glaze("Invalid Input\n")
+        snap
+    }
+    refill?
+]
+
+empty run_areafunc() [
+    bean choice = 0
+    drip radius = 0.0
+    drip base = 0.0
+    drip height = 0.0
+    drip side = 0.0
+    drip length = 0.0
+    drip width = 0.0
+    drip result = 0.0
+
+    glaze("=== Area Calculator (Function) ===\n")
+    glaze("1. Circle\n")
+    glaze("2. Triangle\n")
+    glaze("3. Square\n")
+    glaze("4. Rectangle\n")
+    glaze("Enter choice: ")
+    batter@ choice
+
+    ifbrew (choice == 1) {
+        glaze("Enter radius: ")
+        batter@ radius
+        result = circlearea(radius)
+        glaze("Area: ")
+        glaze(result)
+        glaze("\n")
+    }
+    elifroth (choice == 2) {
+        glaze("Enter base: ")
+        batter@ base
+        glaze("Enter height: ")
+        batter@ height
+        result = triarea(base, height)
+        glaze("Area: ")
+        glaze(result)
+        glaze("\n")
+    }
+    elifroth (choice == 3) {
+        glaze("Enter side: ")
+        batter@ side
+        result = sqarea(side)
+        glaze("Area: ")
+        glaze(result)
+        glaze("\n")
+    }
+    elifroth (choice == 4) {
+        glaze("Enter length: ")
+        batter@ length
+        glaze("Enter width: ")
+        batter@ width
+        result = rectarea(length, width)
+        glaze("Area: ")
+        glaze(result)
+        glaze("\n")
+    }
+    elspress {
+        glaze("Invalid Input\n")
+    }
+    refill?
+]
+
+
+empty run_hailstone() [
+    bean n, step, n_save
+
+    glaze("=== Hailstone Sequence ===\n")
+    glaze("Input any number (positive) to start the Hailstone Sequence: ")
+    batter@ n
+    step = 0
+    n_save = n
+
+    glaze("The hailstone sequence starting at " + n + " is: " + n + " ")
+    ifbrew (n_save > 0) {
+        whilehot (n > 1) {
+            ifbrew (n % 2 == 0) {
+                n = n / 2
+            }
+            elspress {
+                n = (3 * n) + 1
+            }
+            step = step + 1
+            glaze("" + n + " ")
+        }
+    } elspress {
+        glaze("Invalid number")
+    }
+    glaze("\nThe number " + n_save + " went to 1 in " + step + " steps\n")
+    refill?
+]
+
+
+empty run_prime() [
+    bean n = 0
+
+    glaze("=== Prime Numbers from 1 to N ===\n")
+    glaze("Input a number: ")
+    batter@ n
+
+    ifbrew (n < 2) {
+        glaze("Error: number must be at least 2\n")
+        refill? 0
+    }
+
+    glaze("Prime numbers from 1 to " + n + " : ")
+    pour (bean i = 1; i <= n; i++) {
+        ifbrew (is_prime(i)) {
+            glaze(i)
+            glaze(" ")
+        }
+    }
+    glaze("\n")
+    refill?
+]
+
+bean cup() [
+    bean choice = 0
+    bean running = 1
+    blend answer
+
+    whilehot (running == 1) {
+
+        ~~ Step 1: Display menu
+        glaze("\n=================================\n")
+        glaze("        PROGRAM SELECTOR\n")
+        glaze("=================================\n")
+        glaze("Select a program to run:\n\n")
+        glaze("1 - Multiplication Table\n")
+        glaze("2 - Shapes Asterisk\n")
+        glaze("3 - Area Normal\n")
+        glaze("4 - Area Function\n")
+        glaze("5 - Hailstone Sequence\n")
+        glaze("6 - Prime Numbers from 1 to N\n")
+        glaze("\nEnter choice: ")
+
+        ~~ Step 2: Read user selection
+        batter@ choice
+
+        ~~ Step 3 & 4: Validate and dispatch to selected program
+        ifbrew (choice == 1) {
+            run_multtable()
+        }
+        elifroth (choice == 2) {
+            run_shapes()
+        }
+        elifroth (choice == 3) {
+            run_areanormal()
+        }
+        elifroth (choice == 4) {
+            run_areafunc()
+        }
+        elifroth (choice == 5) {
+            run_hailstone()
+        }
+        elifroth (choice == 6) {
+            run_prime()
+        }
+        elspress {
+            ~~ Step 3: Invalid input handling
+            glaze("\nInvalid choice. Input any number to continue: ")
+            batter@choice
+        }
+
+        ~~ Step 5: After valid program finishes, ask to run again
+        ifbrew (choice >= 1) {
+            ifbrew (choice <= 6) {
+                glaze("\nWould you like to choose another function? (yes/no): ")
+                batter@ answer
+                ifbrew (answer == "no") {
+                    running = 0
+                }
+            }
+        }
+    }
+
+    glaze("\nThank you!\n")
+    refill? 0
+]
