@@ -16,8 +16,7 @@ _ARITH_OPS = {
     "+": operator.add,
     "-": operator.sub,
     "*": operator.mul,
-    "/": lambda a, b: a // b if isinstance(a, int) and isinstance(b, int) and b != 0
-                      else (a / b if b != 0 else None),
+    "/": lambda a, b: a / b if b != 0 else None,
     "%": lambda a, b: a % b if b != 0 else None,
 }
 
