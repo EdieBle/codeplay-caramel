@@ -12,17 +12,19 @@ recipe temp is_prime (bean n) [
 ]
 
 bean cup() [
-  	bean n, reverse_num = 0
+  	bean n, n1, reverse_num = 0
 	glaze("Input a number: ")
-	batter@ n
-
-	glaze(n + " - ")
-
+	batter@n
+	n1 = n  ~~ makes a copy of n
 	~~ Input must strictly be above 1
 	ifbrew (n < 1) {
 		glaze("Invalid input. Please enter values above 1.")
 		refill? 0
 	}
+	ifbrew (is_prime(n) == cold) {
+		glaze("Input is not a prime!")
+		refill? 0
+	} 
 
 	~~ Reverses the input number
 	whilehot (n > 0){
@@ -33,9 +35,9 @@ bean cup() [
 	
 	~~ Checks the reversed number if it is a prime number or not
 	ifbrew(is_prime(reverse_num) == hot) {
-		glaze(reverse_num + " is a prime number.")
+		glaze("Both " + n1 + " - " + reverse_num + " is a prime number.")
 	} elspress {
-		glaze (reverse_num + " is not a prime number.")
+		glaze ("Input " + n1 + " is prime - " + reverse_num + " is not a prime number.")
 	}
   refill? 0
 ]
