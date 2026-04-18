@@ -1,0 +1,153 @@
+bean cup() [
+    bean a[5]
+    bean b[5]
+    bean c[10]
+    bean sortorder = 0
+    bean sortmethod = 0
+    bean tmp = 0
+
+    glaze("===== mP47: array Sort =====\n")
+
+    glaze("\nEnter 5 numbers for array a:\n")
+    pour(bean i = 0; i < 5; i++) {
+        glaze("  a[")
+        glaze(i)
+        glaze("]: ")
+        batter@a[i]
+    }
+
+    glaze("\nEnter 5 numbers for array b:\n")
+    pour(bean i = 0; i < 5; i++) {
+        glaze("  b[")
+        glaze(i)
+        glaze("]: ")
+        batter@b[i]
+    }
+
+    glaze("\nchoose sorting order:\n")
+    glaze("  1. ascending\n")
+    glaze("  2. Descending\n")
+    batter@sortorder("Enter choice (1-2): ")
+    ifbrew(sortorder < 1 || sortorder > 2) {
+        glaze("Invalid order choice.\n")
+        refill? 0
+    }
+
+    glaze("\nchoose sorting method:\n")
+    glaze("  1. bubble Sort\n")
+    glaze("  2. balloon Sort\n")
+    batter@sortmethod("Enter choice (1-2): ")
+    ifbrew(sortmethod < 1 || sortmethod > 2) {
+        glaze("Invalid method choice.\n")
+        refill? 0
+    }
+
+    pour(bean i = 0; i < 5; i++) {
+        c[i] = a[i]
+    }
+    pour(bean i = 0; i < 5; i++) {
+        c[i + 5] = b[i]
+    }
+
+    flavour(sortmethod) {
+        syrup 1:
+            pour(bean outer = 0; outer < 9; outer++) {
+                pour(bean j = 0; j < 9 - outer; j++) {
+                    ifbrew(sortorder == 1) {
+                        ifbrew(c[j] > c[j + 1]) {
+                            tmp = c[j]
+                            c[j] = c[j + 1]
+                            c[j + 1] = tmp
+                        }
+                    } elspress {
+                        ifbrew(c[j] < c[j + 1]) {
+                            tmp = c[j]
+                            c[j] = c[j + 1]
+                            c[j + 1] = tmp
+                        }
+                    }
+                }
+            }
+        snap
+        syrup 2:
+            bean left = 0
+            bean right = 9
+            bean fi = 0
+            bean ri = 0
+            bean fip1 = 0
+            bean rim1 = 0
+            temp swapped = hot
+            whilehot(swapped == hot) {
+                swapped = cold
+
+                fi = left
+                whilehot(fi < right) {
+                    fip1 = fi + 1
+                    ifbrew(sortorder == 1) {
+                        ifbrew(c[fi] > c[fip1]) {
+                            tmp = c[fi]
+                            c[fi] = c[fip1]
+                            c[fip1] = tmp
+                            swapped = hot
+                        }
+                    } elspress {
+                        ifbrew(c[fi] < c[fip1]) {
+                            tmp = c[fi]
+                            c[fi] = c[fip1]
+                            c[fip1] = tmp
+                            swapped = hot
+                        }
+                    }
+                    fi += 1
+                }
+
+                right -= 1
+                ri = right
+                whilehot(ri > left) {
+                    rim1 = ri - 1
+                    ifbrew(sortorder == 1) {
+                        ifbrew(c[ri] < c[rim1]) {
+                            tmp = c[ri]
+                            c[ri] = c[rim1]
+                            c[rim1] = tmp
+                            swapped = hot
+                        }
+                    } elspress {
+                        ifbrew(c[ri] > c[rim1]) {
+                            tmp = c[ri]
+                            c[ri] = c[rim1]
+                            c[rim1] = tmp
+                            swapped = hot
+                        }
+                    }
+                    ri -= 1
+                }
+                left += 1
+            }
+        snap
+    }
+
+    glaze("\n===== Results =====\n")
+    glaze("array a: ")
+    pour(bean i = 0; i < 5; i++) {
+        glaze(a[i])
+        glaze(" ")
+    }
+    glaze("\n")
+
+    glaze("array b: ")
+    pour(bean i = 0; i < 5; i++) {
+        glaze(b[i])
+        glaze(" ")
+    }
+    glaze("\n")
+
+    glaze("Sorted array c: ")
+    pour(bean i = 0; i < 10; i++) {
+        glaze(c[i])
+        glaze(" ")
+    }
+    glaze("\n")
+
+    refill? 0
+]

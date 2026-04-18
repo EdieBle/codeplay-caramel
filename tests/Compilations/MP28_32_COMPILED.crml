@@ -136,6 +136,11 @@ recipe bean lcm(bean a, bean b) [
 bean cup() [
   bean choice, res_even_odd, even_odd_num, num1, num2, res_gcd, res_lcm, res_max, n
 	glaze("========= 28 TO 32 MACHINE PROBLEMS SELECTOR =========\n")
+	glaze("[1] FINDING THE AVERAGE OF STUDENTS\n")
+    glaze("[2] FINDING THE SUM OF EVEN NUMS AND AVERAGE OF ODD NUMS\n")
+    glaze("[3] FINDING THE GCD\n")
+    glaze("[4] FINDING THE LARGEST ELEMENT IN ARRAY\n")
+    glaze("[5] FINDING THE LCM\n\n")
 	glaze("Enter your choice: ")
 	batter@ choice
 	

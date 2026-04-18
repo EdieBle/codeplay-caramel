@@ -1,0 +1,85 @@
+bean cup() [
+    bean choice = 0
+    bean keep_going = 1
+    churro user_word
+    bean length = 0
+    bean j = 0
+    churro c
+    bean is_all_digits = 1
+    bean has_char = 0
+
+    glaze(" SEQUENCE VALIDATOR \n")
+    glaze("1. Enter characters (1 per line, stops if integer is entered)\n")
+    glaze("2. Enter integers (stops if letter/character is entered)\n")
+    glaze("Enter choice: ")
+    batter@ choice
+
+    ~~ MODE 1: CHARACTERS ONLY (Stops on Integers)
+    ifbrew (choice == 1) {
+        glaze("\n--- Character Mode Started ---\n")
+        whilehot (keep_going == 1) {
+            glaze("Input one character: ")
+            batter@ user_word
+            length = sift(user_word)
+            
+            ~~ 1. Check if the input is a full integer (like '10' or '5')
+            is_all_digits = 1
+            j = 0
+            whilehot (j < length) {
+                c = user_word[j]
+                ifbrew (c < "0") { is_all_digits = 0 }
+                ifbrew (c > "9") { is_all_digits = 0 }
+                j++
+            }
+
+            ~~ 2. Make decisions based on the scan
+            ifbrew (is_all_digits == 1) {
+                glaze("Integer number detected! Stopping sequence.\n")
+                keep_going = 0 
+            } elspress {
+                ~~ It is not a number. Check if it is a single character.
+                ifbrew (length > 1) {
+                    glaze("Error: Too many characters! You must enter 1 letter per line. Stopping.\n")
+                    keep_going = 0
+                } elspress {
+                    glaze("Accepted: " + user_word + "\n")
+                }
+            }
+        }
+    }
+
+    ~~ MODE 2: INTEGERS ONLY (Stops on Characters)
+    ifbrew (choice == 2) {
+        glaze("\n--- Integer Mode Started ---\n")
+        whilehot (keep_going == 1) {
+            glaze("Input an integer: ")
+            batter@ user_word
+            length = sift(user_word)
+            
+            ~~ 1. Scan the whole string to see if any letters are inside
+            has_char = 0
+            j = 0
+            whilehot (j < length) {
+                c = user_word[j]
+                ifbrew (c < "0") { has_char = 1 }
+                ifbrew (c > "9") { has_char = 1 }
+                j++
+            }
+
+            ~~ 2. Make decisions based on the scan
+            ifbrew (has_char == 1) {
+                glaze("Character detected! Stopping sequence.\n")
+                keep_going = 0 
+            } elspress {
+                glaze("Accepted: " + user_word + "\n")
+            }
+        }
+    }
+
+    ~~ Catch invalid menu choices
+    ifbrew (choice < 1) { glaze("Invalid choice.\n") }
+    ifbrew (choice > 2) { glaze("Invalid choice.\n") }
+
+    glaze("Program Finished.\n")
+    refill? 0
+]
