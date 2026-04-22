@@ -1,0 +1,27 @@
+recipe bean facto(bean num) [
+    ifbrew (num == 0 || num == 1) {
+        refill? (1)
+    }
+    refill? (num * (facto(num - 1)))
+]
+
+bean cup() [
+  bean num, result
+	glaze("=====FINDING THE FACTORIAL=====\n")
+	glaze("Enter a number: ")
+  batter@num   
+  result = facto(num)
+
+  glaze(num + "! = ")
+    pour(bean i = 1; i <= num; i++) {
+      glaze(i)
+      ifbrew (i != num) {
+        glaze(" * ")
+        snap
+      }
+    }
+
+    glaze("\nFactorial = " + result)
+    
+    refill? 0
+]
