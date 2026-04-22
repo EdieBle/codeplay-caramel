@@ -993,7 +993,7 @@ class StructuredCodeGenerator:
         back_goto_idx = None
         for j in range(start + 1, end + 1):
             if j < len(self.ir) and self.ir[j].op == "GOTO" and self.ir[j].dest == start_label_name:
-                back_goto_idx = j
+                back_goto_idx = j 
 
         # Emit condition computation before the while header
         if cond_idx:
@@ -1039,13 +1039,12 @@ class StructuredCodeGenerator:
                 bi += 1
                 continue
             if instr_i.op == "GOTO":
-                if instr_i.dest and "END" in instr_i.dest:
-                    self._emit("break")
+                if instr_i.dest and ("END" in instr_i.dest or instr_i.dest == start_label_name):
+                    if "END" in instr_i.dest:
+                        self._emit("break")
+                    else:
+                        self._emit("continue")
                     has_body = True
-                elif instr_i.dest and instr_i.dest == start_label_name:
-                    self._emit("continue")
-                    has_body = True
-                # other GOTOs (IF_END, ELSE etc.) are structural, skip silently
                 bi += 1
                 continue
 
@@ -1094,8 +1093,13 @@ class StructuredCodeGenerator:
         if else_label_idx is not None:
             for j in range(else_label_idx - 1, start, -1):
                 if self.ir[j].op == "GOTO":
+                    dest = self.ir[j].dest or ""
+                    if "WHILE_END" in dest or "POUR_END" in dest or \
+                    "WHILE_START" in dest or "POUR_START" in dest or \
+                    "POUR_UPDATE" in dest or "DOWHILE_END" in dest:
+                        continue
                     goto_end_idx = j
-                    end_label = self.ir[j].dest
+                    end_label = dest
                     break
 
         # Emit if-body (between IF_FALSE and GOTO/else_label)
@@ -1112,7 +1116,14 @@ class StructuredCodeGenerator:
                     continue
                 bi += 1
                 continue
-            if instr_i.op in ("GOTO",):
+            if instr_i.op == "GOTO":
+                dest = instr_i.dest or ""
+                if "WHILE_END" in dest or "POUR_END" in dest or "DOWHILE_END" in dest:
+                    self._emit("break")
+                    has_body = True
+                elif "WHILE_START" in dest or "POUR_START" in dest or "POUR_UPDATE" in dest:
+                    self._emit("continue")
+                    has_body = True
                 bi += 1
                 continue
             if instr_i.op == "IF_FALSE":
@@ -1234,6 +1245,13 @@ class StructuredCodeGenerator:
                             bi += 1
                             continue
                         if instr_i.op == "GOTO":
+                            dest = instr_i.dest or ""
+                            if "WHILE_END" in dest or "POUR_END" in dest or "DOWHILE_END" in dest:
+                                self._emit("break")
+                                has_else = True
+                            elif "WHILE_START" in dest or "POUR_START" in dest or "POUR_UPDATE" in dest:
+                                self._emit("continue")
+                                has_else = True
                             bi += 1
                             continue
                         if instr_i.op == "IF_FALSE":
