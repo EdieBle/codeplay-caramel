@@ -1,0 +1,78 @@
+bean cup() [
+    bean choice = 0
+    bean keep_going = 1
+    blend user_word
+    bean length = 0
+    bean j = 0
+    churro c
+    bean is_all_digits = 1
+    bean has_char = 0
+    blend typeof
+
+    glaze(" SEQUENCE VALIDATOR \n")
+    glaze("1. Enter characters (1 per line, stops if integer is entered)\n")
+    glaze("2. Enter integers (stops if letter/character is entered)\n")
+    glaze("Enter choice: ")
+    batter@choice
+
+    ifbrew(choice == 1) {
+        glaze("\n--- Character Mode Started ---\n")
+        whilehot(keep_going == 1) {
+            glaze("Input one character: ")
+            batter@user_word
+            length = sift(user_word)
+            typeof = type(user_word)
+
+            is_all_digits = 1
+            j = 0
+            whilehot(j < length) {
+                c = user_word[j]
+                ifbrew(c < '0') { is_all_digits = 0 }
+                ifbrew(c > '9') { is_all_digits = 0 }
+                j++
+            }
+
+            ifbrew(is_all_digits == 1 && typeof == "churro") {
+                glaze("Integer detected! Stopping sequence.\n")
+                keep_going = 0
+            } elifroth(typeof == "blend") {
+                glaze("Error: Enter only 1 character per line. Stopping.\n")
+                keep_going = 0
+            } elspress {
+                glaze("Accepted: " + user_word + "\n")
+            }
+        }
+    }
+
+    ifbrew(choice == 2) {
+        glaze("\n--- Integer Mode Started ---\n")
+        whilehot(keep_going == 1) {
+            glaze("Input an integer: ")
+            batter@user_word
+            length = sift(user_word)
+
+            has_char = 0
+            j = 0
+            whilehot(j < length) {
+                c = user_word[j]
+                ifbrew(c < '0') { has_char = 1 }
+                ifbrew(c > '9') { has_char = 1 }
+                j++
+            }
+
+            ifbrew(has_char == 1) {
+                glaze("Character detected! Stopping sequence.\n")
+                keep_going = 0
+            } elspress {
+                glaze("Accepted: " + user_word + "\n")
+            }
+        }
+    }
+
+    ifbrew(choice < 1 || choice > 2) {
+        glaze("Invalid choice.\n")
+    }
+
+    glaze("Program Finished.\n")
+    refill? 0
+]
