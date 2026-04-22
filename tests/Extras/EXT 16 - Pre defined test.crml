@@ -1,0 +1,41 @@
+bean cup() [
+    ~~ sqrt
+    drip s = sqrt(25)
+    glaze("sqrt(25) = " + s + "\n")
+
+    ~~ ceil
+    bean c = ceil(4.2)
+    glaze("ceil(4.2) = " + c + "\n")
+
+    ~~ floor
+    bean f = floor(4.9)
+    glaze("floor(4.9) = " + f + "\n")
+
+    ~~ pow
+    drip p = pow(2, 10)
+    glaze("pow(2,10) = " + p + "\n")
+
+    ~~ rand bean range
+    bean rb = rand(1, 6)
+    glaze("rand(1,6) = " + rb + "\n")
+
+    ~~ rand drip range
+    drip rd = rand(1.0, 2.0)
+    glaze("rand(1.0,2.0) = " + rd + "\n")
+
+    ~~ type
+    bean x = 5
+    drip y = 3.14
+    blend z = "hello"
+    churro g = 'c'
+    temp f1 = cold
+    drip xg[1] = [1.0]
+    glaze("type(x) = " + type(x) + "\n")
+    glaze("type(y) = " + type(y) + "\n")
+    glaze("type(z) = " + type(z) + "\n")
+    glaze("type(z) = " + type(g) + "\n")
+    glaze("type(z) = " + type(f1) + "\n")
+    glaze("type(z) = " + type(xg) + "\n")
+
+    refill? 0
+]
