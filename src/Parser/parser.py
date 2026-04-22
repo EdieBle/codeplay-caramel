@@ -174,7 +174,7 @@ class RDParser:
     PRIMARY_LITERALS = {"BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD", "BLENDLIT"}
     EXPR_START = {
         "NOT", "INCREMENT", "DECREMENT", "MINUS", "ID", "ORDER",
-        "BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD", "BLENDLIT", "OP_PAREN", "SIFT"
+        "BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD", "BLENDLIT", "OP_PAREN", "SIFT", "SQRT", "CEIL", "FLOOR", "POW", "RAND", "TYPE"
     }
     BLEND_TERM_START = {
         "BLENDLIT", "ID", "ORDER", "OP_PAREN",
@@ -600,8 +600,13 @@ class RDParser:
             ])
         if t in {"BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD"}:
             return self._node("blend_term", [self._expect(t)])
-        self._error({"BLENDLIT", "ID", "ORDER", "OP_PAREN", "BEANLIT", "DRIPLIT", "CHURROLIT", "HOT", "COLD"})
-
+        
+        if t in {"SQRT", "CEIL", "FLOOR", "POW", "RAND", "TYPE", "SIFT"}:
+            return self._node("blend_term", [self.parse_primary()])
+        
+        self._error({"BLENDLIT", "ID", "ORDER", "OP_PAREN", "BEANLIT", "DRIPLIT",
+                    "CHURROLIT", "HOT", "COLD", "SQRT", "CEIL", "FLOOR", "POW", "RAND", "TYPE", "SIFT"})
+        
     def parse_blend_term_id_tail(self):
         """Parse rule: blend_term_id_tail -> . ID | (args) | λ"""
         if self._accept("DOT_ACC"):
@@ -1083,11 +1088,61 @@ class RDParser:
                 self.parse_expression(),
                 self._expect("CL_PAREN")
             ])
+        
+        # =================================================
+        # PRE_DEFINED FUNCTIONS HAHAHAHAHAHAHAHA YES
+        # =================================================
         if t == "SIFT":
             return self._node("primary", [
                 self._expect("SIFT"),
                 self._expect("OP_PAREN"),
                 self.parse_sift_arg(),
+                self._expect("CL_PAREN")
+            ])
+        if t == "SQRT":
+            return self._node("primary", [
+                self._expect("SQRT"), 
+                self._expect("OP_PAREN"),
+                self.parse_expression(), 
+                self._expect("CL_PAREN")
+            ])
+        if t == "CEIL":
+            return self._node("primary", [
+                self._expect("CEIL"), 
+                self._expect("OP_PAREN"),
+                self.parse_expression(), 
+                self._expect("CL_PAREN")
+            ])
+        if t == "FLOOR":
+            return self._node("primary", [
+                self._expect("FLOOR"), 
+                self._expect("OP_PAREN"),
+                self.parse_expression(), 
+                self._expect("CL_PAREN")
+            ])
+        if t == "POW":
+            return self._node("primary", [
+                self._expect("POW"), 
+                self._expect("OP_PAREN"),
+                self.parse_expression(), 
+                self._expect("COMMA"), 
+                self.parse_expression(),
+                self._expect("CL_PAREN")
+            ])
+        if t == "RAND":
+            return self._node("primary", [
+                self._expect("RAND"), 
+                self._expect("OP_PAREN"),
+                self.parse_expression(), 
+                self._expect("COMMA"), 
+                self.parse_expression(), 
+                self._expect("CL_PAREN")
+            ])
+        if t == "TYPE":
+            return self._node("primary", [
+                self._expect("TYPE"), 
+                self._expect("OP_PAREN"),
+                self.parse_expression(), 
                 self._expect("CL_PAREN")
             ])
         self._error({

@@ -1108,7 +1108,8 @@ class IRGenerator:
                         return self._visit(c2)
                 continue
             
-            # sift
+            # PRE-DEFINED FUNCTIONSSSSSSSSSSSSS
+            # sift(expr)
             if self._is_token(child) and child.type == "SIFT":
                 for c2 in children:
                     if self._is_node(c2) and c2.name == "sift_arg":
@@ -1116,6 +1117,77 @@ class IRGenerator:
                         self._emit("PARAM", arg1=arg_val)
                         t = self._new_temp()
                         self._emit("CALL", dest=t, arg1="__sift__", arg_count=1)
+                        return t
+                    
+            # sqrt(expr) math.sqrt
+            if self._is_token(child) and child.type == "SQRT":
+                for c2 in children:
+                    if self._is_node(c2) and c2.name == "expression":
+                        arg_val = self._visit(c2)
+                        self._emit("PARAM", arg1=arg_val)
+                        t = self._new_temp()
+                        self._emit("CALL", dest=t, arg1="__sqrt__", arg_count=1)
+                        return t
+
+            # ceil(expr) is math.ceil
+            if self._is_token(child) and child.type == "CEIL":
+                for c2 in children:
+                    if self._is_node(c2) and c2.name == "expression":
+                        arg_val = self._visit(c2)
+                        self._emit("PARAM", arg1=arg_val)
+                        t = self._new_temp()
+                        self._emit("CALL", dest=t, arg1="__ceil__", arg_count=1)
+                        return t
+
+            # floor(expr) is math.floor
+            if self._is_token(child) and child.type == "FLOOR":
+                for c2 in children:
+                    if self._is_node(c2) and c2.name == "expression":
+                        arg_val = self._visit(c2)
+                        self._emit("PARAM", arg1=arg_val)
+                        t = self._new_temp()
+                        self._emit("CALL", dest=t, arg1="__floor__", arg_count=1)
+                        return t
+
+            # pow(base, exp) is math.pow — two expression children
+            if self._is_token(child) and child.type == "POW":
+                exprs = [c2 for c2 in children if self._is_node(c2) and c2.name == "expression"]
+                if len(exprs) >= 2:
+                    arg1 = self._visit(exprs[0])
+                    arg2 = self._visit(exprs[1])
+                    self._emit("PARAM", arg1=arg1)
+                    self._emit("PARAM", arg1=arg2)
+                    t = self._new_temp()
+                    self._emit("CALL", dest=t, arg1="__pow__", arg_count=2)
+                    return t
+
+            # rand(a, b) is random.randint or random.uniform depending on types
+            if self._is_token(child) and child.type == "RAND":
+                exprs = [c2 for c2 in children if self._is_node(c2) and c2.name == "expression"]
+                if len(exprs) >= 2:
+                    arg1 = self._visit(exprs[0])
+                    arg2 = self._visit(exprs[1])
+                    use_float = (
+                        isinstance(arg1, float) or isinstance(arg2, float) or
+                        self._var_types.get(str(arg1)) == "drip" or
+                        self._var_types.get(str(arg2)) == "drip" or
+                        (isinstance(arg1, str) and '.' in arg1 and arg1.lstrip('-').replace('.', '', 1).isdigit()) or
+                        (isinstance(arg2, str) and '.' in arg2 and arg2.lstrip('-').replace('.', '', 1).isdigit())
+                    )
+                    self._emit("PARAM", arg1=arg1)
+                    self._emit("PARAM", arg1=arg2)
+                    t = self._new_temp()
+                    self._emit("CALL", dest=t, arg1="__rand__", arg_count=2, use_float=use_float)
+                    return t
+
+            # type(expr) is returns blend string of type name
+            if self._is_token(child) and child.type == "TYPE":
+                for c2 in children:
+                    if self._is_node(c2) and c2.name == "expression":
+                        arg_val = self._visit(c2)
+                        self._emit("PARAM", arg1=arg_val)
+                        t = self._new_temp()
+                        self._emit("CALL", dest=t, arg1="__type__", arg_count=1)
                         return t
 
         # Fallback: visit children

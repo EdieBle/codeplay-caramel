@@ -782,7 +782,7 @@ def tokens_to_lark(tokens):
         typeOfTok = t["type"].upper()
         stripNumTok = ''.join(ch for ch in typeOfTok if not ch.isdigit())   # Filter out non-letter characters, use the mapped identifier at the beginning of this program for semantic. Only exists due to the lexer outputting IDENTIFIER# where # is a number
 
-
+        
         if last_token_type == "REFILL" and stripNumTok == "BEANLIT" and t["lexeme"] == "0":
             stripNumTok = "ZERO"
         elif typeOfTok in KEYWORD_MAP:

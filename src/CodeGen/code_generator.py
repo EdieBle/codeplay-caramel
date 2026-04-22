@@ -502,6 +502,16 @@ class CodeGenerator:
             return "_main_cup"
         if name == "__sift__":
             return "len"
+        if name == "__sqrt__":  
+            return "math.sqrt"
+        if name == "__ceil__":  
+            return "math.ceil"
+        if name == "__floor__": 
+            return "math.floor"
+        if name == "__pow__":   
+            return "math.pow"
+        if name == "__type__":  
+            return "_caramel_type"
         if name.startswith("class_"):
             return f"_class_{name[6:]}"
         if name.startswith("new_"):
@@ -665,9 +675,20 @@ class StructuredCodeGenerator:
             return "_main_cup"
         if name == "__sift__":
             return "len"
+        if name == "__sqrt__":  
+            return "math.sqrt"
+        if name == "__ceil__":  
+            return "math.ceil"
+        if name == "__floor__": 
+            return "math.floor"
+        if name == "__pow__":   
+            return "math.pow"
+        if name == "__type__":  
+            return "_caramel_type"
         if name.startswith("class_"):
             return f"_class_{name[6:]}"
         safe = str(name).replace(".", "_").replace("?", "_q").replace("@", "_at")
+        
         return f"_func_{safe}"
 
     def _py_var(self, name):
@@ -708,20 +729,15 @@ class StructuredCodeGenerator:
 
     # RELATED TO BINOP
     def _get_var_type(self, var_name):
-        """Try to find the declared type of a variable from the IR.
-        For temps, infer from the instruction that produced them."""
         if not isinstance(var_name, str):
             return None
-        # Detect churro literal: single-quoted single character e.g. 'A'
         if len(var_name) == 3 and var_name[0] == "'" and var_name[-1] == "'":
             return "churro"
-        # Detect blend literal: double-quoted string
         if len(var_name) >= 2 and var_name[0] == '"' and var_name[-1] == '"':
             return "blend"
         for instr in self.ir:
             if instr.op == "DECLARE" and instr.dest == var_name:
                 return instr.extra.get("type")
-        # Temp variable — infer from producing instruction
         for instr in self.ir:
             if instr.dest != var_name:
                 continue
@@ -735,16 +751,24 @@ class StructuredCodeGenerator:
                     return "temp"
                 if binop in ("+", "-", "*", "/", "%"):
                     if "churro" in (t1, t2) and "blend" not in (t1, t2):
-                        return "bean"  # churro arithmetic → bean
+                        return "bean"
                 if "blend" in (t1, t2):
-                    return "blend"  # any blend concat → blend
+                    return "blend"
                 if "churro" in (t1, t2):
                     return "churro"
                 return t1 or t2
             if instr.op == "ARR_LOAD":
                 return self._get_var_type(instr.arg1)
-            if instr.op == "CALL" and instr.arg1 == "__sift__":
-                return "bean"
+            if instr.op == "CALL":
+                fn = instr.arg1
+                if fn == "__sift__":  return "bean"
+                if fn == "__sqrt__":  return "drip"
+                if fn == "__ceil__":  return "bean"
+                if fn == "__floor__": return "bean"
+                if fn == "__pow__":   return "drip"
+                if fn == "__type__":  return "blend"
+                if fn == "__rand__":
+                    return "drip" if instr.extra.get("use_float") else "bean"
         return None
     # ------------------------------------------------------------------
     # Header / Footer
@@ -753,6 +777,8 @@ class StructuredCodeGenerator:
     def _emit_header(self):
         self._emit_raw("# === Generated CARAMEL Program ===")
         self._emit_raw("")
+        self._emit_raw("import math")
+        self._emit_raw("import random")
         self._emit_raw("def _caramel_to_bool(val):")
         self._emit_raw("    if isinstance(val, bool): return val")
         self._emit_raw("    if isinstance(val, (int, float)): return val != 0")
@@ -762,6 +788,14 @@ class StructuredCodeGenerator:
         self._emit_raw("def _caramel_input(prompt=''):")
         self._emit_raw("    return input(prompt)")
         self._emit_raw("")
+        self._emit_raw("def _caramel_type(val):")
+        self._emit_raw("    if isinstance(val, bool): return 'temp'")
+        self._emit_raw("    if isinstance(val, int): return 'bean'")
+        self._emit_raw("    if isinstance(val, float): return 'drip'")
+        self._emit_raw("    if isinstance(val, str) and len(val) == 1: return 'churro'")
+        self._emit_raw("    if isinstance(val, str): return 'blend'")
+        self._emit_raw("    if isinstance(val, list): return 'array'")
+        self._emit_raw("    return 'unknown'")
         
         self._emit_raw("class _CaramelEarlyExit(Exception):")
         self._emit_raw("    pass")
@@ -1395,6 +1429,7 @@ class StructuredCodeGenerator:
                 self._emit(f"{dest} = _inp.lower() in (\"hot\", \"true\", \"1\")")
             else:
                 self._emit(f"{dest} = _caramel_input({prompt_arg})")
+        
         elif op == "RETURN":
             if instr.arg1 is not None:
                 val = self._py_val(instr.arg1)
@@ -1418,6 +1453,12 @@ class StructuredCodeGenerator:
             for j in range(max(0, idx - arg_count), idx):
                 if j < len(self.ir) and self.ir[j].op == "PARAM":
                     params.append(self._py_val(self.ir[j].arg1))
+            
+            if instr.arg1 == "__rand__":
+                use_float = instr.extra.get("use_float", False)
+                fn = "random.uniform" if use_float else "random.randint"
+                self._emit(f"{dest} = {fn}({', '.join(params)})")
+                return idx + 1
             self._emit(f"{dest} = {func}({', '.join(params)})")
 
         elif op == "PARAM":
@@ -1526,20 +1567,15 @@ class StructuredCodeGenerator:
         return idx + 1
 
     def _get_var_type(self, var_name):
-        """Try to find the declared type of a variable from the IR.
-        For temps, infer from the instruction that produced them."""
         if not isinstance(var_name, str):
             return None
-        # Detect churro literal: single-quoted single character e.g. 'A'
         if len(var_name) == 3 and var_name[0] == "'" and var_name[-1] == "'":
             return "churro"
-        # Detect blend literal: double-quoted string
         if len(var_name) >= 2 and var_name[0] == '"' and var_name[-1] == '"':
             return "blend"
         for instr in self.ir:
             if instr.op == "DECLARE" and instr.dest == var_name:
                 return instr.extra.get("type")
-        # Temp variable — infer from producing instruction
         for instr in self.ir:
             if instr.dest != var_name:
                 continue
@@ -1553,16 +1589,24 @@ class StructuredCodeGenerator:
                     return "temp"
                 if binop in ("+", "-", "*", "/", "%"):
                     if "churro" in (t1, t2) and "blend" not in (t1, t2):
-                        return "bean"  # churro arithmetic → bean
+                        return "bean"
                 if "blend" in (t1, t2):
-                    return "blend"  # any blend concat → blend
+                    return "blend"
                 if "churro" in (t1, t2):
                     return "churro"
                 return t1 or t2
             if instr.op == "ARR_LOAD":
                 return self._get_var_type(instr.arg1)
-            if instr.op == "CALL" and instr.arg1 == "__sift__":
-                return "bean"
+            if instr.op == "CALL":
+                fn = instr.arg1
+                if fn == "__sift__":  return "bean"
+                if fn == "__sqrt__":  return "drip"
+                if fn == "__ceil__":  return "bean"
+                if fn == "__floor__": return "bean"
+                if fn == "__pow__":   return "drip"
+                if fn == "__type__":  return "blend"
+                if fn == "__rand__":
+                    return "drip" if instr.extra.get("use_float") else "bean"
         return None
 
     # ==========================

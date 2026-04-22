@@ -120,7 +120,8 @@ class SemanticAnalyzer:
     
     # Valid data types
     VALID_TYPES = {"bean", "drip", "churro", "temp", "blend", "mug"}
-    
+    RESERVED_BUILTINS = {"sift", "ceil", "floor", "pow", "rand", "sqrt", "type"}
+
     # Type compatibility for assignments: target_type to set of compatible source types
     # STRICT: bean != drip without explicit cast
     TYPE_COMPAT = {
@@ -130,40 +131,6 @@ class SemanticAnalyzer:
         "temp":   {"temp", "bean", "drip"},             # temp can go into bean, drip
         "blend":  {"blend"},                            # blend only into blend
     }
-
-    # (source_type, target_type) -> True if allowed, False if invalid (REDUNDANT NA SIYA)
-    # TYPE_CAST_COMPAT = {
-    #     ("bean",   "bean"):   True,
-    #     ("bean",   "drip"):   True,   # .0 added
-    #     ("bean",   "blend"):  False,  # syntax error toh
-    #     ("bean",   "temp"):   True,   # non-zero=hot, zero=cold
-    #     ("bean",   "churro"): True,   # ASCII value
-
-    #     ("drip",   "bean"):   True,   # decimal truncated
-    #     ("drip",   "drip"):   True,
-    #     ("drip",   "blend"):  False,
-    #     ("drip",   "temp"):   True,   # non-zero=hot, zero=cold
-    #     ("drip",   "churro"): False,
-
-    #     ("blend",  "bean"):   False,
-    #     ("blend",  "drip"):   False,
-    #     ("blend",  "blend"):  True,
-    #     ("blend",  "temp"):   False,
-    #     ("blend",  "churro"): False,
-
-    #     ("temp",   "bean"):   True,   # hot=1, cold=0
-    #     ("temp",   "drip"):   True,   # hot=1.0, cold=0.0
-    #     ("temp",   "blend"):  False,
-    #     ("temp",   "temp"):   True,
-    #     ("temp",   "churro"): False,
-
-    #     ("churro", "bean"):   True,   # ASCII value
-    #     ("churro", "drip"):   True,   # ASCII + .0
-    #     ("churro", "blend"):  False,
-    #     ("churro", "temp"):   True,   # non-zero=hot, zero=cold
-    #     ("churro", "churro"): True,   # blend (ASCII addition)
-    # }
-    
     # Binary operator result types: (left_type, right_type) -> result_type
     BINARY_RESULT_TYPES = {
         # Arithmetic operators (bean and drip only, but must match)
@@ -341,8 +308,8 @@ class SemanticAnalyzer:
         return_type = self._extract_return_type(node)
 
         if func_name:
-            if func_name == "sift":
-                self._error("E_SIFT_RES", "'sift' is a reserved built-in and cannot be used as a function name", "sift")
+            if func_name in self.RESERVED_BUILTINS:
+                self._error("E_RES_FUNC", f"{func_name} is a reserved built-in and cannot be used as a function name", f"{func_name}")
             symbol = Symbol(
                 func_name,
                 "function",
@@ -389,7 +356,8 @@ class SemanticAnalyzer:
             # debug
             # print(f"[RECIPE '{func_name}'] scope before visit_children: {list(self.symbol_table.scopes[-1].keys())}")
             self._visit_children(node)
-            
+
+    # pre-defined functions   
     def _visit_sift_arg(self, node):
         """sift argument must be blend type or a recipe returning blend."""
         for child in node.children:
@@ -402,7 +370,51 @@ class SemanticAnalyzer:
                     f"'sift' requires a blend argument but got '{inferred}'",
                     child
                 )
-                
+
+    def _visit_sqrt_arg(self, node):
+        """sqrt(expr) — arg must be bean or drip, returns drip."""
+        for child in node.children:
+            if not self._is_parse_node(child): continue
+            inferred = self._infer_value_type(child)
+            if inferred is not None and inferred not in ("bean", "drip"):
+                self._error("E_BUILTIN", f"'sqrt' requires a numeric argument but got '{inferred}'", child)
+
+    def _visit_ceil_arg(self, node):
+        """ceil(expr) — arg must be bean or drip, returns bean."""
+        for child in node.children:
+            if not self._is_parse_node(child): continue
+            inferred = self._infer_value_type(child)
+            if inferred is not None and inferred not in ("bean", "drip"):
+                self._error("E_BUILTIN", f"'ceil' requires a numeric argument but got '{inferred}'", child)
+
+    def _visit_floor_arg(self, node):
+        """floor(expr) — arg must be bean or drip, returns bean."""
+        for child in node.children:
+            if not self._is_parse_node(child): continue
+            inferred = self._infer_value_type(child)
+            if inferred is not None and inferred not in ("bean", "drip"):
+                self._error("E_BUILTIN", f"'floor' requires a numeric argument but got '{inferred}'", child)
+
+    def _visit_pow_arg(self, node):
+        """pow(base, exp) — both must be bean or drip, returns drip."""
+        exprs = [c for c in node.children if self._is_parse_node(c) and c.name == "expression"]
+        for expr in exprs:
+            inferred = self._infer_value_type(expr)
+            if inferred is not None and inferred not in ("bean", "drip"):
+                self._error("E_BUILTIN", f"'pow' requires numeric arguments but got '{inferred}'", expr)
+
+    def _visit_rand_arg(self, node):
+        """rand(a, b) — both must be bean or drip, returns bean or drip."""
+        exprs = [c for c in node.children if self._is_parse_node(c) and c.name == "expression"]
+        for expr in exprs:
+            inferred = self._infer_value_type(expr)
+            if inferred is not None and inferred not in ("bean", "drip"):
+                self._error("E_BUILTIN", f"'rand' requires numeric arguments but got '{inferred}'", expr)
+
+    def _visit_type_arg(self, node):
+        """type(expr) — accepts any type, returns blend."""
+        pass  # no type restriction — accepts anything
+        
     def _extract_parameters(self, param_node):
         """Extract list of (name, type) tuples from a parameter AST node."""
         params = []
@@ -453,8 +465,8 @@ class SemanticAnalyzer:
                 break
 
         if func_name:
-            if func_name == "sift":
-                self._error("E_SIFT_RES", "'sift' is a reserved built-in and cannot be used as a function name", node)
+            if func_name in self.RESERVED_BUILTINS:
+                self._error("E_RES_FUNC", f"{func_name} is a reserved built-in and cannot be used as a function name", f"{func_name}")
 
             symbol = Symbol(
                 func_name,
@@ -721,17 +733,36 @@ class SemanticAnalyzer:
 
 
     def _visit_primary(self, node):
-        """Visit primary: check for undeclared variables.
-        FIX: Check token leaves with type=='ID' directly instead of checking
-        for parse nodes named 'ID'. The old approach caused _extract_token_value
-        to grab the first child of a parse node (e.g. '=') instead of the
-        actual identifier, producing false 'Undeclared identifier' errors.
-        """
+        """Visit primary: check for undeclared variables and built-in calls."""
         for child in node.children:
-            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+            if self._is_parse_node(child):
+                continue
+            if not hasattr(child, 'type'):
+                continue
+            if child.type == "ID":
                 var_name = child.value
                 if var_name and not self.symbol_table.lookup(var_name):
                     self._error("E002", f"Undeclared identifier '{var_name}'", child)
+            
+            # walang sift dito kc yung SIFT may sariling AST node na ginawa siya called sift_call, ctrl+f mo nalang - J
+            elif child.type == "SQRT":
+                self._visit_sqrt_arg(node)
+                return
+            elif child.type == "CEIL":
+                self._visit_ceil_arg(node)
+                return
+            elif child.type == "FLOOR":
+                self._visit_floor_arg(node)
+                return
+            elif child.type == "POW":
+                self._visit_pow_arg(node)
+                return
+            elif child.type == "RAND":
+                self._visit_rand_arg(node)
+                return
+            elif child.type == "TYPE":
+                self._visit_type_arg(node)
+                return
         self._visit_children(node)
     
     # Statements
