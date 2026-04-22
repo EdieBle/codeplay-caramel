@@ -15,7 +15,11 @@
 }
 
 [data-theme="dark"] .cp-navbar {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  background: rgba(13, 13, 13, 0.85); /* Semi-transparent deep dark */
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-bottom: 1px solid rgba(221, 169, 109, 0.15); /* Tinted subtle border */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .cp-navbar__brand {

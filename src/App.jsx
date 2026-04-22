@@ -7,94 +7,16 @@ import "./components/NavBar.css";
 import ErrorTabs from "./components/ErrorTabs";
 import Modal from "./components/Modal";
 
+import CaramelEditor from "./components/CaramelEditor";
+
 // === Input Sanitization Helper ===
 const sanitizeQuotes = (text) =>
   text
     .replace(/[\u201C\u201D]/g, '"')
     .replace(/[\u2018\u2019]/g, "'");
 
-// === Syntax Highlighting Helper ===
-const highlightCode = (code) => {
-  if (!code) return "";
 
-  // 1. Data Types (Use non-capturing group (?:) so we don't mess up indices)
-  const dataTypesRegex = /\b(?:bean|drip|churro|temp|mug|blend)\b/;
-
-  // 2. Literals (Strings & Numbers)
-  // Updated to support decimals like 4.5 using (?:\.\d+)?
-  const literalsRegex = /".*?"|'.*?'|\b\d+(?:\.\d+)?\b/;
-
-  // 3. Keywords
-  // Use non-capturing group (?:) for the OR logic
-  const keywordsRegex =
-    /\b(?:ifbrew|elifroth|elspress|flavour|syrup|pour|whilehot|taste\s+till|snap|skip|brewed|decaf|defoam|cup|hot|cold|recipe|empty|crema|new|cafe|backroom|order|glaze)\b|refill\?|batter@/;
-
-  // 4. Operators
-  // Removed outer parentheses.
-  // Order matters: longer matches (+=) must come before single matches (+)
-  const operatorsRegex =
-    /\+\+|--|\+=|-=|\*=|\/=|\=\=|!=|&&|\|\||>=|<=|[-+*/%=<>!]/;
-
-  // 5. Punctuation
-  // Removed outer parentheses.
-  const punctuationRegex = /[(){}[\].,]/;
-
-  // Combine into one master regex
-  // Each line here creates exactly ONE capturing group
-  const masterRegex = new RegExp(
-    `(${dataTypesRegex.source})|(${literalsRegex.source})|(${keywordsRegex.source})|(${operatorsRegex.source})|(${punctuationRegex.source})`,
-    "g",
-  );
-
-  let lastIndex = 0;
-  let match;
-  const elements = [];
-
-  while ((match = masterRegex.exec(code)) !== null) {
-    // === IDENTIFIERS LOGIC ===
-    // Any text *between* matches is treated as an identifier (variables like x, val)
-    if (match.index > lastIndex) {
-      elements.push(
-        <span key={lastIndex} className="token-identifier">
-          {code.slice(lastIndex, match.index)}
-        </span>,
-      );
-    }
-
-    let className = "token-identifier";
-
-    // Assign class based on which Group matched
-    if (match[1]) {
-      className = "token-datatype"; // SeaGreen
-    } else if (match[2]) {
-      className = "token-literal"; // Olive
-    } else if (match[3]) {
-      className = "token-keyword"; // Red
-    } else if (match[4]) {
-      className = "token-operator"; // Blue
-    } else if (match[5]) {
-      className = "token-punctuation"; // Orange
-    }
-
-    elements.push(
-      <span key={match.index} className={className}>
-        {match[0]}
-      </span>,
-    );
-    lastIndex = masterRegex.lastIndex;
-  }
-
-  // Push remaining text
-  if (lastIndex < code.length) {
-    elements.push(
-      <span key={lastIndex} className="token-identifier">
-        {code.slice(lastIndex)}
-      </span>,
-    );
-  }
-
-  return elements;
-};
+// highlightCode removed. Syntax highlighting is now handled by Monaco Editor.
 
 export default function App() {
   const [code, setCode] = useState(
@@ -119,16 +41,13 @@ export default function App() {
   const [lineTokens, setLineTokens] = useState([]);
   const [showLineTokens, setShowLineTokens] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [showTokenTable, setShowTokenTable] = useState(true);
+  const [showTokenTable, setShowTokenTable] = useState(false);
 
   // Save Modal State
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [saveFilename, setSaveFilename] = useState("code");
 
   // Refs
-  const textareaRef = useRef(null);
-  const highlightRef = useRef(null);
-  const lineNumbersRef = useRef(null);
   const fileInputRef = useRef(null);
   const executionSessionRef = useRef(null);
   const pollTimerRef = useRef(null);
@@ -444,37 +363,7 @@ export default function App() {
     setHasExecuted(false);
   };
 
-  const updateCursorPosition = () => {
-    const ta = textareaRef.current;
-    if (!ta) return;
-
-    const pos = ta.selectionStart ?? 0;
-    const before = code.slice(0, pos);
-
-    const lines = before.split("\n");
-
-    setCurrentLine(lines.length);
-
-    const lastLine = lines[lines.length - 1] ?? "";
-    setCurrentColumn(lastLine.length + 1);
-  };
-
-  const handleScroll = () => {
-    const ta = textareaRef.current;
-    const ln = lineNumbersRef.current;
-    const hl = highlightRef.current;
-    if (!ta) return;
-
-    if (ln) ln.scrollTop = ta.scrollTop;
-    if (hl) {
-      hl.scrollTop = ta.scrollTop;
-      hl.scrollLeft = ta.scrollLeft;
-    }
-  };
-
-  useEffect(() => {
-    updateCursorPosition();
-  }, [code]);
+  // Cursor tracking is now handled directly by Monaco Editor.
 
   return (
     <div className="app-root">
@@ -493,109 +382,33 @@ export default function App() {
             showTokenTable ? "" : "layout-row-top--expanded"
           }`}
         >
-          <div className="editor layout-flex">
-            <h3 className="play-bold">Code Editor</h3>
-
-            <div className="editor-container">
-              <div className="line-numbers" ref={lineNumbersRef}>
-                {code.split("\n").map((_, i) => (
-                  <div
-                    key={i}
-                    className={`line-number ${i + 1 === currentLine ? "active" : ""}`}
-                  >
-                    {i + 1}
-                  </div>
-                ))}
+          <div className="editor layout-flex" style={{ paddingTop: '0', background: 'transparent', border: 'none', boxShadow: 'none' }}>
+            <div className="editor-tabs-container">
+              <div className="editor-tab-title">
+                <span className="play-bold">Code Editor</span>
               </div>
-
-              <div className="code-wrapper">
-                <pre
-                  className="code-layer highlight-overlay"
-                  ref={highlightRef}
-                >
-                  {highlightCode(code)}
-                  <br />
-                </pre>
-
-                <textarea
-                  ref={textareaRef}
-                  className="code-layer real-textarea"
-                  value={code}
-                  onChange={(e) => setCode(sanitizeQuotes(e.target.value))}
-                  onClick={updateCursorPosition}
-                  onKeyUp={updateCursorPosition}
-                  onScroll={handleScroll}
-                  onKeyDown={(e) => {
-                    if (e.key === "Tab") {
-                      e.preventDefault();
-                      const ta = textareaRef.current;
-                      const start = ta.selectionStart;
-                      const end = ta.selectionEnd;
-                      const newValue =
-                        code.slice(0, start) + "\t" + code.slice(end);
-                      setCode(newValue);
-                      requestAnimationFrame(() => {
-                        ta.selectionStart = ta.selectionEnd = start + 1;
-                        updateCursorPosition();
-                      });
-                    }
-                  }}
-                  spellCheck={false}
-                />
-                <div className="cursor-status">
-                  Ln {currentLine}, Col {currentColumn}
-                </div>
+              <div className="editor-tab-actions">
+                <button className="tokenize-btn" onClick={handleExecute} disabled={busy}>{busy ? "Compiling..." : "Compile"}</button>
+                <button className="tokenize-btn" onClick={handleTokenizeParseAndAnalyzer} disabled={busy}>{busy ? "Processing..." : "Analyze"}</button>
+                <button className="tokenize-btn" onClick={handleTokenizeAndParse} disabled={busy}>{busy ? "Processing..." : "Parse"}</button>
+                <button className="tokenize-btn" onClick={handleTokenize} disabled={busy}>{busy ? "Tokenizing..." : "Tokenize"}</button>
+                <button className="tokenize-btn" onClick={handleClearEditor} disabled={busy}>Clear</button>
+                <button className="tokenize-btn tokenize-btn--toggle" onClick={() => setShowTokenTable(!showTokenTable)} disabled={busy}>{showTokenTable ? "Hide Lexeme Output" : "Show Lexeme Output"}</button>
               </div>
             </div>
 
-            <div className="tokenize-btn-container">
-              <button
-                className="tokenize-btn"
-                onClick={handleExecute}
-                disabled={busy}
-              >
-                {busy ? "Compiling..." : "Compile"}
-              </button>
-
-              <button
-                className="tokenize-btn"
-                onClick={handleTokenizeParseAndAnalyzer}
-                disabled={busy}
-              >
-                {busy ? "Processing..." : "Analyze"}
-              </button>
-
-              <button
-                className="tokenize-btn"
-                onClick={handleTokenizeAndParse}
-                disabled={busy}
-              >
-                {busy ? "Processing..." : "Parse"}
-              </button>
-
-              <button
-                className="tokenize-btn"
-                onClick={handleTokenize}
-                disabled={busy}
-              >
-                {busy ? "Tokenizing..." : "Tokenize"}
-              </button>
-
-              <button
-                className="tokenize-btn"
-                onClick={handleClearEditor}
-                disabled={busy}
-              >
-                Clear
-              </button>
-
-              <button
-                className="tokenize-btn tokenize-btn--toggle"
-                onClick={() => setShowTokenTable(!showTokenTable)}
-                disabled={busy}
-              >
-                {showTokenTable ? "Hide Lexeme Output" : "Show Lexeme Output"}
-              </button>
+            <div className="editor-container" style={{ marginTop: 0, borderTopLeftRadius: 0, position: 'relative' }}>
+              <CaramelEditor 
+                code={code}
+                setCode={setCode}
+                onChangeCursor={(line, col) => {
+                  setCurrentLine(line);
+                  setCurrentColumn(col);
+                }}
+              />
+              <div className="cursor-status" style={{ zIndex: 10 }}>
+                Ln {currentLine}, Col {currentColumn}
+              </div>
             </div>
           </div>
 

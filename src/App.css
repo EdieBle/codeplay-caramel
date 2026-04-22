@@ -19,11 +19,13 @@
 
 [data-theme="dark"] {
   --color-primary: #dda96d;
-  --color-secondary-light: #3d3d3d;
-  --color-bg-light: #2d2d2d;
-  --color-text-light: #e8e8e8;
-  --color-text-muted-light: #a8a8a8;
-  --color-border-light: rgba(255, 255, 255, 0.1);
+  --color-primary-hover: #e6b280;
+  --color-secondary-light: #161616; /* New deeper panel background */
+  --color-bg-light: #0d0d0d;       /* New deepest background */
+  --color-text-light: #f5f5f5;      /* Crisp white text */
+  --color-text-muted-light: #999999;
+  --color-border-light: rgba(221, 169, 109, 0.15); /* Tinted borders */
+  --color-shadow-light: rgba(0, 0, 0, 0.6);
 }
 
 #root {
@@ -70,134 +72,91 @@
 
 /* =========================================
    SYNTAX HIGHLIGHTING & STACKING LOGIC
+   (Delegated to Monaco Editor)
    ========================================= */
-
-.code-wrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: var(--color-bg-light);
-  border-radius: 8px;
-  transition:
-    background 0.3s ease,
-    color 0.3s ease;
-}
-
-.code-layer {
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  letter-spacing: normal;
-  tab-size: 4;
-  padding: 10px;
-  margin: 0;
-  border: none;
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  white-space: pre;
-  overflow: auto;
-  text-align: left;
-  color: var(--color-text-light);
-  background: var(--color-bg-light);
-  transition:
-    color 0.3s ease,
-    background 0.3s ease;
-}
-
-.highlight-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 1;
-  pointer-events: none;
-  /* Default color for identifiers (unreserved words) */
-  color: #333333;
-  background: transparent;
-}
-
-.real-textarea {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 2;
-  color: transparent;
-  background: transparent;
-  caret-color: var(--color-primary);
-  resize: none;
-  outline: none;
-  transition: caret-color 0.3s ease;
-}
 
 /* =========================================
-   COLOR PALETTE (6 Distinct Groups)
+   COLOR PALETTE (Distinct Groups)
    ========================================= */
 
-/* 1. DATA TYPES (bean, drip, churro...) -> BLUE */
+/* 1. DATA TYPES -> DARK BLUE */
 .token-datatype {
   color: #084690;
   font-weight: bold;
   transition: color 0.3s ease;
 }
+[data-theme="dark"] .token-datatype { color: #64b5f6; }
 
-[data-theme="dark"] .token-datatype {
-  color: #64b5f6;
-}
-
-/* 2. KEYWORDS (ifbrew, cup...) -> CYAN */
+/* 2. REMAINING KEYWORDS -> LIGHT BLUE */
 .token-keyword {
   color: #1c9cc8;
   font-weight: bold;
   transition: color 0.3s ease;
 }
+[data-theme="dark"] .token-keyword { color: #4dd0e1; }
 
-[data-theme="dark"] .token-keyword {
-  color: #4dd0e1;
+/* 3. ORANGE KEYWORDS (recipe, empty, crema, new) */
+.token-keyword-orange {
+  color: #f39c12;
+  font-weight: bold;
+  transition: color 0.3s ease;
 }
+[data-theme="dark"] .token-keyword-orange { color: #ffb74d; }
 
-/* 3. OPERATORS (++, --, ==, &&, +=...) -> RED */
+/* 4. GREEN KEYWORDS (cafe, backroom, order, brewed) */
+.token-keyword-green {
+  color: #27ae60;
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+[data-theme="dark"] .token-keyword-green { color: #66bb6a; }
+
+/* 5. PINK KEYWORDS (sift) */
+.token-keyword-pink {
+  color: #e84393;
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+[data-theme="dark"] .token-keyword-pink { color: #f48fb1; }
+
+/* 6. COMMENTS -> GRAY */
+.token-comment {
+  color: #7f8c8d;
+  font-style: italic;
+  transition: color 0.3s ease;
+}
+[data-theme="dark"] .token-comment { color: #a8a8a8; }
+
+/* 7. OPERATORS -> RED (Keep as is) */
 .token-operator {
   color: #a10702;
   font-weight: bold;
   transition: color 0.3s ease;
 }
+[data-theme="dark"] .token-operator { color: #ff6b6b; }
 
-[data-theme="dark"] .token-operator {
-  color: #ff6b6b;
-}
-
-/* 4. SYMBOLS / PUNCTUATION (. , { } [ ] ( )) -> GRAY */
+/* 8. SYMBOLS / PUNCTUATION -> GRAY (Keep as is) */
 .token-punctuation {
   color: #5f5d5d;
   font-weight: bold;
   transition: color 0.3s ease;
 }
+[data-theme="dark"] .token-punctuation { color: #b0b0b0; }
 
-[data-theme="dark"] .token-punctuation {
-  color: #b0b0b0;
-}
-
-/* 5. LITERALS ("text", 123) -> YELLOW/GREEN */
+/* 9. LITERALS -> YELLOW/GREEN (Keep as is) */
 .token-literal {
   color: #556b2f;
   transition: color 0.3s ease;
 }
+[data-theme="dark"] .token-literal { color: #a5d6a7; }
 
-[data-theme="dark"] .token-literal {
-  color: #a5d6a7;
-}
-
-/* 6. IDENTIFIERS (val, char, int, x, y...) -> ORANGE */
+/* 10. IDENTIFIERS -> RED */
 .token-identifier {
-  color: #f75830;
+  color: #c0392b;
   font-weight: normal;
   transition: color 0.3s ease;
 }
-
-[data-theme="dark"] .token-identifier {
-  color: #ffb366;
-}
+[data-theme="dark"] .token-identifier { color: #e57373; }
 
 /* =========================================
    LAYOUT EXPANSION LOGIC
@@ -237,66 +196,16 @@
    PERFECT ALIGNMENT FIX
    ========================================= */
 
-/* 1. Flex container to hold Numbers and Code side-by-side */
 .editor-container {
-  display: flex; /* Use Flexbox */
-  flex-direction: row; /* Align horizontally */
-  align-items: stretch; /* Make both same height */
-
-  /* Optional: visual border/background for the whole box */
-  border: 1px solid var(--color-border-light);
+  display: block; 
+  position: relative;
   background-color: var(--color-bg-light);
   height: 55vh; /* Responsive height */
   overflow: hidden;
-  border-radius: 8px;
-  transition:
-    background-color 0.3s ease,
-    border-color 0.3s ease;
-}
-
-/* 2. The Line Numbers Column */
-.line-numbers {
-  /* CRITICAL: Must match .code-layer typography EXACTLY */
-  font-family: "Consolas", "Monaco", "Courier New", monospace;
-  font-size: 14px;
-  line-height: 1.5;
-
-  /* CRITICAL: Must match .code-layer padding-top (10px) */
-  /* Top padding moves the first number down to align with first line of code */
-  padding: 10px 0;
-
-  /* Visual styling for the gutter */
-  text-align: right;
-  background-color: var(--color-secondary-light);
-  border-right: 1px solid var(--color-border-light);
-  min-width: 45px; /* Fixed width */
-  user-select: none; /* Prevent selecting numbers */
-  color: var(--color-text-muted-light);
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease,
-    border-color 0.3s ease;
-}
-
-/* 3. The Individual Number */
-.line-number {
-  /* Force each number to be exactly the height of one code line */
-  /* 14px font * 1.5 line-height = 21px height */
-  height: 21px;
-  line-height: 21px;
-  padding-right: 10px; /* Space between number and border */
-}
-
-/* 4. The Code Wrapper (Right Side) */
-.code-wrapper {
-  flex-grow: 1; /* Fill the rest of the width */
-  position: relative;
-  overflow: hidden;
-}
-
-/* Ensure code layer background is transparent so lines don't get cut off */
-.code-layer {
-  background: transparent;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-light);
+  box-shadow: 0 4px 20px var(--color-shadow-light);
+  transition: all 0.3s ease;
 }
 
 /* =========================================

@@ -26,12 +26,14 @@
 [data-theme="dark"] {
   --color-primary: #dda96d;
   --color-primary-hover: #e6b280;
-  --color-secondary-light: #3d3d3d;
-  --color-bg-light: #2d2d2d;
-  --color-text-light: #e8e8e8;
-  --color-text-muted-light: #a8a8a8;
-  --color-border-light: rgba(255, 255, 255, 0.1);
-  --color-shadow-light: rgba(0, 0, 0, 0.3);
+  --color-secondary-light: #161616;
+  --color-bg-light: #0d0d0d;
+  --color-text-light: #f5f5f5;
+  --color-text-muted-light: #999999;
+  --color-border-light: rgba(221, 169, 109, 0.15);
+  --color-shadow-light: rgba(0, 0, 0, 0.6);
+  /* Ensure stale legacy variables also use the new dark color if referenced */
+  --color-bg-dark: #0d0d0d;
 }
 
 /* BUTTONS */
@@ -84,21 +86,22 @@
 
 [data-theme="dark"] .tokenize-btn {
   background: var(--color-primary);
-  color: #1a1a1a;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  color: #000; /* Contrast on gold */
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
 [data-theme="dark"] .tokenize-btn:hover {
   background: var(--color-primary-hover);
-  color: #1a1a1a;
-  box-shadow: 0 4px 12px rgba(221, 169, 109, 0.3);
+  color: #000;
+  box-shadow: 0 6px 20px rgba(221, 169, 109, 0.25);
+  transform: translateY(-3px) scale(1.02);
 }
 
 .tokenize-btn--toggle {
   background: var(--color-secondary-light);
-  color: #6d4b24;
+  color: var(--color-text-muted-light);
   border: 1px solid var(--color-border-light);
-  box-shadow: 0 2px 6px rgba(85, 77, 64, 0.15);
+  box-shadow: 0 2px 6px var(--color-shadow-light);
   font-weight: 500;
 }
 
@@ -106,22 +109,19 @@
   background: #ffe8d3;
   color: #5a3c1c;
   transform: translateY(-2px);
-  box-shadow: 0 3px 10px rgba(85, 77, 64, 0.25);
+  box-shadow: 0 4px 12px var(--color-shadow-light);
 }
 
 [data-theme="dark"] .tokenize-btn--toggle {
-  background: var(--color-bg-dark-secondary);
-  color: var(--color-text-dark);
-  border: thin solid rgba(221, 169, 109, 0.4);
-  box-shadow: inset 0 0 0 1px rgba(221, 169, 109, 0.3);
+  background: rgba(221, 169, 109, 0.05);
+  color: var(--color-primary);
+  border: 1px solid rgba(221, 169, 109, 0.3);
 }
 
 [data-theme="dark"] .tokenize-btn--toggle:hover {
   background: rgba(221, 169, 109, 0.15);
   color: #ffffff;
-  box-shadow:
-    inset 0 0 0 1px rgba(221, 169, 109, 0.5),
-    0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
 .tokens {
@@ -131,35 +131,29 @@
   max-width: 550px;
   flex-direction: column;
   max-height: 80vh;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px var(--color-shadow-light);
+  border-radius: 12px;
+  box-shadow: 0 8px 30px var(--color-shadow-light);
   background: var(--color-bg-light);
   border: 1px solid var(--color-border-light);
-  transition:
-    background 0.3s ease,
-    box-shadow 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 /* Center title and add spacing */
 .tokens h3 {
   margin: 0;
-  padding: 1.5rem 1.5rem 1.25rem 1.5rem;
+  padding: 1.5rem;
   text-align: center;
   font-family: "Indie Flower", cursive;
   color: var(--color-text-light);
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   letter-spacing: 0.5px;
-  border-bottom: 2px solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border-light);
   background: linear-gradient(
     135deg,
-    rgba(221, 169, 109, 0.03) 0%,
+    rgba(221, 169, 109, 0.05) 0%,
     transparent 100%
   );
   font-weight: 600;
-  transition:
-    color 0.3s ease,
-    border-color 0.3s ease,
-    background 0.3s ease;
 }
 
 /* Table styling */
@@ -266,11 +260,9 @@ body {
 /* Code editor container */
 .editor-container {
   position: relative;
-  display: flex;
-  align-items: stretch;
+  display: block;
   background: var(--color-bg-light);
   border-radius: 6px;
-  overflow: hidden;
   border: 1px solid var(--color-border-light);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   width: 100%;
@@ -281,69 +273,6 @@ body {
     background 0.3s ease,
     box-shadow 0.3s ease,
     border-color 0.3s ease;
-}
-
-/* Line numbers on the left */
-.line-numbers {
-  flex-shrink: 0;
-  width: 55px;
-  background: var(--color-secondary-light);
-  color: var(--color-text-muted-light);
-  font-family: "Fira Code", monospace;
-  font-size: 0.85rem;
-  text-align: right;
-  padding: 10px 0.5rem;
-  box-sizing: border-box;
-  border-right: 1px solid var(--color-border-light);
-  overflow: hidden;
-  transition:
-    background 0.3s ease,
-    color 0.3s ease,
-    border-color 0.3s ease;
-}
-
-/* Each line number */
-.line-number {
-  line-height: 1.5rem;
-  height: 1.5rem;
-  padding-right: 6px;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
-}
-
-.line-number.active {
-  background: var(--color-primary);
-  color: #1a1a1a;
-  border-radius: 4px;
-  font-weight: 600;
-}
-
-[data-theme="dark"] .line-number.active {
-  background: var(--color-primary);
-  color: #1a1a1a;
-}
-
-/* Text editor area */
-.textarea {
-  flex: 1;
-  background: var(--color-bg-light);
-  color: var(--color-text-light);
-  border: none;
-  outline: none;
-  padding: 0.75rem 1rem;
-  font-family: "Play", sans-serif;
-  font-size: 1rem;
-  resize: none;
-  white-space: pre;
-  tab-size: 2;
-  caret-color: var(--color-primary);
-  line-height: 1.5rem;
-  overflow-y: auto;
-  transition:
-    background 0.3s ease,
-    color 0.3s ease,
-    caret-color 0.3s ease;
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
@@ -760,3 +689,63 @@ body {
   background: rgba(45, 45, 45, 0.9);
   color: var(--color-text-dark);
 }
+
+/* Custom Tabs for Code Editor layout */
+.editor-tabs-container {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 0;
+}
+
+.editor-tab-title {
+  background-color: var(--color-bg-light);
+  color: var(--color-text-light);
+  padding: 0.75rem 1.5rem 0.6rem 1.5rem;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border-light);
+  border-bottom: none;
+  z-index: 2;
+  position: relative;
+  top: 1px;
+}
+
+[data-theme="dark"] .editor-tab-title {
+  background-color: var(--color-bg-light);
+}
+
+.editor-tab-title .play-bold {
+  color: var(--color-text-light) !important;
+  font-size: 1.2rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+}
+
+.editor-tab-actions {
+  background-color: transparent;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  padding: 0.5rem 1rem 0.5rem 0.5rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.editor-tab-actions .tokenize-btn {
+  margin: 0;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+.editor-tab-actions .tokenize-btn--toggle {
+  margin-left: auto;
+}
+
+
