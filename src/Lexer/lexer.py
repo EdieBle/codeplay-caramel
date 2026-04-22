@@ -163,7 +163,7 @@ def tokenize(code):
             next_ch_la_1 = code[pos + 1] if pos + 1 < len(code) else None
             next_ch_la_2 = code[pos + 2] if pos + 2 < len(code) else None
 
-            can_go_to_194 = 194 in branches and ch == '-'
+            can_go_to_223 = 223 in branches and ch == '-'
             IGNORED = {"whitespace", "newline", "tab"}
             def last_significant_token(tokens):
                 for tok in reversed(tokens):
@@ -171,9 +171,9 @@ def tokenize(code):
                         return tok
                 return None
             
-            if can_go_to_194 and next_ch_la_1 is not None and next_ch_la_1.isdigit():
+            if can_go_to_223 and next_ch_la_1 is not None and next_ch_la_1.isdigit():
                 prev = last_significant_token(tokens)
-                print(f"\n\n\n can go to 194 and next character digit? {can_go_to_194}\n\n\n")
+                print(f"\n\n\n can go to 223 and next character digit? {can_go_to_223}\n\n\n")
 
                 if (prev and (prev["type"] == "beanlit" or prev["type"] == "id" or prev["type"] == ")") and next_ch_la_1 is not None and next_ch_la_1.isdigit()):
                     # Force binary minus
@@ -184,7 +184,7 @@ def tokenize(code):
                     break
                     
 
-            if can_go_to_194 and next_ch_la_2 is not None and next_ch_la_2.isdigit():
+            if can_go_to_223 and next_ch_la_2 is not None and next_ch_la_2.isdigit():
                 prev = last_significant_token(tokens)
                 if (prev and (prev["type"] == "beanlit" or prev["type"] == "id" or prev["type"] == ")")
                         and next_ch_la_1 is not None and next_ch_la_2.isdigit()
@@ -198,18 +198,18 @@ def tokenize(code):
 
 
             # Check if '0' can move us to state 253, this is for the bean and drip literal leading zero stuff
-            can_go_to_250 = any(
+            can_go_to_279 = any(
                 nxt for nxt in branches
-                if 0 in TRANSITIONS_DFA and '0' in TRANSITIONS_DFA[nxt].chars and nxt == 250
+                if 0 in TRANSITIONS_DFA and '0' in TRANSITIONS_DFA[nxt].chars and nxt == 279
             )
 
             # Check if any current DFA branch can move us to state 273 (the '.' state)
-            can_go_to_271 = any(
-                nxt == 271 and '.' in TRANSITIONS_DFA[nxt].chars
+            can_go_to_299 = any(
+                nxt == 299 and '.' in TRANSITIONS_DFA[nxt].chars
                 for nxt in branches
             )
 
-            if can_go_to_271:
+            if can_go_to_299:
                 look = pos
                 while look < len(code):
                     c = code[look]
@@ -219,7 +219,7 @@ def tokenize(code):
 
                     look += 1
 
-            if ch == '0' and can_go_to_250:
+            if ch == '0' and can_go_to_279:
                 lookahead = pos + 1
                 # first_non_zero_found = False
                 while lookahead < len(code):
@@ -249,7 +249,7 @@ def tokenize(code):
 
             for nxt in branches:
                 node = TRANSITIONS_DFA[nxt]
-                if (curr_state == 0 and nxt == 249 and ch == "\n"): # check might be unnecessary for ch but might as well just to make sure amirite
+                if (curr_state == 0 and nxt == 278 and ch == "\n"): # check might be unnecessary for ch but might as well just to make sure amirite
                     print("\033[92m[NEWLINE]\033[0m Consuming newline")
                     push(node.token_type, "\n", column)
 
@@ -266,7 +266,7 @@ def tokenize(code):
                     line += 1
                     column = 1
 
-                elif curr_state == 0 and nxt == 237 and ch == "]": 
+                elif curr_state == 0 and nxt == 266 and ch == "]": 
                     push(node.token_type, "]", column)
 
                     pos += 1     
@@ -276,7 +276,7 @@ def tokenize(code):
                     
                     break
 
-                elif curr_state == 0 and nxt == 240 and ch == "}": 
+                elif curr_state == 0 and nxt == 269 and ch == "}": 
                     push(node.token_type, "}", column)
 
                     pos += 1     
@@ -348,7 +348,7 @@ def tokenize(code):
                 print("\033[95m[FALLBACK] Starting identifier scan\033[0m")  # debug
 
                 lex = first_char
-                temp_state = 302
+                temp_state = 331
                 i = start_i + 1
 
                 while i < len(code):
@@ -422,7 +422,7 @@ def tokenize(code):
                     return None, start_i, "INC_DRIP_ERR"
 
                 lex = first_char
-                temp_state = 250
+                temp_state = 279
                 i = start_i + 1
 
                 while i < len(code):
@@ -447,10 +447,10 @@ def tokenize(code):
                     # =============================================
                     # ERROR: entered 270 ('.') but next char not digit
                     # =============================================
-                    if nxt == 271:      # DOT state
-                        print("[NUM] ENTERED DOT STATE 271")
+                    if nxt == 299:      # DOT state
+                        print("[NUM] ENTERED DOT STATE 299")
                         # Lookahead: must have digit next
-                        if i + 1 >= len(code) or code[i+1] not in TRANSITIONS_DFA[271].chars:
+                        if i + 1 >= len(code) or code[i+1] not in TRANSITIONS_DFA[299].chars:
                             print("\033[91m[NUM ERROR]\033[0m Float literal has '.' but no digits after it")
                             return None, start_i, "INC_DRIP_ERR"
 
