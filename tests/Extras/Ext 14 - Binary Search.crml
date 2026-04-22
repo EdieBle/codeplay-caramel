@@ -1,0 +1,54 @@
+bean cup() [
+  bean low, high, mid, tmp, found, found_id, n, val, search
+  bean arr[***]
+  
+  glaze("Input array size: ")
+  batter@ n 
+
+  ~~ Input elements
+  pour(bean i = 0; i < n; i++) {
+    glaze("Element " + i + ": ")
+    batter@ val
+    arr[i] = val
+  }
+  glaze("Search for a number: ")
+  batter@ search 
+
+  pour(bean i = 0; i < n - 1; i++) {
+    pour(bean j = 0; j < n - i - 1; j++){
+      ifbrew(arr[j] > arr [j+1]) {
+        tmp = arr[j]
+        arr[j] = arr[j+1]
+        arr[j+1] = tmp
+      }
+    }
+  }
+high = n - 1
+  whilehot(low <= high) { 
+    
+    mid = low + (high - low) / 2
+
+    ifbrew(arr[mid] == search) { 
+      found = 1
+      found_id = mid
+      low = high + 1
+    }
+
+    ifbrew(arr[mid] < search) { 
+      low = mid + 1
+    }
+
+    elspress {
+      high = mid - 1
+    }
+  }
+
+  ifbrew(found == 1) {
+    glaze("Element is present at index " + found_id)
+  }
+
+  elspress {
+    glaze("Element is not present!")
+  }
+  refill? 0
+]

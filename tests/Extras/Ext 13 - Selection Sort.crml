@@ -1,0 +1,31 @@
+bean cup() [
+  bean n, val
+  bean arr[***]
+  glaze("Input array size: ")
+  batter@ n
+
+~~ Store the array elements in the given array size
+  pour(bean i= 0; i < n; i++) {
+    glaze("Element " + i + ": ")
+    batter@ val
+    arr[i] = val
+  }
+
+~~ Selection sort 
+  pour(bean i = 0; i < n - 1; i++){
+    bean min = i 
+    pour (bean j = 0; j < n - i - 1; j++) {
+      ifbrew(arr[j] > arr[j+1]) {
+        min = arr[j]
+        arr[j] = arr[j+1]
+        arr[j+1] = min
+      }
+    }
+  }
+
+~~ Print the sorted elements
+pour (bean i = 0; i < n; i++){
+  glaze(arr[i] + " ")
+}
+  refill? 0
+]
