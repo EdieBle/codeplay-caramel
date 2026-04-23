@@ -29,7 +29,7 @@ export default function CaramelEditor({ code, setCode, onChangeCursor }) {
           [/\b(?:cafe|backroom|order|brewed)\b/, "keywordGreen"],
 
           // 5. Pink Keywords
-          [/\bsift\b/, "keywordPink"],
+          [/\b(?:sift|ceil|floor|pow|rand|sqrt|rand)\b/, "keywordPink"],
 
           // 6. Remaining Keywords
           [
@@ -144,7 +144,7 @@ export default function CaramelEditor({ code, setCode, onChangeCursor }) {
       "bean", "drip", "churro", "temp", "mug", "blend",
       "recipe", "empty", "crema", "new",
       "cafe", "backroom", "order", "brewed",
-      "sift",
+      "sift", "ceil", "floor", "pow", "rand", "sqrt", "type",
       "ifbrew", "elifroth", "elspress", "flavour", "syrup", "pour", 
       "whilehot", "taste till", "snap", "skip", "decaf", "defoam", 
       "cup", "hot", "cold", "glaze", "refill?", "batter@"
