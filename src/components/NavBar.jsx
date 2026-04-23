@@ -56,8 +56,8 @@ export default function NavBar({ onSaveFile, onOpenFile }) {
             <a
               href="#"
               onClick={(e) => {
-                e.preventDefault();
-                onSaveFile?.();
+                // e.preventDefault();
+                // onSaveFile?.();
               }}
             >
               <i className="fa-solid fa-save"></i>
@@ -69,8 +69,8 @@ export default function NavBar({ onSaveFile, onOpenFile }) {
             <a
               href="#"
               onClick={(e) => {
-                e.preventDefault();
-                onOpenFile?.();
+                // e.preventDefault();
+                 //onOpenFile?.();
               }}
             >
               <i className="fa-solid fa-folder-open"></i>
