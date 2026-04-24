@@ -229,3 +229,11 @@
     border-color 0.3s ease,
     color 0.3s ease;
 }
+
+.caramel-string-bracket-light {
+  color: #556b2f !important;
+}
+
+.caramel-string-bracket-dark {
+  color: #a5d6a7 !important;
+}
