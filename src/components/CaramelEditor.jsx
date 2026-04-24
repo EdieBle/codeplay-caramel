@@ -29,7 +29,7 @@ export default function CaramelEditor({ code, setCode, onChangeCursor }) {
           [/\b(?:cafe|backroom|order|brewed)\b/, "keywordGreen"],
 
           // 5. Pink Keywords
-          [/\b(?:sift|ceil|floor|pow|rand|sqrt|rand)\b/, "keywordPink"],
+          [/\b(?:sift|ceil|floor|pow|rand|sqrt|type)\b/, "keywordPink"],
 
           // 6. Remaining Keywords
           [
