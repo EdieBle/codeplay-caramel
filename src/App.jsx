@@ -54,6 +54,27 @@ export default function App() {
   const [currentLine, setCurrentLine] = useState(1);
   const [currentColumn, setCurrentColumn] = useState(1);
 
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const autosaveTimerRef = useRef(null);
+  const DRAFT_KEY = 'caramel_draft';
+  const DRAFT_TIME_KEY = 'caramel_draft_time';
+  const DEFAULT_CODE = `bean cup() [\n  bean x = 5, y = 7\n  drip val = 4.5\n  refill? 0\n]`;
+  const [saveStatus, setSaveStatus] = useState('saved'); // 'saved' | 'unsaved' | 'saving'
+
+  const codeRef = useRef(code);
+  useEffect(() => { codeRef.current = code; }, [code]);
+
+  useEffect(() => {
+    autosaveTimerRef.current = setInterval(() => {
+      if (codeRef.current && codeRef.current.trim()) {
+        localStorage.setItem(DRAFT_KEY, codeRef.current);
+        localStorage.setItem(DRAFT_TIME_KEY, Date.now().toString());
+      }
+    }, 30000);
+    return () => clearInterval(autosaveTimerRef.current);
+  }, []);
+
   // Clean up polling on unmount
   useEffect(() => {
     return () => {
@@ -63,10 +84,47 @@ export default function App() {
     };
   }, []);
 
+    // On mount: check for saved draft
+  useEffect(() => {
+    const draft = localStorage.getItem(DRAFT_KEY);
+    const draftTime = localStorage.getItem(DRAFT_TIME_KEY);
+    if (draft && draft !== DEFAULT_CODE) {
+      const time = draftTime ? new Date(parseInt(draftTime)).toLocaleTimeString() : 'unknown time';
+      setShowDraftBanner(time);
+    }
+  }, []);
+
+  // Autosave every 30 seconds
+  useEffect(() => {
+    autosaveTimerRef.current = setInterval(() => {
+      if (codeRef.current && codeRef.current.trim()) {
+        setSaveStatus('saving');
+        localStorage.setItem(DRAFT_KEY, codeRef.current);
+        localStorage.setItem(DRAFT_TIME_KEY, Date.now().toString());
+        setTimeout(() => setSaveStatus('saved'), 800);
+      }
+    }, 30000);
+  }, [code]);
+
+  useEffect(() => {
+    codeRef.current = code;
+    setSaveStatus('unsaved');
+  }, [code]);
+
   // === Handlers ===
 
   const handleSaveFile = () => {
     setShowSaveModal(true);
+  };
+
+  const handleRestoreDraft = () => {
+    const draft = localStorage.getItem(DRAFT_KEY);
+    if (draft) setCode(draft);
+    setShowDraftBanner(false);
+  };
+
+  const handleDismissDraft = () => {
+    setShowDraftBanner(false);
   };
 
   const handleSaveModalConfirm = () => {
@@ -83,6 +141,8 @@ export default function App() {
     URL.revokeObjectURL(element.href);
     setShowSaveModal(false);
     setSaveFilename("code");
+    localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem(DRAFT_TIME_KEY);
   };
 
   const handleSaveModalCancel = () => {
@@ -361,6 +421,8 @@ export default function App() {
     setCurrentLine(1);
     setExecutionResult(null);
     setHasExecuted(false);
+    localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem(DRAFT_TIME_KEY);
   };
 
   // Cursor tracking is now handled directly by Monaco Editor.
@@ -375,7 +437,13 @@ export default function App() {
         style={{ display: "none" }}
       />
       <NavBar onSaveFile={handleSaveFile} onOpenFile={handleOpenFile} />
-
+        {showDraftBanner && (
+          <div className="draft-banner">
+            <span>📄 Unsaved draft found from {showDraftBanner}.</span>
+            <button className="draft-btn draft-btn--restore" onClick={handleRestoreDraft}>Restore</button>
+            <button className="draft-btn draft-btn--dismiss" onClick={handleDismissDraft}>Dismiss</button>
+          </div>
+        )}
       <div className="main-content">
         <div
           className={`layout-row-top ${
@@ -383,6 +451,7 @@ export default function App() {
           }`}
         >
           <div className="editor layout-flex" style={{ paddingTop: '0', background: 'transparent', border: 'none', boxShadow: 'none' }}>
+                        
             <div className="editor-tabs-container">
               <div className="editor-tab-title">
                 <span className="play-bold">Code Editor</span>
@@ -393,6 +462,11 @@ export default function App() {
                 <button className="tokenize-btn" onClick={handleTokenizeAndParse} disabled={busy}>{busy ? "Processing..." : "Parse"}</button>
                 <button className="tokenize-btn" onClick={handleTokenize} disabled={busy}>{busy ? "Tokenizing..." : "Tokenize"}</button>
                 <button className="tokenize-btn" onClick={handleClearEditor} disabled={busy}>Clear</button>
+                <span className={`save-status save-status--${saveStatus}`}>
+                  {saveStatus === 'saving' && <><i className="fa-solid fa-spinner fa-spin" /> Saving...</>}
+                  {saveStatus === 'saved' && <><i className="fa-solid fa-cloud-check" /> Saved</>}
+                  {saveStatus === 'unsaved' && <><i className="fa-solid fa-circle-dot" /> Unsaved</>}
+                </span>
                 <button className="tokenize-btn tokenize-btn--toggle" onClick={() => setShowTokenTable(!showTokenTable)} disabled={busy}>{showTokenTable ? "Hide Lexeme Output" : "Show Lexeme Output"}</button>
               </div>
             </div>

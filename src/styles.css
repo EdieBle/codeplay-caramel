@@ -749,3 +749,49 @@ body {
 }
 
 
+.draft-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  padding-top: 30px;
+  background: #2a2a1a;
+  border-bottom: 1px solid #c8a84b;
+  color: #e8d5a3;
+  font-size: 0.85rem;
+}
+
+.draft-btn {
+  padding: 0.2rem 0.75rem;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.draft-btn--restore {
+  background: #c8a84b;
+  color: #1a1a0e;
+}
+
+.draft-btn--dismiss {
+  background: transparent;
+  color: #888;
+  border: 1px solid #444;
+}
+
+.save-status {
+  font-size: 0.75rem;
+  margin-left: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  opacity: 0.8;
+}
+.save-status--saved { color: #7bc67e; }
+.save-status--unsaved { color: #e8a94b; }
+.save-status--saving { color: #a0c4ff; }
+
+.draft-btn--dismiss:hover { color: #ccc; }
+.draft-btn--restore:hover { opacity: 0.85; }
