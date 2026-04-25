@@ -1188,7 +1188,7 @@ class StructuredCodeGenerator:
                 elif_if_false = None
                 for j in range(else_label_idx + 1, end_label_idx):
                     op_j = self.ir[j].op
-                    if op_j in ("LABEL", "GOTO", "NOP"):
+                    if op_j in ("LABEL", "GOTO", "NOP", "ARR_LOAD"):
                         continue
                     if op_j == "BINOP":
                         continue  # condition computation before elif
@@ -1216,6 +1216,12 @@ class StructuredCodeGenerator:
                             else:
                                 expr = f"{a} {binop} {b}"
                             self._elif_binops[dest] = expr
+                        elif self.ir[j].op == "ARR_LOAD":
+                            arr = self._py_var(self.ir[j].arg1)
+                            raw_idx = self._py_val(self.ir[j].arg2)
+                            idx = self._elif_binops.get(raw_idx, raw_idx)
+                            dest = self._py_var(self.ir[j].dest)
+                            self._elif_binops[dest] = f"{arr}[{idx}]"
 
                     # Generate elif chain
                     bi = elif_if_false
@@ -1244,6 +1250,16 @@ class StructuredCodeGenerator:
                             self._elif_binops[dest] = expr
                             bi += 1
                             continue
+
+                        if instr_i.op == "ARR_LOAD":
+                            arr = self._py_var(instr_i.arg1)
+                            raw_idx = self._py_val(instr_i.arg2)
+                            idx = self._elif_binops.get(raw_idx, raw_idx)  
+                            dest = self._py_var(instr_i.dest)
+                            self._elif_binops[dest] = f"{arr}[{idx}]"
+                            bi += 1
+                            continue
+
                         # Non-elif content after last elif → else block
                         self._emit("else:")
                         self._push()
@@ -1515,6 +1531,7 @@ class StructuredCodeGenerator:
             dest = self._py_var(instr.dest)
             arr = self._py_var(instr.arg1)
             idx_val = self._py_val(instr.arg2)
+            idx_val = getattr(self, '_elif_binops', {}).get(idx_val, idx_val)
             is_2d = instr.extra.get("is_2d", False)
             # Find if source array is dynamic
             arr_decl = next((ins for ins in self.ir if ins.op == "ARR_DECLARE" and ins.dest == instr.arg1), None)
@@ -1528,6 +1545,7 @@ class StructuredCodeGenerator:
         elif op == "ARR_STORE":
             arr = self._py_var(instr.dest)
             idx_val = self._py_val(instr.arg1)
+            idx_val = getattr(self, '_elif_binops', {}).get(idx_val, idx_val)
             val = self._py_val(instr.arg2)
             if instr.dest and str(instr.dest).startswith("_t"):
                 # Temp subarray from 2D load — auto-expand with default
