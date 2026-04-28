@@ -552,6 +552,9 @@ class CodeGenerator:
         if isinstance(val, float):
             return repr(val)
         s = str(val)
+        eb = getattr(self, '_elif_binops', {})
+        if s.startswith('_t') and s in eb:
+            return eb[s]
         # String literals
         if (s.startswith('"') and s.endswith('"')) or \
            (s.startswith("'") and s.endswith("'")):
@@ -718,6 +721,9 @@ class StructuredCodeGenerator:
         if isinstance(val, float):
             return repr(val)
         s = str(val)
+        eb = getattr(self, '_elif_binops', {})
+        if s.startswith('_t') and s in eb:
+            return eb[s]
         if (s.startswith('"') and s.endswith('"')) or \
            (s.startswith("'") and s.endswith("'")):
             return s
@@ -999,7 +1005,7 @@ class StructuredCodeGenerator:
 
         # Find the LAST GOTO back to this label (the actual back-edge)
         back_edge = None
-        for j in range(label_idx + 1, min(label_idx + 500, len(self.ir))):
+        for j in range(label_idx + 1, min(label_idx + 1000, len(self.ir))):
             if self.ir[j].op == "GOTO" and self.ir[j].dest == start_label:
                 back_edge = j
             # Stop at FUNC boundaries
@@ -1275,6 +1281,13 @@ class StructuredCodeGenerator:
                             if instr_k.op == "GOTO":
                                 bi += 1
                                 continue
+                            if instr_k.op in ("BINOP", "ARR_LOAD"):
+                                dest = self._py_var(instr_k.dest)
+                                eb = getattr(self, '_elif_binops', {})
+                                if dest in eb:
+                                    self._emit(f"{dest} = {eb[dest]}")
+                                    bi += 1
+                                    continue
                             self._gen_simple(instr_k, bi)
                             bi += 1
                         self._pop()
@@ -1308,6 +1321,14 @@ class StructuredCodeGenerator:
                             bi = self._gen_if_block(bi, end_label_idx)
                             has_else = True
                             continue
+                        if instr_i.op in ("BINOP", "ARR_LOAD"):
+                            dest = self._py_var(instr_i.dest)
+                            eb = getattr(self, '_elif_binops', {})
+                            if dest in eb:
+                                self._emit(f"{dest} = {eb[dest]}")
+                                has_else = True
+                                bi += 1
+                                continue
                         self._gen_simple(instr_i, bi)
                         has_else = True
                         bi += 1
