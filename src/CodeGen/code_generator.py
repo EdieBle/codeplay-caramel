@@ -999,7 +999,7 @@ class StructuredCodeGenerator:
 
         # Find the LAST GOTO back to this label (the actual back-edge)
         back_edge = None
-        for j in range(label_idx + 1, min(label_idx + 200, len(self.ir))):
+        for j in range(label_idx + 1, min(label_idx + 500, len(self.ir))):
             if self.ir[j].op == "GOTO" and self.ir[j].dest == start_label:
                 back_edge = j
             # Stop at FUNC boundaries
