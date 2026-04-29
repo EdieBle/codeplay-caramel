@@ -906,6 +906,7 @@ class StructuredCodeGenerator:
                 i += 1  # Skip gotos in structured code
                 continue
 
+            
             # Regular instructions
             i = self._gen_simple(instr, i)
 
@@ -1005,7 +1006,7 @@ class StructuredCodeGenerator:
 
         # Find the LAST GOTO back to this label (the actual back-edge)
         back_edge = None
-        for j in range(label_idx + 1, min(label_idx + 1000, len(self.ir))):
+        for j in range(label_idx + 1, min(label_idx + 2000, len(self.ir))):
             if self.ir[j].op == "GOTO" and self.ir[j].dest == start_label:
                 back_edge = j
             # Stop at FUNC boundaries
@@ -1105,6 +1106,7 @@ class StructuredCodeGenerator:
         return end + 1
     
     def _gen_if_block(self, start, boundary, is_elif=False):
+        print(f"[GEN_IF] called start={start} boundary={boundary} is_elif={is_elif}")
         """Generate an if/else block from IR pattern."""
         instr = self.ir[start]
         cond = self._py_val(instr.arg1)
@@ -1144,6 +1146,7 @@ class StructuredCodeGenerator:
 
         # Emit if-body (between IF_FALSE and GOTO/else_label)
         body_end = goto_end_idx if goto_end_idx else (else_label_idx or boundary)
+        print(f"[GEN_IF] cond={cond} body_end={body_end} else_label_idx={else_label_idx} goto_end_idx={goto_end_idx}")
         has_body = False
         bi = start + 1
         while bi < body_end and bi < len(self.ir):
@@ -1183,7 +1186,7 @@ class StructuredCodeGenerator:
         if else_label_idx is not None and end_label:
             # Find end label
             end_label_idx = None
-            for j in range(else_label_idx, boundary):
+            for j in range(else_label_idx, boundary+1):
                 if self.ir[j].op == "LABEL" and self.ir[j].dest == end_label:
                     end_label_idx = j
                     break
