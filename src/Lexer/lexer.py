@@ -120,20 +120,20 @@ def tokenize(code):
     while pos < len(code):
         ch = code[pos]
 
-        print(f"\n=== OUTER LOOP: scanning new token at pos={pos}, col={column}, char='{ch}' ===") #debug
+       # debug  print(f"\n=== OUTER LOOP: scanning new token at pos={pos}, col={column}, char='{ch}' ===") #debug
 
         # ----------------------------------------------------------
         # SIMPLE CHECKS
         # ----------------------------------------------------------
         if ch == (" "):
-            print(f"\n=== [SPACE] space detected at pos={pos}, col={column}, char='{ch}', tokenizing... ===") #debug
+           # debug  print(f"\n=== [SPACE] space detected at pos={pos}, col={column}, char='{ch}', tokenizing... ===") #debug
             push("whitespace", '⎵', column)
             pos += 1
             column += 1
             continue
 
         if ch == ("\t"):
-            print(f"\n=== [TAB] tab detected at pos={pos}, col={column}, char='{ch}', tokenizing... ===") #debug
+           # debug  print(f"\n=== [TAB] tab detected at pos={pos}, col={column}, char='{ch}', tokenizing... ===") #debug
             push("tab", '⎵⎵⎵⎵', column)
             pos += 1
             column += 4
@@ -151,7 +151,7 @@ def tokenize(code):
 
         while pos < len(code):
             ch = code[pos]
-            print(f"[INNER] At pos={pos}, col={column}, char='{ch}', curr_state={curr_state}") # debug
+            # debug print(f"[INNER] At pos={pos}, col={column}, char='{ch}', curr_state={curr_state}") # debug
 
             next_state = None
 
@@ -173,7 +173,7 @@ def tokenize(code):
             
             if can_go_to_223 and next_ch_la_1 is not None and next_ch_la_1.isdigit():
                 prev = last_significant_token(tokens)
-                print(f"\n\n\n can go to 223 and next character digit? {can_go_to_223}\n\n\n")
+                # debug print(f"\n\n\n can go to 223 and next character digit? {can_go_to_223}\n\n\n")
 
                 if (prev and (prev["type"] == "beanlit" or prev["type"] == "id" or prev["type"] == ")") and next_ch_la_1 is not None and next_ch_la_1.isdigit()):
                     # Force binary minus
@@ -213,9 +213,9 @@ def tokenize(code):
                 look = pos
                 while look < len(code):
                     c = code[look]
-                    if c in '123456789':
-                        # pos = look  # track last meaningful digit after decimal
-                        print(c)
+                    # if c in '123456789':
+                    #     # pos = look  # track last meaningful digit after decimal
+                    #     print(c)
 
                     look += 1
 
@@ -229,7 +229,7 @@ def tokenize(code):
                         lookahead += 1
                         pos += 1
                         column += 1
-                        print(f"[BEAN PREPROCESS] Skipping extra '0', buffer='{buffer}'")
+                        # debug print(f"[BEAN PREPROCESS] Skipping extra '0', buffer='{buffer}'")
                     elif next_char in '123456789':
                         pos += 1
                         # first non-zero digit found
@@ -243,14 +243,14 @@ def tokenize(code):
                 ch = code[pos]  # update current char for DFA processing
 
 
-            print(f"[INNER] Possible branches from state {curr_state}: {branches}") # debug
+            # DEBUG IMPORTANT print(f"[INNER] Possible branches from state {curr_state}: {branches}") # debug
 
             handled = None
 
             for nxt in branches:
                 node = TRANSITIONS_DFA[nxt]
                 if (curr_state == 0 and nxt == 278 and ch == "\n"): # check might be unnecessary for ch but might as well just to make sure amirite
-                    print("\033[92m[NEWLINE]\033[0m Consuming newline")
+                    # debug print("\033[92m[NEWLINE]\033[0m Consuming newline")
                     push(node.token_type, "\n", column)
 
                     pos += 1     
@@ -289,17 +289,17 @@ def tokenize(code):
 
                 if ch in node.chars:
                     if node.isEnd:
-                        print(f"[INNER NXT #1] NEXT STATE {nxt} is accepting | NOT consuming '{ch}'") # debug
+                        # debug print(f"[INNER NXT #1] NEXT STATE {nxt} is accepting | NOT consuming '{ch}'") # debug
                         last_accept = (nxt, pos, column, buffer)
                         next_state = None
                         break
                 
                     next_state = nxt
-                    print(f"[INNER NXT #2] MATCH: '{ch}' -> state {nxt} \n") # debug
+                    # debug print(f"[INNER NXT #2] MATCH: '{ch}' -> state {nxt} \n") # debug
                     break
 
             if next_state is None:
-                print(f"[INNER] STOP: No transition for '{ch}' from state {curr_state}") # debug
+                # debug print(f"[INNER] STOP: No transition for '{ch}' from state {curr_state}") # debug
                 break
 
             curr_state = next_state
@@ -307,13 +307,13 @@ def tokenize(code):
             pos += 1 # position moves 1 spot for the code list
             column += 1
 
-            print(f"[INNER TRANSITION] Transition -> state {curr_state}, buffer='{buffer}' \n") # debug
+            # debug print(f"[INNER TRANSITION] Transition -> state {curr_state}, buffer='{buffer}' \n") # debug
 
             if TRANSITIONS_DFA[curr_state].isEnd:
                 last_accept = (curr_state, pos, column, buffer)
-                print(f"[INNER] ACCEPTING STATE {curr_state} (buffer='{buffer}')") # debug
+                # debug print(f"[INNER] ACCEPTING STATE {curr_state} (buffer='{buffer}')") # debug
 
-        print(f"=== INNER LOOP COMPLETE at pos={pos}, curr_state={curr_state} ===\n") # debug
+        # debug print(f"=== INNER LOOP COMPLETE at pos={pos}, curr_state={curr_state} ===\n") # debug
         
 
         # Very very important part that ensures both negative literals are handled as well as the actual self-delimiting shit
@@ -324,13 +324,13 @@ def tokenize(code):
         # DFA FAIL - fallbacks start here and error handlers over here
         #=================================================================
         if last_accept is None:
-            print("\033[91m[1] DFA FAIL - \033[0m main DFA failed, starting fallbacks.") # debug
+            # debug print("\033[91m[1] DFA FAIL - \033[0m main DFA failed, starting fallbacks.") # debug
 
             # Rewind to start of failed token attempt
             fallback_pos = start_pos
             fallback_col = start_col
 
-            print(f"\033[94m[FALLBACK]\033[0m Begin at first buffer char at pos={fallback_pos}, char='{code[fallback_pos]}'") # debug
+            # debug print(f"\033[94m[FALLBACK]\033[0m Begin at first buffer char at pos={fallback_pos}, char='{code[fallback_pos]}'") # debug
 
              # probably a smarter way of handling identifiers so it saves some performance by not checking numbers.
             lexeme = None
@@ -342,10 +342,10 @@ def tokenize(code):
                 ch_bl_err_range = start_i
                 first_char = code[start_i]
                 if first_char == first_char.upper():
-                    print("\033[91m[ID ERROR]\033[0m Cannot have a identifier or keyword with a capital letter.")
+                    # debug print("\033[91m[ID ERROR]\033[0m Cannot have a identifier or keyword with a capital letter.")
                     return None, start_i, "ID_ERR"
 
-                print("\033[95m[FALLBACK] Starting identifier scan\033[0m")  # debug
+                # debug print("\033[95m[FALLBACK] Starting identifier scan\033[0m")  # debug
 
                 lex = first_char
                 temp_state = 331
@@ -353,7 +353,7 @@ def tokenize(code):
 
                 while i < len(code):
                     ch = code[i]
-                    print(f"[ID FALLBACK] Checking '{ch}' from state {temp_state}")
+                    # debug print(f"[ID FALLBACK] Checking '{ch}' from state {temp_state}")
                     
 
                     branches = TRANSITIONS_DFA[temp_state].branches
@@ -367,7 +367,7 @@ def tokenize(code):
                             nxt = candidate
                             
                             if node.isEnd: 
-                                print(f"[ID FALLBACK] NEXT STATE {nxt} is accepting, NOT CONSUMING '{candidate}'") # debug 
+                                # debug print(f"[ID FALLBACK] NEXT STATE {nxt} is accepting, NOT CONSUMING '{candidate}'") # debug 
                                 nonlocal last_accept
                                 # print(nxt)
                                 # print(pos)
@@ -379,9 +379,9 @@ def tokenize(code):
                             break
 
                     if nxt is None:
-                        print(i)
-                        print(lex + "\n")
-                        print(f"\033[91m[FALLBACK STOP]\033[0m '{ch}' invalid so stop BEFORE consuming")
+                       # debug  print(i)
+                       # debug  print(lex + "\n")
+                        # debug print(f"\033[91m[FALLBACK STOP]\033[0m '{ch}' invalid so stop BEFORE consuming")
                         return None, i, "ID_ERR"
 
 
@@ -395,22 +395,22 @@ def tokenize(code):
                         if next_char in valid_delims: # might need to put a end state here
                             return lex, i, "OK"  # valid identifier
                         else:
-                            print("\033[91m[ID FALLBACK] ERROR | identifier too long or invalid termination\033[0m")
+                            # debug print("\033[91m[ID FALLBACK] ERROR | identifier too long or invalid termination\033[0m")
                             return None, start_i, "EXCEED_LENGTH_ERR" # not getting called right now
 
                 # Accept if ended on any other accepting state
                 if TRANSITIONS_DFA[temp_state].isEnd:
-                    print(f"\033[92m[ID FALLBACK ACCEPT]\033[0m Identifier = '{lex}', ending at pos {i}")
+                    # debug print(f"\033[92m[ID FALLBACK ACCEPT]\033[0m Identifier = '{lex}', ending at pos {i}")
                     return lex, i, "OK"
 
-                print(f"\033[91m[ID FALLBACK REJECT]\033[0m Ended on NON-END state {temp_state}")
+               # debug  print(f"\033[91m[ID FALLBACK REJECT]\033[0m Ended on NON-END state {temp_state}")
                 
                 return None, i, "GEN_ERR" 
 
             def run_num_handler(start_i):
                 nonlocal ch_bl_err_range 
                 ch_bl_err_range = start_i
-                print("\033[95m[FALLBACK] Starting number scan\033[0m")  # debug
+               # debug  print("\033[95m[FALLBACK] Starting number scan\033[0m")  # debug
 
                 first_char = code[start_i]
 
@@ -418,7 +418,7 @@ def tokenize(code):
                 # ERROR: literal starts with a decimal point
                 # =============================================
                 if first_char == '.':
-                    print("\033[91m[NUM ERROR]\033[0m Cannot start number with '.' | incomplete float literal")
+                   # debug  print("\033[91m[NUM ERROR]\033[0m Cannot start number with '.' | incomplete float literal")
                     return None, start_i, "INC_DRIP_ERR"
 
                 lex = first_char
@@ -427,7 +427,7 @@ def tokenize(code):
 
                 while i < len(code):
                     ch = code[i]
-                    print(f"[NUM] Checking '{ch}' from state {temp_state}")
+                  # debug   print(f"[NUM] Checking '{ch}' from state {temp_state}")
 
                     branches = TRANSITIONS_DFA[temp_state].branches
                     if isinstance(branches, int):
@@ -441,17 +441,17 @@ def tokenize(code):
                             break
 
                     if nxt is None:
-                        print(f"\033[91m[NUM STOP]\033[0m '{ch}' invalid BEFORE consuming")
+                      # debug   print(f"\033[91m[NUM STOP]\033[0m '{ch}' invalid BEFORE consuming")
                         break
 
                     # =============================================
                     # ERROR: entered 270 ('.') but next char not digit
                     # =============================================
                     if nxt == 299:      # DOT state
-                        print("[NUM] ENTERED DOT STATE 299")
+                       # debug  print("[NUM] ENTERED DOT STATE 299")
                         # Lookahead: must have digit next
                         if i + 1 >= len(code) or code[i+1] not in TRANSITIONS_DFA[299].chars:
-                            print("\033[91m[NUM ERROR]\033[0m Float literal has '.' but no digits after it")
+                         # debug    print("\033[91m[NUM ERROR]\033[0m Float literal has '.' but no digits after it")
                             return None, start_i, "INC_DRIP_ERR"
 
                     # consume
@@ -466,34 +466,34 @@ def tokenize(code):
                 nonlocal ch_bl_err_range 
                 ch_bl_err_range = start_i
                 if code[start_i] == '\'':
-                    print("\033[91m[CHUR ERROR]\033[0m Invalid churro literal format")
+                  # debug   print("\033[91m[CHUR ERROR]\033[0m Invalid churro literal format")
                     return None, start_i, "CH_BL_ERR"
                 if code[start_i] == '"':
-                    print("\033[91m[BLND ERROR]\033[0m Invalid blend literal format")
+                  # debug   print("\033[91m[BLND ERROR]\033[0m Invalid blend literal format")
                     return None, start_i, "CH_BL_ERR"
                 if code[start_i:start_i+2] == '~.':
-                    print("\033[91m[MLCM ERROR]\033[0m Unclosed Multi-line comment.")
+                  # debug   print("\033[91m[MLCM ERROR]\033[0m Unclosed Multi-line comment.")
                     return None, start_i, "CH_BL_ERR"
 
             # LEXEME is character, FINAL_POS, err_type 
             # if err_type is "OK" and lexeme and returned lexeme is NOT none, edi accepted siya
             # this spot decides what kinda error it should be handled by.
             if code[fallback_pos].isalpha() == True:
-                print(f"\033[92m[IS A ALPHA CHARACTER]")
+              # debug   print(f"\033[92m[IS A ALPHA CHARACTER]")
                 lexeme, final_pos, err_type = run_identifier_handler(fallback_pos)
 
 
              # can be used to handle errors related to bean and drip literals!
             if code[fallback_pos].isnumeric() == True or code[fallback_pos] == '.':
-                print(f"\033[92m[IS A NUMERIC CHARACTER]")
+              # debug   print(f"\033[92m[IS A NUMERIC CHARACTER]")
                 lexeme, final_pos, err_type = run_num_handler(fallback_pos)
             
             if code[fallback_pos] == '\'' or code[fallback_pos] == '"' or code[fallback_pos:fallback_pos+2] == "~.":
-                print(f"\033[92m[IS A CHURRO/BLEND LITERAL or AN UNCLOSED MULTILINE COMMENT]")
+               # debug  print(f"\033[92m[IS A CHURRO/BLEND LITERAL or AN UNCLOSED MULTILINE COMMENT]")
                 lexeme, final_pos, err_type = run_incomp_handler(fallback_pos)
             
             if not code[fallback_pos].isalnum() and not code[fallback_pos:fallback_pos+2] == "~." and code[fallback_pos] not in {"'", '"'}:
-                print("\033[96m[IS A SYMBOL CHARACTER]\033[0m")
+              # debug   print("\033[96m[IS A SYMBOL CHARACTER]\033[0m")
                 push("ERROR", code[fallback_pos], column, "Invalid or unexpected symbol after character.")
                 # treat as single-character token or lexical error
                 pos = fallback_pos+1
@@ -502,8 +502,8 @@ def tokenize(code):
 
             # error type handlers.
             if lexeme in KEYWORDS_TABLE["KEYWORDS"]:
-                print("LEXEME IN KEYWORDS TABLE! IS A KEYWORD!")
-                print(lexeme)
+               # debug  print("LEXEME IN KEYWORDS TABLE! IS A KEYWORD!")
+               # debug  print(lexeme)
 
                 # ---------------------------------------------
                 # RE-RUN DFA WALKER TO CONFIRM VALID DELIMITATION
@@ -541,13 +541,13 @@ def tokenize(code):
 
                 # Now verify the DFA properly matched the exact keyword
                 if valid_keyword:
-                    print("[KEYWORD VALIDATED] DFA accepted keyword with proper delimiter")
+                  # debug   print("[KEYWORD VALIDATED] DFA accepted keyword with proper delimiter")
                     push("KEYWORD", lexeme, fallback_col)
                     pos = final_pos
                     column += (final_pos - fallback_pos)
                     continue
                 else:
-                    print("[KEYWORD INVALID] DFA rejected keyword due to bad delimiter")
+                  # debug   print("[KEYWORD INVALID] DFA rejected keyword due to bad delimiter")
                     push("ERROR", lexeme, fallback_col, "Invalid Delimiter for possible token.")
                     pos = final_pos
                     column += (final_pos - fallback_pos)
@@ -575,7 +575,7 @@ def tokenize(code):
                 continue
 
             if lexeme is None and err_type == "INC_DRIP_ERR" : 
-                print("\033[91m[ERROR]\033[0m error detected | consuming until whitespace")
+               # debug  print("\033[91m[ERROR]\033[0m error detected | consuming until whitespace")
 
                 # Consume the entire invalid run starting from the original token start (start_pos)
                 error_pos = start_pos
@@ -596,17 +596,17 @@ def tokenize(code):
 
             if lexeme is None and err_type == "ID_ERR" : 
                 # Consume the entire invalid run starting from the original token start (start_pos)
-                print(final_pos)
+               # debug print(final_pos)
                 error_pos = final_pos # this SHOULD fix the infinite recursion problem with capital letters considering it would fall under run_identifier_handle
-                print("start of id error")
+               # debug  print("start of id error")
                 while error_pos < pos:
                     error_pos += 1
                 
                 error_lex = code[start_pos:error_pos] 
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
                 first_char = code[start_pos]
-                print("The first char")
-                print(first_char)
+                # debug print("The first char")
+                # debug print(first_char)
                 if first_char == first_char.upper() and first_char.isalpha() and not first_char.isnumeric():
                     print("\033[91m[ID ERROR]\033[0m Invalid Token.")
                     error_lex = code[start_pos:error_pos+1] 
@@ -636,18 +636,18 @@ def tokenize(code):
                 error_lex = code[start_pos:error_pos]
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
 
-                print(error_lex)
+                # debug print(error_lex)
                 if code[ch_bl_err_range] == '\'':
-                    print("\033[91m[CHUR ERROR]\033[0m Invalid churro literal format")
+                # debug     print("\033[91m[CHUR ERROR]\033[0m Invalid churro literal format")
                     #push("ERROR", error_lex, start_col, "Unclosed or Invalid Churro")
                     
                     push("ERROR", error_lex, start_col, "Unclosed Token")
                 if code[ch_bl_err_range] == '"':
-                    print("\033[91m[BLND ERROR]\033[0m Invalid blend literal format")
+                # debug     print("\033[91m[BLND ERROR]\033[0m Invalid blend literal format")
                     #push("ERROR", error_lex, start_col, "Unclosed or Undelimited Blend Literal")
                     push("ERROR", error_lex, start_col, "Unclosed Token")
                 if code[ch_bl_err_range:ch_bl_err_range+2] == '~.':
-                    print("\033[91m[MCLN ERROR]\033[0m Unclosed Multi-line comment.")
+                # debug     print("\033[91m[MCLN ERROR]\033[0m Unclosed Multi-line comment.")
                     #push("ERROR", error_lex, start_col, "Unclosed Multi-line comment.")
                     push("ERROR", error_lex, start_col, "Unclosed Token")
 
@@ -658,19 +658,19 @@ def tokenize(code):
                 continue
 
             if lexeme is None and err_type == "GEN_ERR":
-                print("\033[91m[ERROR]\033[0m fallback failed")
+            # debug     print("\033[91m[ERROR]\033[0m fallback failed")
 
                 # Consume the entire invalid run starting from the original token start (start_pos)
                 
                 error_pos = final_pos+1  # place this here, same issue as ID_ERR with the loop stuff
 
-                print(start_pos)
-                print(error_pos)
+            # debug     print(start_pos)
+            # debug     print(error_pos)
                 while error_pos < pos:
                     error_pos += 1
                 
                 error_lex = code[start_pos:final_pos] 
-                print(error_lex) #debug
+            # debug     print(error_lex) #debug
 
                 # debug statement for error stuff: print(f"\033[91m[ERROR]\033[0m Emitting single ERROR token for full invalid chunk: '{error_lex}' (cols {start_col}..{start_col + len(error_lex) - 1})")
                 push("ERROR", error_lex, start_col, "Invalid Token")
@@ -691,7 +691,7 @@ def tokenize(code):
         state_id, end_pos, end_col, lexeme = last_accept
         token_type = TRANSITIONS_DFA[state_id].token_type
 
-        print(f"[TOKEN] Accepted type={token_type}, lexeme='{lexeme}'")
+        # debug print(f"[TOKEN] Accepted type={token_type}, lexeme='{lexeme}'")
 
         push(token_type, lexeme, start_col)
 
