@@ -1,0 +1,209 @@
+blend student_name[***]
+bean student_number[***]
+blend student_course[***]
+
+bean cup() [ 
+  ~~ record init
+  bean record_count = 0
+  blend inputname = ""
+  bean inputnumber = 0
+  blend inputcourse = ""
+  temp is_found = cold
+  bean edit_choice = 0
+  bean del_choice = 0
+
+  ~~ menu init
+  bean choice = 0
+  temp run_program = hot
+
+  glaze("====================== Student Record Menu ======================\n\n")
+
+  whilehot(run_program == hot) {
+    glaze("Menu: \n")
+    glaze("1. Add a Record\n")
+    glaze("2. Display All Records\n")
+    glaze("3. Display Record (Individual)\n")
+    glaze("4. Edit Student Record\n")
+    glaze("5. Delete Student Records (Delete One/Delete All)\n")
+    glaze("6. Exit Program\n")
+    batter@choice("Action: ")
+    
+    flavour(choice) {
+      syrup 1:
+        temp is_valid_num = cold
+        temp is_duplicate = cold
+
+        glaze("Adding a Record...\n\n")
+        batter@inputname("Enter student name: ")
+        
+        whilehot(is_valid_num == cold) {
+          batter@inputnumber("Enter student number: ")
+
+          ifbrew(inputnumber > 0) {
+            is_duplicate = cold
+            pour(bean i = 0; i < record_count; i++) {
+              ifbrew(student_number[i] == inputnumber) {
+                is_duplicate = hot
+              }
+            }
+
+            ifbrew(is_duplicate == hot) {
+              glaze("Error! Student number already exists. Please enter another student number!\n\n")
+            } elspress {
+              is_valid_num = hot
+            }
+
+             } elspress {
+               glaze("Error! Please enter a positive student number.\n\n")
+            }
+        }
+
+        batter@inputcourse("Enter course: ")
+
+        student_name[record_count] = inputname
+        student_number[record_count] = inputnumber
+        student_course[record_count] = inputcourse
+        record_count = record_count + 1
+
+        glaze("\nRecord added successfully!\n\n")
+
+        snap
+
+      syrup 2:
+        glaze("Displaying All Records...\n\n")
+        ifbrew(record_count == 0) {
+          glaze("No records found.\n\n")
+        } elspress {
+          glaze("===================== All Student Records =====================\n\n")
+          glaze("---------------------------------------------------------------\n")
+          glaze("Record#\t\tName\t\tStudent Number\t\tCourse\n")
+          glaze("---------------------------------------------------------------\n")
+          pour(bean i = 0; i < record_count; i++) {
+            glaze((i+1) + "\t\t" + student_name[i] + "\t\t" + student_number[i] + "\t\t" + student_course[i] + "\n\n")
+          }
+        }
+        snap
+
+      syrup 3:
+        glaze("Searching a Record...\n\n")
+        ifbrew(record_count == 0) {
+          glaze("No records found.\n\n")
+        } elspress {
+            is_found = cold
+            batter@inputnumber("Enter student number to search: ")
+
+            pour(bean i = 0; i < record_count; i++) {
+              ifbrew(student_number[i] == inputnumber) {
+                is_found = hot
+                glaze("=======================  Search Records  =======================\n\n")
+                glaze("---------------------------------------------------------------\n")
+                glaze("Record#\t\tName\t\tStudent Number\t\tCourse\n")
+                glaze("---------------------------------------------------------------\n")
+                glaze((i+1) + "\t\t" + student_name[i] + "\t\t" + student_number[i] + "\t\t" + student_course[i] + "\n\n")
+            }
+          } 
+          ifbrew(is_found == cold) {
+            glaze("Error! Student number not found. \n\n")
+          }
+        }
+        snap
+      
+      syrup 4:
+        glaze("Editing Records...\n\n")
+        
+        ifbrew(record_count == 0) {
+          glaze("No records found.\n\n")
+        } elspress {
+            is_found = cold
+            batter@inputnumber("Enter student number to edit: ")
+
+            pour(bean i = 0; i < record_count; i++) {
+              ifbrew(student_number[i] == inputnumber) {
+                is_found = hot
+                glaze("======================= Current Record ========================\n\n")
+                glaze("---------------------------------------------------------------\n")
+                glaze("Record#\t\tName\t\tStudent Number\t\tCourse\n")
+                glaze("---------------------------------------------------------------\n")
+                glaze((i+1) + "\t\t" + student_name[i] + "\t\t" + student_number[i] + "\t\t" + student_course[i] + "\n\n")
+
+                glaze("Select Information to Edit: \n")
+                glaze("1. Edit Student Name\n")
+                glaze("2. Edit Student Course\n")
+                batter@edit_choice("Action: ")
+
+                glaze("====================== Enter New Details ======================\n\n")
+                ifbrew(edit_choice == 1){
+                  batter@inputname("Enter new student name: ")
+                  student_name[i] = inputname
+                } elifroth (edit_choice == 2) {
+                  batter@inputcourse("Enter new course: ")
+                  student_course[i] = inputcourse
+                } elspress {
+                  glaze("Error! Please choose a valid action.")
+                }
+                
+                glaze("\nRecord updated successfully!\n\n")
+            }
+          } 
+          ifbrew(is_found == cold) {
+            glaze("Error! Student number not found.\n\n")
+          }
+        }
+        
+        snap
+      syrup 5:
+        glaze("Deleting Records...\n\n")
+        ifbrew(record_count == 0) {
+          glaze("No records found.\n\n")
+        } elspress {
+          glaze("Select Delete Method:\n")
+          glaze("1. Delete One Record\n")
+          glaze("2. Delete All Records\n")
+          batter@del_choice("Action: ")
+          
+          ifbrew(del_choice == 1) {
+            is_found = cold
+            batter@inputnumber("Enter student number to delete: ")
+
+            pour(bean i = 0; i < record_count; i++) {
+              ifbrew(student_number[i] == inputnumber) {
+                is_found = hot
+
+                pour(bean j = i; j < (record_count - 1) ; j++) {
+                  student_name[j] = student_name[j + 1]
+                  student_number[j] = student_number[j + 1]
+                  student_course[j] = student_course[j + 1]
+                }
+
+                record_count = record_count - 1
+              }
+            }
+            
+            ifbrew(is_found == hot) {
+              glaze("\nRecord deleted successfully!\n\n")
+            } elspress {
+              glaze("Error! Student number not found.\n\n")
+            }
+          } elifroth(del_choice == 2) {
+            record_count = 0
+            glaze("\nAll records deleted successfully!\n\n")
+          } elspress {
+            glaze("Error! Please choose a valid action.\n\n")
+          } 
+        } 
+        snap
+
+      syrup 6:
+        glaze("Exiting program...\n\n")
+        run_program = cold
+        snap
+
+      defoam:
+        glaze("Error! Please choose a valid action.\n\n")
+        snap
+    }
+  }
+
+  refill? 0
+]
+

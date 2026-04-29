@@ -1,0 +1,211 @@
+bean a[9] = [0,0,0,0,0,0,0,0,0]
+bean b[9] = [0,0,0,0,0,0,0,0,0]
+bean r[9] = [0,0,0,0,0,0,0,0,0]
+
+bean rows = 3
+bean cols = 3
+
+empty inputa()[
+    bean i = 0
+    whilehot(i < rows){
+        bean j = 0
+        whilehot(j < cols){
+
+            bean index = (i * cols) + j
+
+            glaze("A[" + i + "][" + j + "]: ")
+            batter@ a[index]
+
+            j++
+        }
+        i++
+    }
+    refill?
+]
+
+empty inputb()[
+    bean i = 0
+    whilehot(i < rows){
+        bean j = 0
+        whilehot(j < cols){
+
+            bean index = (i * cols) + j
+
+            glaze("B[" + i + "][" + j + "]: ")
+            batter@ b[index]
+
+            j++
+        }
+        i++
+    }
+    refill?
+]
+
+empty displaya()[
+    bean i = 0
+    whilehot(i < rows){
+        bean j = 0
+        whilehot(j < cols){
+            bean index = (i * cols) + j
+            glaze(a[index] + " ")
+            j++
+        }
+        glaze("\n")
+        i++
+    }
+    refill?
+]
+
+empty displayb()[
+    bean i = 0
+    whilehot(i < rows){
+        bean j = 0
+        whilehot(j < cols){
+            bean index = (i * cols) + j
+            glaze(b[index] + " ")
+            j++
+        }
+        glaze("\n")
+        i++
+    }
+    refill?
+]
+
+empty displayr()[
+    bean i = 0
+    whilehot(i < rows){
+        bean j = 0
+        whilehot(j < cols){
+            bean index = (i * cols) + j
+            glaze(r[index] + " ")
+            j++
+        }
+        glaze("\n")
+        i++
+    }
+    refill?
+]
+
+empty addmatrix()[
+    inputa()
+    inputb()
+
+    bean i = 0
+    whilehot(i < rows * cols){
+        r[i] = a[i] + b[i]
+        i++
+    }
+
+    glaze("result:\n")
+    displayr()
+    refill?
+]
+
+empty subtractmatrix()[
+    inputa()
+    inputb()
+
+    bean i = 0
+    whilehot(i < rows * cols){
+        r[i] = a[i] - b[i]
+        i++
+    }
+
+    glaze("result:\n")
+    displayr()
+    refill?
+]
+
+empty multiplymatrix()[
+    inputa()
+    inputb()
+
+    bean i = 0
+    whilehot(i < rows){
+        bean j = 0
+        whilehot(j < cols){
+
+            bean sum = 0
+            bean k = 0
+
+            whilehot(k < cols){
+                bean ia = (i * cols) + k
+                bean ib = (k * cols) + j
+                sum = sum + (a[ia] * b[ib])
+                k++
+            }
+
+            bean ir = (i * cols) + j
+            r[ir] = sum
+
+            j++
+        }
+        i++
+    }
+
+    glaze("result:\n")
+    displayr()
+    refill?
+]
+
+empty transposematrix()[
+
+    inputa()
+
+    bean i = 0
+    whilehot(i < rows){
+        bean j = 0
+        whilehot(j < cols){
+
+            bean ia = (i * cols) + j
+            bean ir = (j * rows) + i
+
+            r[ir] = a[ia]
+
+            j++
+        }
+        i++
+    }
+
+    glaze("transpose (swap):\n")
+    displayr()
+    refill?
+]
+
+bean cup()[
+
+    bean choice
+
+    whilehot(hot){
+        glaze("=== Caramel Matrix Menu ===\n")
+        glaze("1. Matrix Addition\n")
+        glaze("2. Matrix Subtraction\n")
+        glaze("3. Matrix Multiplication\n")
+        glaze("4. Matrix Transpose\n")
+        glaze("5. Exit Caramel\n")
+        glaze("Choice: ")
+
+        batter@ choice
+
+        ifbrew(choice == 1){
+            addmatrix()
+        }
+        elifroth(choice == 2){
+            subtractmatrix()
+        }
+        elifroth(choice == 3){
+            multiplymatrix()
+        }
+        elifroth(choice == 4){
+            transposematrix()
+        }
+        elifroth(choice == 5){
+            snap
+        }
+        elspress{
+            glaze("Invalid Choice. Try Again!\n")
+        }
+    }
+
+    refill? 0
+]

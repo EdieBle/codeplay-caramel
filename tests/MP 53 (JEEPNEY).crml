@@ -1,0 +1,163 @@
+bean seatarr[22]
+
+empty printjeep() [
+    glaze("     ___________________________\n")
+    glaze("    |  _______________________  |\n")
+    glaze("    | | JEEPNEY               | |\n")
+    glaze("    |_|_______________________|_|\n")
+    glaze("    |  ___________________      |\n")
+    glaze("    | |                   |     |\n")
+    glaze("    | |    DRIVER         | [ ] |\n")
+    glaze("    | |___________________|     |\n")
+    glaze("    |===========================|\n")
+    pour(bean row = 0; row < 11; row++) {
+        bean left = seatarr[row]
+        bean right = seatarr[row + 11]
+        ifbrew(left == 1) {
+            glaze("    | [X]")
+        } elspress {
+            glaze("    | [ ]")
+        }
+        glaze("             ")
+        ifbrew(right == 1) {
+            glaze("[X]      |\n")
+        } elspress {
+            glaze("[ ]      |\n")
+        }
+    }
+    glaze("    |===========================|\n")
+    glaze("    |  ()                  ()   |\n")
+    glaze("     \\_________________________/\n")
+    refill?
+]
+
+empty showseats() [
+    glaze("\n--- Seat Map ---\n")
+    glaze("[ ] = Available  [X] = Taken\n")
+    glaze("Left column | Right column\n")
+    pour(bean row = 0; row < 11; row++) {
+        bean left = seatarr[row]
+        bean right = seatarr[row + 11]
+        bean lnum = row + 1
+        bean rnum = row + 12
+        glaze("Seat ")
+        glaze(lnum)
+        ifbrew(lnum < 10) {
+            glaze("  ")
+        } elspress {
+            glaze(" ")
+        }
+        ifbrew(left == 1) {
+            glaze("[X]    |    Seat ")
+        } elspress {
+            glaze("[ ]    |    Seat ")
+        }
+        glaze(rnum)
+        glaze(" ")
+        ifbrew(right == 1) {
+            glaze("[X]\n")
+        } elspress {
+            glaze("[ ]\n")
+        }
+    }
+    glaze("----------------\n")
+    refill?
+]
+
+bean cup() [
+    bean passenger_count = 0
+    bean max_capacity = 22
+    bean running = 1
+    bean choice = 0
+    bean vacant = 0
+    bean n = 0
+    bean seat = 0
+    bean loaded_count = 0
+    bean unloaded_count = 0
+
+    whilehot(running == 1) {
+        glaze("\n== JEEPNEY MANAGEMENT SYSTEM ==\n")
+        glaze("Passengers: " + passenger_count + " / " + max_capacity + "\n")
+        glaze("[1] Load Passengers\n")
+        glaze("[2] Unload Passengers\n")
+        glaze("[3] Show Passengers\n")
+        glaze("[4] Exit\n")
+        batter@choice("Choice: ")
+
+        flavour(choice) {
+            syrup 1:
+                vacant = max_capacity - passenger_count
+                glaze("Vacant seats: " + vacant + "\n")
+                ifbrew(vacant < 1) {
+                    glaze("Error: No vacant seat available.\n")
+                    snap
+                }
+                ifbrew(vacant > 0) {
+                    batter@n("How many passengers to load? ")
+                    ifbrew(n <= 0) {
+                        glaze("Error: Enter a positive number!\n")
+                    } elifroth(n > vacant) {
+                        glaze("Error: Not enough vacant seats! Only " + vacant + " available.\n")
+                    } elspress {
+                        loaded_count = 0
+                        whilehot(loaded_count < n) {
+                            showseats()
+                            glaze("Enter seat number (1-22) for passenger " + (loaded_count + 1) + ": ")
+                            batter@seat
+                            ifbrew(seat < 1 || seat > 22) {
+                                glaze("Error: Invalid seat number!\n")
+                            } elifroth(seatarr[seat - 1] == 1) {
+                                glaze("Error: Seat already occupied!\n")
+                            } elspress {
+                                seatarr[seat - 1] = 1
+                                passenger_count = passenger_count + 1
+                                loaded_count = loaded_count + 1
+                                glaze("Passenger seated at seat " + seat + "\n")
+                            }
+                        }
+                    }
+                }
+            snap
+
+            syrup 2:
+                batter@n("How many passengers to unload? ")
+                ifbrew(n <= 0) {
+                    glaze("Error: Enter a positive number!\n")
+                } elifroth(n > passenger_count) {
+                    glaze("Error: Cannot unload " + n + " passengers. Only " + passenger_count + " on board.\n")
+                } elspress {
+                    unloaded_count = 0
+                    whilehot(unloaded_count < n) {
+                        showseats()
+                        batter@seat("Enter seat number to vacate: ")
+                        ifbrew(seat < 1 || seat > 22) {
+                            glaze("Error: Invalid seat number!\n")
+                        } elifroth(seatarr[seat - 1] == 0) {
+                            glaze("Error: Seat is already empty!\n")
+                        } elspress {
+                            seatarr[seat - 1] = 0
+                            passenger_count = passenger_count - 1
+                            unloaded_count = unloaded_count + 1
+                            glaze("Seat " + seat + " is now vacant.\n")
+                        }
+                    }
+                }
+            snap
+
+            syrup 3:
+                printjeep()
+            snap
+
+            syrup 4:
+                glaze("Jeepney stopping... Goodbye!\n")
+                running = 0
+            snap
+
+            defoam:
+                glaze("Invalid choice! Please enter 1-4.\n")
+            snap
+        }
+    }
+
+    refill? 0
+]
