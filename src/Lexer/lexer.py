@@ -76,6 +76,7 @@ KEYWORD_MAP = {
     "REFILL?": "REFILL",
     "SKIP": "SKIP",
     "SNAP": "SNAP",
+    "SIFT": "SIFT",
     "SYRUP": "SYRUP",
     "TASTE": "TASTE",
     "TILL": "TILL",
@@ -139,7 +140,6 @@ def tokenize(code):
             column += 4
             continue
 
-
         # ----------------------------------------------------------
         # DFA CRAWLING STARTS
         # ----------------------------------------------------------
@@ -163,7 +163,8 @@ def tokenize(code):
             next_ch_la_1 = code[pos + 1] if pos + 1 < len(code) else None
             next_ch_la_2 = code[pos + 2] if pos + 2 < len(code) else None
 
-            can_go_to_223 = 223 in branches and ch == '-'
+            # MINUS INTEGER (223 IS MINUS INITIAL STATE)
+            can_go_to_216 = 216 in branches and ch == '-'
             IGNORED = {"whitespace", "newline", "tab"}
             def last_significant_token(tokens):
                 for tok in reversed(tokens):
@@ -171,9 +172,9 @@ def tokenize(code):
                         return tok
                 return None
             
-            if can_go_to_223 and next_ch_la_1 is not None and next_ch_la_1.isdigit():
+            if can_go_to_216 and next_ch_la_1 is not None and next_ch_la_1.isdigit():
                 prev = last_significant_token(tokens)
-                # debug print(f"\n\n\n can go to 223 and next character digit? {can_go_to_223}\n\n\n")
+                # debug print(f"\n\n\n can go to 216 and next character digit? {can_go_to_223}\n\n\n")
 
                 if (prev and (prev["type"] == "beanlit" or prev["type"] == "id" or prev["type"] == ")") and next_ch_la_1 is not None and next_ch_la_1.isdigit()):
                     # Force binary minus
@@ -184,7 +185,7 @@ def tokenize(code):
                     break
                     
 
-            if can_go_to_223 and next_ch_la_2 is not None and next_ch_la_2.isdigit():
+            if can_go_to_216 and next_ch_la_2 is not None and next_ch_la_2.isdigit():
                 prev = last_significant_token(tokens)
                 if (prev and (prev["type"] == "beanlit" or prev["type"] == "id" or prev["type"] == ")")
                         and next_ch_la_1 is not None and next_ch_la_2.isdigit()
@@ -196,20 +197,21 @@ def tokenize(code):
                     break
 
 
-
-            # Check if '0' can move us to state 253, this is for the bean and drip literal leading zero stuff
-            can_go_to_279 = any(
+            # Integer initial state: 279
+            # Check if '0' can move us to state 273, this is for the bean and drip literal leading zero stuff
+            can_go_to_272 = any(
                 nxt for nxt in branches
-                if 0 in TRANSITIONS_DFA and '0' in TRANSITIONS_DFA[nxt].chars and nxt == 279
+                if 0 in TRANSITIONS_DFA and '0' in TRANSITIONS_DFA[nxt].chars and nxt == 272
             )
 
-            # Check if any current DFA branch can move us to state 273 (the '.' state)
-            can_go_to_299 = any(
-                nxt == 299 and '.' in TRANSITIONS_DFA[nxt].chars
+            # Driplit initial state
+            # Check if any current DFA branch can move us to state 292 (the '.' state)
+            can_go_to_292 = any(
+                nxt == 292 and '.' in TRANSITIONS_DFA[nxt].chars
                 for nxt in branches
             )
 
-            if can_go_to_299:
+            if can_go_to_292:
                 look = pos
                 while look < len(code):
                     c = code[look]
@@ -219,7 +221,7 @@ def tokenize(code):
 
                     look += 1
 
-            if ch == '0' and can_go_to_279:
+            if ch == '0' and can_go_to_272:
                 lookahead = pos + 1
                 # first_non_zero_found = False
                 while lookahead < len(code):
@@ -246,10 +248,10 @@ def tokenize(code):
             # DEBUG IMPORTANT print(f"[INNER] Possible branches from state {curr_state}: {branches}") # debug
 
             handled = None
-
+            # Newline
             for nxt in branches:
                 node = TRANSITIONS_DFA[nxt]
-                if (curr_state == 0 and nxt == 278 and ch == "\n"): # check might be unnecessary for ch but might as well just to make sure amirite
+                if (curr_state == 0 and nxt == 271 and ch == "\n"): # check might be unnecessary for ch but might as well just to make sure amirite
                     # debug print("\033[92m[NEWLINE]\033[0m Consuming newline")
                     push(node.token_type, "\n", column)
 
@@ -261,12 +263,12 @@ def tokenize(code):
                     # IMPORTANT: break out of inner loop to restart outer loop
                     break
                 
-
-                if ((curr_state == 336 and nxt == 337 and ch == "\n") or (curr_state == 337 and nxt == 337 and ch == "\n") or (curr_state == 338 and nxt == 337 and ch == "\n")):
+                # Multi-line comments
+                if ((curr_state == 358 and nxt == 359 and ch == "\n") or (curr_state == 359 and nxt == 359 and ch == "\n") or (curr_state == 359 and nxt == 360 and ch == "\n")):
                     line += 1
                     column = 1
-
-                elif curr_state == 0 and nxt == 266 and ch == "]": 
+                # CLose bracket
+                elif curr_state == 0 and nxt == 259 and ch == "]": 
                     push(node.token_type, "]", column)
 
                     pos += 1     
@@ -275,8 +277,8 @@ def tokenize(code):
                     next_state = None
                     
                     break
-
-                elif curr_state == 0 and nxt == 269 and ch == "}": 
+                    # close braces
+                elif curr_state == 0 and nxt == 262 and ch == "}": 
                     push(node.token_type, "}", column)
 
                     pos += 1     
@@ -346,9 +348,9 @@ def tokenize(code):
                     return None, start_i, "ID_ERR"
 
                 # debug print("\033[95m[FALLBACK] Starting identifier scan\033[0m")  # debug
-
+                # Identifiers
                 lex = first_char
-                temp_state = 331
+                temp_state = 324
                 i = start_i + 1
 
                 while i < len(code):
@@ -388,10 +390,10 @@ def tokenize(code):
                     lex += ch
                     temp_state = nxt
                     i += 1
-                        
-                    if temp_state == 331:
+                        # Identifiers
+                    if temp_state == 324:
                         next_char = code[i]
-                        valid_delims = TRANSITIONS_DFA[331].chars
+                        valid_delims = TRANSITIONS_DFA[324].chars
                         if next_char in valid_delims: # might need to put a end state here
                             return lex, i, "OK"  # valid identifier
                         else:
@@ -422,7 +424,7 @@ def tokenize(code):
                     return None, start_i, "INC_DRIP_ERR"
 
                 lex = first_char
-                temp_state = 279
+                temp_state = 272
                 i = start_i + 1
 
                 while i < len(code):
@@ -443,11 +445,11 @@ def tokenize(code):
                     if nxt is None:
                       # debug   print(f"\033[91m[NUM STOP]\033[0m '{ch}' invalid BEFORE consuming")
                         break
-
+                    # Driplit
                     # =============================================
                     # ERROR: entered 270 ('.') but next char not digit
                     # =============================================
-                    if nxt == 299:      # DOT state
+                    if nxt == 292:      # DOT state
                        # debug  print("[NUM] ENTERED DOT STATE 299")
                         # Lookahead: must have digit next
                         if i + 1 >= len(code) or code[i+1] not in TRANSITIONS_DFA[299].chars:
