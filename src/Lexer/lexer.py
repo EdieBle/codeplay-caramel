@@ -145,6 +145,12 @@ def tokenize(code):
             column += 4
             continue
 
+        if ord(ch) > 127:
+            push("ERROR", ch, column, f"Unknown character '{ch}'. Only ASCII characters are supported.")
+            pos += 1
+            column += 1
+            continue
+
         # ----------------------------------------------------------
         # DFA CRAWLING STARTS
         # ----------------------------------------------------------
@@ -344,6 +350,7 @@ def tokenize(code):
             final_pos = None
             err_type = None
             ch_bl_err_range = None
+            
             def run_identifier_handler(start_i):
                 nonlocal ch_bl_err_range 
                 ch_bl_err_range = start_i
@@ -482,15 +489,18 @@ def tokenize(code):
                   # debug   print("\033[91m[MLCM ERROR]\033[0m Unclosed Multi-line comment.")
                     return None, start_i, "CH_BL_ERR"
 
+
             # LEXEME is character, FINAL_POS, err_type 
             # if err_type is "OK" and lexeme and returned lexeme is NOT none, edi accepted siya
             # this spot decides what kinda error it should be handled by.
+            
+            # error type handlers.
             if code[fallback_pos].isalpha() == True:
               # debug   print(f"\033[92m[IS A ALPHA CHARACTER]")
                 lexeme, final_pos, err_type = run_identifier_handler(fallback_pos)
 
-
              # can be used to handle errors related to bean and drip literals!
+            
             if code[fallback_pos].isnumeric() == True or code[fallback_pos] == '.':
               # debug   print(f"\033[92m[IS A NUMERIC CHARACTER]")
                 lexeme, final_pos, err_type = run_num_handler(fallback_pos)
@@ -504,10 +514,9 @@ def tokenize(code):
                 push("ERROR", code[fallback_pos], column, "Invalid or unexpected symbol after character.")
                 # treat as single-character token or lexical error
                 pos = fallback_pos+1
-                
                 continue
+        
 
-            # error type handlers.
             if lexeme in KEYWORDS_TABLE["KEYWORDS"]:
                # debug  print("LEXEME IN KEYWORDS TABLE! IS A KEYWORD!")
                # debug  print(lexeme)
