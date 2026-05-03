@@ -654,7 +654,7 @@ class SemanticAnalyzer:
                                 if is_2d and col_size is not None and arr_size is not None:
                                     # Check row count and each row's element count separately
                                     arr_init_count = self._check_arr_2d_bounds(
-                                        dc, arr_size, col_size, id_token
+                                        dc, arr_size, col_size, id_token, dtype
                                     )
                                 else:
                                     arr_init_count = self._count_arr_elements_2d(dc)
@@ -705,7 +705,7 @@ class SemanticAnalyzer:
         self._visit_children(node)
         self.current_var_type = None
 
-    def _check_arr_2d_bounds(self, arr_cont_2d_node, row_size, col_size, id_token):
+    def _check_arr_2d_bounds(self, arr_cont_2d_node, row_size, col_size, id_token, dtype=None):
         """Check 2D array bounds: row count vs row_size, each row's count vs col_size.
         Returns total element count (for consistency), emits errors directly."""
         rows = []
@@ -735,7 +735,8 @@ class SemanticAnalyzer:
                     f"but initialized with {count} element(s)",
                     id_token
                 )
-        return sum(self._count_arr_elements_1d(r) for r in rows)
+            # Check element types for this row
+            self._check_arr_element_types(row, dtype, id_token)
 
 
     def _visit_primary(self, node):
@@ -908,6 +909,24 @@ class SemanticAnalyzer:
                 self._error("E002", f"Undeclared identifier '{var_name}'", id_token)
             elif symbol.is_constant:
                 self._error("E005", f"Cannot modify constant identifier '{var_name}'", id_token)
+
+            # CHECK: so you stop the user from assigning a value to the array not of its type
+            elif symbol.is_array and symbol.dtype:
+                # Find id_bracket_tail to get the assigned value
+                for child in node.children:
+                    if self._is_parse_node(child) and child.name == "id_dec_tail":
+                        for tc in child.children:
+                            if self._is_parse_node(tc) and tc.name == "id_bracket_tail":
+                                for bc in tc.children:
+                                    if self._is_parse_node(bc) and bc.name in ("arr_elem", "expression", "assign_val", "value"):
+                                        inferred = self._infer_value_type(bc)
+                                        if inferred and inferred != symbol.dtype:
+                                            if not (symbol.dtype in ("bean", "drip") and inferred in ("bean", "drip")):
+                                                self._error(
+                                                    "E_ARR_TYPE",
+                                                    f"Cannot assign '{inferred}' value to '{symbol.dtype}' array '{var_name}'",
+                                                    id_token
+                                                )
         self._visit_children(node)
     
     def _visit_update_id(self, node):
