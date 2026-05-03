@@ -1175,6 +1175,11 @@ class SemanticAnalyzer:
         for child in node.children:
             if not self._is_parse_node(child):
                 if hasattr(child, 'type'):
+                    if child.type == "ID":
+                        # Look up variable type
+                        symbol = self.symbol_table.lookup(child.value)
+                        if symbol:
+                            return symbol.dtype
                     return self._infer_type_from_literal(child.type)
             elif child.name == "ID":
                 var_name = self._extract_token_value(child)

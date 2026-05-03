@@ -257,10 +257,20 @@ class IROptimizer:
             # In _pass_constant_propagation, when tracking assignments:
             if instr.op == "ASSIGN" and instr.dest:
                 if _is_constant(instr.arg1):
-                    # Don't track bool constants assigned to blend variables
-                    # (they get coerced to "hot"/"cold" strings)
                     if isinstance(instr.arg1, bool):
+                        # Don't track bool constants — they get coerced to "hot"/"cold" for blend
                         self._constants.pop(instr.dest, None)
+                    elif isinstance(instr.arg1, float):
+                        # Check if dest is bean — coerce float to int before storing
+                        dest_type = None
+                        for di in self.instructions:
+                            if di.op == "DECLARE" and di.dest == instr.dest:
+                                dest_type = di.extra.get("type")
+                                break
+                        if dest_type == "bean":
+                            self._constants[instr.dest] = int(instr.arg1)
+                        else:
+                            self._constants[instr.dest] = instr.arg1
                     else:
                         self._constants[instr.dest] = instr.arg1
                 else:
