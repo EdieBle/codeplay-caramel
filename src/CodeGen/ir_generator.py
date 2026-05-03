@@ -990,7 +990,11 @@ class IRGenerator:
         return left
 
     def _visit_arith_tail(self, left, node):
+        """Process arith_expr_tail with correct operator precedence (* / % before + -)."""
         children = self._get_children(node)
+        
+        # Collect all (op, operand) pairs
+        pairs = []
         i = 0
         while i < len(children):
             child = children[i]
@@ -998,13 +1002,47 @@ class IRGenerator:
                 op = self._extract_arith_op(child)
                 if i + 1 < len(children):
                     right = self._visit(children[i + 1])
-                    t = self._new_temp()
-                    self._emit("BINOP", dest=t, arg1=left, arg2=right, binop=op)
-                    left = t
+                    pairs.append((op, right))
                     i += 2
                     continue
             i += 1
-        return left
+
+        if not pairs:
+            return left
+
+        # Build operand list: [left, op, right, op, right, ...]
+        # First pass: collapse * / % 
+        operands = [left]
+        ops = []
+        for op, val in pairs:
+            operands.append(val)
+            ops.append(op)
+
+        # Process high-precedence operators first (* / %)
+        HIGH = {"*", "/", "%"}
+        i = 0
+        while i < len(ops):
+            if ops[i] in HIGH:
+                a = operands[i]
+                b = operands[i + 1]
+                t = self._new_temp()
+                self._emit("BINOP", dest=t, arg1=a, arg2=b, binop=ops[i])
+                # print(f"[IR_GEN VISIT ARITH TAIL HI DEBUG] dest = {t} and arg1 = {a} and arg 2 = {b} and the binop is {ops[i]}")
+                operands[i] = t
+                operands.pop(i + 1)
+                ops.pop(i)
+            else:
+                i += 1
+
+        # Process remaining low-precedence operators (+ -)
+        result = operands[0]
+        for i, op in enumerate(ops):
+            t = self._new_temp()
+            self._emit("BINOP", dest=t, arg1=result, arg2=operands[i + 1], binop=op)
+            # print(f"[IR_GEN VISIT ARITH TAIL LOW DEBUG] dest = {t} and arg1 = {result} and arg 2 = {operands[i + 1]} and the binop is {op}")
+            result = t
+
+        return result
 
     def _visit_arith_expr_tail(self, node):
         return None
