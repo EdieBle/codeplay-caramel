@@ -246,6 +246,20 @@ class StructuredCodeGenerator:
                 if fn == "__rand__":
                     return "drip" if instr.extra.get("use_float") else "bean"
         return None
+    
+    def _emit_pour_continue(self, goto_dest):
+        """Emit pour loop update instructions before continue for skip support."""
+        # Find the POUR_UPDATE label and emit its instructions
+        update_label = goto_dest
+        for j in range(len(self.ir)):
+            if self.ir[j].op == "LABEL" and self.ir[j].dest == update_label:
+                k = j + 1
+                while k < len(self.ir) and self.ir[k].op not in ("GOTO", "LABEL", "IF_FALSE"):
+                    self._gen_simple(self.ir[k], k)
+                    k += 1
+                break
+        self._emit("continue")
+    
     # ------------------------------------------------------------------
     # Header / Footer
     # ------------------------------------------------------------------
@@ -690,8 +704,11 @@ class StructuredCodeGenerator:
                 if "WHILE_END" in dest or "POUR_END" in dest or "DOWHILE_END" in dest:
                     self._emit("break")
                     has_body = True
-                elif "WHILE_START" in dest or "POUR_START" in dest or "POUR_UPDATE" in dest:
+                elif "WHILE_START" in dest or "POUR_START" in dest:
                     self._emit("continue")
+                    has_body = True
+                elif "POUR_UPDATE" in dest:
+                    self._emit_pour_continue(dest)
                     has_body = True
                 bi += 1
                 continue
@@ -841,9 +858,12 @@ class StructuredCodeGenerator:
                             if "WHILE_END" in dest or "POUR_END" in dest or "DOWHILE_END" in dest:
                                 self._emit("break")
                                 has_else = True
-                            elif "WHILE_START" in dest or "POUR_START" in dest or "POUR_UPDATE" in dest:
+                            elif "WHILE_START" in dest or "POUR_START" in dest:
                                 self._emit("continue")
-                                has_else = True
+                                has_body = True
+                            elif "POUR_UPDATE" in dest:
+                                self._emit_pour_continue(dest)
+                                has_body = True
                             bi += 1
                             continue
                         if instr_i.op == "IF_FALSE":
