@@ -70,7 +70,7 @@ SESSION_TTL = 600      # Seconds before a stale session is garbage-collected
 # Hard wall-clock limit (seconds) for a single interactive execution session.
 # If the program has not finished within this window the session is force-killed
 # and the user sees an "Execution timed out" message.
-EXECUTION_TIMEOUT_SECONDS = 30
+EXECUTION_TIMEOUT_SECONDS = 120
 
 
 class ExecutionSession:

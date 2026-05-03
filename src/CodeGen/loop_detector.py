@@ -286,10 +286,10 @@ class InfiniteLoopDetector:
         if cond_arg is True:
             # Only report if there is no break
             if not self._body_has_break(
-                region["start_idx"] + 1, region["back_idx"] or (region["start_idx"] + 500),
+                region["start_idx"] + 1, region["back_idx"] or (region["start_idx"] + 5000),
                 region["end_label"]
             ) and not self._body_has_return(
-                region["start_idx"] + 1, region["back_idx"] or (region["start_idx"] + 500)
+                region["start_idx"] + 1, region["back_idx"] or (region["start_idx"] + 5000)
             ):
                 line = region["line_hint"]
                 kind_name = {"while": "whilehot", "pour": "pour", "dowhile": "taste-till"}.get(
@@ -318,7 +318,7 @@ class InfiniteLoopDetector:
             return  # Not provably True
 
         # Check for break
-        back = region["back_idx"] or (region["start_idx"] + 500)
+        back = region["back_idx"] or (region["start_idx"] + 5000)
         if not self._body_has_break(region["start_idx"] + 1, back, region["end_label"]) \
                 and not self._body_has_return(region["start_idx"] + 1, back):
             line = region["line_hint"]
