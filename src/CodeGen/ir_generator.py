@@ -39,6 +39,7 @@ Operations:
     MEMBER_ACC  - member access                 (dest=temp, arg1=obj, arg2=member)
 """
 
+import traceback
 
 class IRInstruction:
     """Represents a single IR instruction."""
@@ -140,24 +141,30 @@ class IRGenerator:
 
     def generate(self):
         """Generate IR from the AST. Returns list of IRInstruction objects."""
-        if not self.ast:
-            return []
-        self._visit(self.ast)
+        
+        try:
+            if not self.ast:
+                return []
+            self._visit(self.ast)
 
-        # print("[IR_GEN] Starting generation")
-        # if not self.ast:
-        #     return []
-        # try:
-        #     self._visit(self.ast)
-        # except Exception as e:
-        #     import traceback
-        #     print(f"[IR_GEN CRASH] {e}")
-        #     traceback.print_exc()
-        #     return self.instructions
-        # debug
-        for i, instr in enumerate(self.instructions):
-            print(f"DEBUG IRGEN LIST [{i:03}]: {instr}")
-        return self.instructions
+            # print("[IR_GEN] Starting generation")
+            # if not self.ast:
+            #     return []
+            # try:
+            #     self._visit(self.ast)
+            # except Exception as e:
+            #     import traceback
+            #     print(f"[IR_GEN CRASH] {e}")
+            #     traceback.print_exc()
+            #     return self.instructions
+            # debug
+            for i, instr in enumerate(self.instructions):
+                print(f"DEBUG IRGEN LIST [{i:03}]: {instr}")
+            return self.instructions
+        except Exception as e:
+            print(f"[IR_GEN FATAL] {type(e).__name__}: {e}")
+            traceback.print_exc()
+            return ""
     
     def get_ir_dicts(self):
         """Return IR as a list of plain dictionaries (for JSON serialization)."""
