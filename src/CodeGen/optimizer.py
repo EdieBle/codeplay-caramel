@@ -214,7 +214,9 @@ class IROptimizer:
             if instr.op in ("FUNC_BEGIN", "FUNC_END", "LABEL"):
                 self._constants.clear()
                 continue
-
+            # if instr.op == "ASSIGN" and instr.dest:
+            #     print(f"[PROP] {instr.dest} = {instr.arg1!r} → constants[{instr.dest}] = {instr.arg1 if _is_constant(instr.arg1) else 'REMOVED'}")
+            
             # Track assignments of constants
             if instr.op == "ASSIGN" and instr.dest:
                 if _is_constant(instr.arg1):

@@ -2363,17 +2363,30 @@ class IRGenerator:
     def _visit_pre_unary_dec(self, node):
         """Handle ++ID or --ID as a statement."""
         children = self._get_children(node)
-        for i, child in enumerate(children):
-            if self._is_token(child) and child.type in ("INCREMENT", "DECREMENT"):
-                for c2 in children[i + 1:]:
-                    if self._is_token(c2) and c2.type == "ID":
-                        var = c2.value
-                        t = self._new_temp()
-                        inc = 1 if child.type == "INCREMENT" else -1
-                        self._emit("BINOP", dest=t, arg1=var, arg2=inc, binop="+")
-                        self._emit("ASSIGN", dest=var, arg1=t)
-                        return
-        self._visit_children_all(node)
+        op_type = None
+        var = None
+
+        for child in children:
+            # Handle unary_op node wrapper
+            if self._is_node(child) and child.name == "unary_op":
+                for uc in self._get_children(child):
+                    if self._is_token(uc) and uc.type in ("INCREMENT", "DECREMENT"):
+                        op_type = uc.type
+                        break
+            # Handle direct INCREMENT/DECREMENT token
+            elif self._is_token(child) and child.type in ("INCREMENT", "DECREMENT"):
+                op_type = child.type
+            # Get the variable name
+            elif self._is_token(child) and child.type == "ID":
+                var = child.value
+
+        if op_type and var:
+            t = self._new_temp()
+            inc = 1 if op_type == "INCREMENT" else -1
+            self._emit("BINOP", dest=t, arg1=var, arg2=inc, binop="+")
+            self._emit("ASSIGN", dest=var, arg1=t)
+        else:
+            self._visit_children_all(node)
 
     # ------------------------------------------------------------------
     # Data type node (no-op for IR)
