@@ -147,7 +147,7 @@ class IROptimizer:
 
     def _try_fold_binop(self, instr):
         a, b = instr.arg1, instr.arg2
-        op = instr.extra.get("binop", "")
+        op = instr.extra.get("binop", "")        
 
         if not (_is_constant(a) and _is_constant(b)):
             return None
@@ -157,6 +157,7 @@ class IROptimizer:
             na, nb = _to_numeric(a), _to_numeric(b)
             if na is not None and nb is not None:
                 result = _ARITH_OPS[op](na, nb)
+                # print(f"[FOLD_BINOP ARITH_OPS] {instr.dest} = {a!r} {op} {b!r} → {result!r}")
                 return result
 
         # Relational
@@ -223,10 +224,14 @@ class IROptimizer:
                     self._constants.pop(instr.dest, None)
 
             # Substitute known constants in operands
+            old_arg1 = instr.arg1
             if instr.arg1 in self._constants:
                 instr.arg1 = self._constants[instr.arg1]
             if instr.arg2 in self._constants:
                 instr.arg2 = self._constants[instr.arg2]
+            
+            # if old_arg1 != instr.arg1:
+                # print(f"[CONST_PROP] {instr.dest}: arg1 {old_arg1!r} → {instr.arg1!r}")
 
             # Also substitute in extra args
             if "args" in instr.extra:
@@ -244,7 +249,6 @@ class IROptimizer:
     # ------------------------------------------------------------------
 
     def _pass_strength_reduction(self):
-        """Replace expensive operations with cheaper equivalents."""
         for instr in self.instructions:
             if instr.op != "BINOP":
                 continue
@@ -252,8 +256,19 @@ class IROptimizer:
             op = instr.extra.get("binop", "")
             a, b = instr.arg1, instr.arg2
 
+            def _is_string_literal(v):
+                return isinstance(v, str) and (v.startswith("'") or v.startswith('"'))
+
+            def _safe_zero(v):
+                if isinstance(v, bool): return False
+                return _is_zero(v)
+
+            def _safe_one(v):
+                if isinstance(v, bool): return False
+                return _is_one(v)
+
             # x * 0 = 0
-            if op == "*" and (_is_zero(a) or _is_zero(b)):
+            if op == "*" and (_safe_zero(a) or _safe_zero(b)):
                 instr.op = "ASSIGN"
                 instr.arg1 = 0
                 instr.arg2 = None
@@ -262,13 +277,13 @@ class IROptimizer:
 
             # x * 1 = x, 1 * x = x
             if op == "*":
-                if _is_one(b):
+                if _safe_one(b) and not _is_string_literal(a):
                     instr.op = "ASSIGN"
                     instr.arg1 = a
                     instr.arg2 = None
                     instr.extra = {}
                     continue
-                if _is_one(a):
+                if _safe_one(a) and not _is_string_literal(b):
                     instr.op = "ASSIGN"
                     instr.arg1 = b
                     instr.arg2 = None
@@ -277,13 +292,13 @@ class IROptimizer:
 
             # x + 0 = x, 0 + x = x
             if op == "+":
-                if _is_zero(b):
+                if _safe_zero(b) and not _is_string_literal(a):
                     instr.op = "ASSIGN"
                     instr.arg1 = a
                     instr.arg2 = None
                     instr.extra = {}
                     continue
-                if _is_zero(a):
+                if _safe_zero(a) and not _is_string_literal(b):
                     instr.op = "ASSIGN"
                     instr.arg1 = b
                     instr.arg2 = None
@@ -291,7 +306,7 @@ class IROptimizer:
                     continue
 
             # x - 0 = x
-            if op == "-" and _is_zero(b):
+            if op == "-" and _safe_zero(b) and not _is_string_literal(a):
                 instr.op = "ASSIGN"
                 instr.arg1 = a
                 instr.arg2 = None
@@ -299,15 +314,15 @@ class IROptimizer:
                 continue
 
             # x / 1 = x
-            if op == "/" and _is_one(b):
+            if op == "/" and _safe_one(b) and not _is_string_literal(a):
                 instr.op = "ASSIGN"
                 instr.arg1 = a
                 instr.arg2 = None
                 instr.extra = {}
                 continue
 
-            # x * 2 = x + x (cheaper on some architectures)
-            if op == "*" and _to_numeric(b) == 2:
+            # x * 2 = x + x
+            if op == "*" and _to_numeric(b) == 2 and not isinstance(b, bool):
                 instr.extra["binop"] = "+"
                 instr.arg2 = a
                 continue

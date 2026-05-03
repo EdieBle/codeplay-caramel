@@ -60,11 +60,16 @@ class CodeGenerator:
         Generate Python source code from IR instructions.
         Returns the generated code as a string.
         """
-        self._preprocess()
-        self._emit_header()
-        self._translate_instructions()
-        self._emit_footer()
-        return "\n".join(self._lines)
+        try:
+            self._preprocess()
+            self._emit_header()
+            self._translate_instructions()
+            self._emit_footer()
+            return "\n".join(self._lines)
+        except Exception as e:
+            print(f"[CODEGEN FATAL] {type(e).__name__}: {e}")
+            traceback.print_exc()
+            return ""
 
     def execute(self, input_values=None):
         """
@@ -554,6 +559,7 @@ class CodeGenerator:
         s = str(val)
         eb = getattr(self, '_elif_binops', {})
         if s.startswith('_t') and s in eb:
+            print(f"[NORMAL CODEGEN PY_VAL] resolving {s!r} -> {eb[s]!r} from _elif_binops")
             return eb[s]
         # String literals
         if (s.startswith('"') and s.endswith('"')) or \
@@ -712,6 +718,7 @@ class StructuredCodeGenerator:
         return safe
 
     def _py_val(self, val):
+        """Convert an IR value to a Python expression string."""
         if val is None:
             return "None"
         if isinstance(val, bool):
@@ -723,14 +730,20 @@ class StructuredCodeGenerator:
         s = str(val)
         eb = getattr(self, '_elif_binops', {})
         if s.startswith('_t') and s in eb:
+            print(f"[STRUCT CODEGEN PY_VAL] resolving {s!r} -> {eb[s]!r} from _elif_binops")
             return eb[s]
+        # String literals
         if (s.startswith('"') and s.endswith('"')) or \
            (s.startswith("'") and s.endswith("'")):
             return s
+        # Temp vars
         if s.startswith("_t"):
             return s
+        # Order access
         if s.startswith("order."):
-            return s[6:]  # global array: order.arr -> arr
+            field = s[6:]
+            return f'_order["{field}"]'
+        # Regular variable reference
         return self._py_var(s)
 
     # RELATED TO BINOP
@@ -935,69 +948,75 @@ class StructuredCodeGenerator:
 
     def _gen_function(self, start):
         """Generate a function definition block."""
-        instr = self.ir[start]
-        func_name = instr.dest
-        py_name = self._py_func_name(func_name)
+        try:
+            instr = self.ir[start]
+            func_name = instr.dest
+            py_name = self._py_func_name(func_name)
 
-        # Find FUNC_END
-        func_end = start + 1
-        depth = 1
-        while func_end < len(self.ir):
-            if self.ir[func_end].op == "FUNC_BEGIN":
-                depth += 1
-            elif self.ir[func_end].op == "FUNC_END":
-                depth -= 1
-                if depth == 0:
-                    break
-            func_end += 1
+            # Find FUNC_END
+            func_end = start + 1
+            depth = 1
+            while func_end < len(self.ir):
+                if self.ir[func_end].op == "FUNC_BEGIN":
+                    depth += 1
+                elif self.ir[func_end].op == "FUNC_END":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                func_end += 1
 
-        # Collect parameters
-        params = []
-        for j in range(start + 1, func_end):
-            if self.ir[j].op == "DECLARE" and self.ir[j].extra.get("param"):
-                params.append(self.ir[j].dest)
+            # Collect parameters
+            params = []
+            for j in range(start + 1, func_end):
+                if self.ir[j].op == "DECLARE" and self.ir[j].extra.get("param"):
+                    params.append(self.ir[j].dest)
 
-        param_str = ", ".join(params)
-        self._emit(f"def {py_name}({param_str}):")
-        self._push()
+            param_str = ", ".join(params)
+            self._emit(f"def {py_name}({param_str}):")
+            self._push()
 
-        # Track declared
-        old_declared = self._declared.copy()
-        self._declared = set(params)
+            # Track declared
+            old_declared = self._declared.copy()
+            self._declared = set(params)
 
-        # Emit body (skip param declarations)
-        body_start = start + 1
-        has_body = False
-        bi = body_start
-        while bi < func_end:
-            instr_i = self.ir[bi]
-            if instr_i.op == "DECLARE" and instr_i.extra.get("param"):
-                bi += 1
-                continue
-            has_body = True
-            # Use structured translation for the body
-            if instr_i.op == "LABEL":
-                loop_end = self._detect_while_loop(bi)
-                if loop_end is not None and loop_end <= func_end:
-                    bi = self._gen_while_loop(bi, loop_end)
+            # Emit body (skip param declarations)
+            body_start = start + 1
+            has_body = False
+            bi = body_start
+            while bi < func_end:
+                instr_i = self.ir[bi]
+                if instr_i.op == "DECLARE" and instr_i.extra.get("param"):
+                    bi += 1
                     continue
-                bi += 1
-                continue
-            if instr_i.op == "IF_FALSE":
-                bi = self._gen_if_block(bi, func_end)
-                continue
-            if instr_i.op in ("GOTO",):
-                bi += 1
-                continue
-            bi = self._gen_simple(instr_i, bi)
+                has_body = True
+                # Use structured translation for the body
+                if instr_i.op == "LABEL":
+                    loop_end = self._detect_while_loop(bi)
+                    if loop_end is not None and loop_end <= func_end:
+                        bi = self._gen_while_loop(bi, loop_end)
+                        continue
+                    bi += 1
+                    continue
+                if instr_i.op == "IF_FALSE":
+                    bi = self._gen_if_block(bi, func_end)
+                    continue
+                if instr_i.op in ("GOTO",):
+                    bi += 1
+                    continue
+                # print(f"[FUNC_WALK CODEGEN BEFORE GEN_SIMPLE] bi={bi} op={instr_i.op} dest={instr_i.dest} arg1={instr_i.arg1!r} arg2={getattr(instr_i, 'arg2', None)!r}")
+                bi = self._gen_simple(instr_i, bi)
 
-        if not has_body:
-            self._emit("pass")
+            if not has_body:
+                self._emit("pass")
 
-        self._pop()
-        self._emit("")
-        self._declared = old_declared
-        return func_end + 1
+            self._pop()
+            self._emit("")
+            self._declared = old_declared
+            return func_end + 1
+        except Exception as e:
+            print(f"[GEN_FUNCTION FATAL] start={start}: {e}")
+            traceback.print_exc()
+            return start + 1
 
     def _detect_while_loop(self, label_idx):
         """
@@ -1405,244 +1424,252 @@ class StructuredCodeGenerator:
 
     def _gen_simple(self, instr, idx):
         """Generate a simple (non-control-flow) instruction."""
-        op = instr.op
+        try:
+            op = instr.op
 
-        if op == "DECLARE":
-            if instr.extra.get("param"):
-                return idx + 1
-            var = self._py_var(instr.dest)
-            dtype = instr.extra.get("type", "bean")
-            default = self.DEFAULT_VALUES.get(dtype, "None")
-            if var not in self._declared:
-                self._emit(f"{var} = {default}")
-                self._declared.add(var)
-                
-        elif op == "ASSIGN":
-            dest = self._py_var(instr.dest)
-            val = self._py_val(instr.arg1)
-            var_type = self._get_var_type(instr.dest)
-            src_type = self._get_var_type(instr.arg1) if isinstance(instr.arg1, str) else None
-            if var_type == "bean" and src_type not in ("churro", "blend"):
-                self._emit(f"{dest} = int({val})")
-            else:
-                self._emit(f"{dest} = {val}")
-
-        elif op == "BINOP":
-            dest = self._py_var(instr.dest)
-            a = self._py_val(instr.arg1)
-            b = self._py_val(instr.arg2)
-            binop = instr.extra.get("binop", "+")
-            t1 = self._get_var_type(instr.arg1)
-            t2 = self._get_var_type(instr.arg2)
-
-            def is_churro(val_raw, inferred_type):
-                if inferred_type == "churro":
-                    return True
-                if isinstance(val_raw, str) and len(val_raw) == 3 \
-                        and val_raw[0] == "'" and val_raw[-1] == "'":
-                    return True
-                return False
-
-            # Determine other operand's type
-            t1 = self._get_var_type(instr.arg1)
-            t2 = self._get_var_type(instr.arg2)
-            other_is_blend = (
-                (isinstance(instr.arg2, str) and instr.arg2.startswith('"')) or t2 == "blend"
-            )
-            other_is_blend_left = (
-                (isinstance(instr.arg1, str) and instr.arg1.startswith('"')) or t1 == "blend"
-            )
-
-            if is_churro(instr.arg1, t1) or is_churro(instr.arg2, t2):
-                # Don't ord() when comparing churro against a blend/string literal
-                a = f"ord({a})" if is_churro(instr.arg1, t1) and not other_is_blend else a
-                b = f"ord({b})" if is_churro(instr.arg2, t2) and not other_is_blend_left else b
-
-            if binop == "&&":
-                self._emit(f"{dest} = _caramel_to_bool({a}) and _caramel_to_bool({b})")
-            elif binop == "||":
-                self._emit(f"{dest} = _caramel_to_bool({a}) or _caramel_to_bool({b})")
-
-                #should handle the cases wherein glaze j + "\n" as it transforms arg1 or arg2 into a string if the other is blend/string
-            elif binop == "+" and "blend" in (t1, t2):
-                a = f"str({a})" if t1 != "blend" else a
-                b = f"str({b})" if t2 != "blend" else b
-                self._emit(f"{dest} = {a} + {b}")
-            else:
-                self._emit(f"{dest} = {a} {binop} {b}")
-
-        elif op == "UNARYOP":
-            dest = self._py_var(instr.dest)
-            a = self._py_val(instr.arg1)
-            uop = instr.extra.get("unaryop", "-")
-            if uop == "!":
-                self._emit(f"{dest} = not _caramel_to_bool({a})")
-            else:
-                self._emit(f"{dest} = {uop}({a})")
-
-        elif op == "PRINT":
-            args = instr.extra.get("args", [])
-            if args:
-                py_args = ", ".join(self._py_val(a) for a in args)
-                self._emit(f"_caramel_print({py_args})")
-            else:
-                self._emit("_caramel_print()")
-
-        elif op == "INPUT": # WALA PALA YUNG TEMP PAKI TEST IF VALID, also check if it does indeed print kase sa parser oks naman and child siya ni batter@
-            dest = self._py_var(instr.dest)
-            dtype = self._get_var_type(instr.dest) or instr.extra.get("array_elem_type")
-            prompt = instr.extra.get("prompt") or ""
-            prompt_arg = f"{prompt}" if prompt else "''"
-            if dtype == "bean":
-                self._emit(f"{dest} = _caramel_input_bean({prompt_arg})")
-            elif dtype == "drip":
-                self._emit(f"{dest} = _caramel_input_drip({prompt_arg})")
-            elif dtype == "temp":
-                self._emit(f"_inp = _caramel_input({prompt_arg})")
-                self._emit(f"{dest} = _inp.lower() in (\"hot\", \"true\", \"1\")")
-            else:
-                self._emit(f"{dest} = _caramel_input({prompt_arg})")
-        
-        elif op == "RETURN":
-            if instr.arg1 is not None:
+            if op == "DECLARE":
+                if instr.extra.get("param"):
+                    return idx + 1
+                var = self._py_var(instr.dest)
+                dtype = instr.extra.get("type", "bean")
+                default = self.DEFAULT_VALUES.get(dtype, "None")
+                if var not in self._declared:
+                    self._emit(f"{var} = {default}")
+                    self._declared.add(var)
+                    
+            elif op == "ASSIGN":
+                dest = self._py_var(instr.dest)
                 val = self._py_val(instr.arg1)
-                rtype = instr.extra.get("return_type")
-                if rtype == "drip":
-                    self._emit(f"return float({val})")
-                elif rtype == "bean":
-                    self._emit(f"return int({val})")
-                elif rtype == "temp":
-                    self._emit(f"return bool({val})")
+                var_type = self._get_var_type(instr.dest)
+                src_type = self._get_var_type(instr.arg1) if isinstance(instr.arg1, str) else None
+                if var_type == "bean" and src_type not in ("churro", "blend"):
+                    self._emit(f"{dest} = int({val})")
                 else:
-                    self._emit(f"return {val}")
-            else:
-                self._emit("return")
+                    self._emit(f"{dest} = {val}")
 
-        elif op == "CALL":
-            dest = self._py_var(instr.dest)
-            func = self._py_func_name(instr.arg1)
-            arg_count = instr.extra.get("arg_count", 0)
-            params = []
-            for j in range(max(0, idx - arg_count), idx):
-                if j < len(self.ir) and self.ir[j].op == "PARAM":
-                    params.append(self._py_val(self.ir[j].arg1))
+            elif op == "BINOP":
+                dest = self._py_var(instr.dest)
+                a = self._py_val(instr.arg1)
+                b = self._py_val(instr.arg2)
+                binop = instr.extra.get("binop", "+")
+                t1 = self._get_var_type(instr.arg1)
+                t2 = self._get_var_type(instr.arg2)
+
+                print(f"[CODEGEN BINOP] dest={instr.dest} arg1={instr.arg1!r} arg2={instr.arg2!r} binop={instr.extra.get('binop')} → a={a!r} b={b!r} t1={t1} t2={t2}")
+                def is_churro(val_raw, inferred_type):
+                    if inferred_type == "churro":
+                        return True
+                    if isinstance(val_raw, str) and len(val_raw) == 3 \
+                            and val_raw[0] == "'" and val_raw[-1] == "'":
+                        return True
+                    return False
+
+                # Determine other operand's type
+                t1 = self._get_var_type(instr.arg1)
+                t2 = self._get_var_type(instr.arg2)
+                other_is_blend = (
+                    (isinstance(instr.arg2, str) and instr.arg2.startswith('"')) or t2 == "blend"
+                )
+                other_is_blend_left = (
+                    (isinstance(instr.arg1, str) and instr.arg1.startswith('"')) or t1 == "blend"
+                )
+
+                if is_churro(instr.arg1, t1) or is_churro(instr.arg2, t2):
+                    # Don't ord() when comparing churro against a blend/string literal
+                    a = f"ord({a})" if is_churro(instr.arg1, t1) and not other_is_blend else a
+                    b = f"ord({b})" if is_churro(instr.arg2, t2) and not other_is_blend_left else b
+
+                if binop == "&&":
+                    self._emit(f"{dest} = _caramel_to_bool({a}) and _caramel_to_bool({b})")
+                elif binop == "||":
+                    self._emit(f"{dest} = _caramel_to_bool({a}) or _caramel_to_bool({b})")
+
+                    #should handle the cases wherein glaze j + "\n" as it transforms arg1 or arg2 into a string if the other is blend/string
+                elif binop == "+" and "blend" in (t1, t2):
+                    a = f"str({a})" if t1 != "blend" else a
+                    b = f"str({b})" if t2 != "blend" else b
+                    self._emit(f"{dest} = {a} + {b}")
+                else:
+                    self._emit(f"{dest} = {a} {binop} {b}")
+
+            elif op == "UNARYOP":
+                dest = self._py_var(instr.dest)
+                a = self._py_val(instr.arg1)
+                uop = instr.extra.get("unaryop", "-")
+                if uop == "!":
+                    print(f"[uop = ! PRINT] raw args={instr.extra.get('args')} → py_args={[self._py_val(a) for a in instr.extra.get('args', [])]}")
+                    self._emit(f"{dest} = not _caramel_to_bool({a})")
+                else:
+                    print(f"[else not uop = ! PRINT] raw args={instr.extra.get('args')} → py_args={[self._py_val(a) for a in instr.extra.get('args', [])]}")
+                    self._emit(f"{dest} = {uop}({a})")
+
+            elif op == "PRINT":
+                args = instr.extra.get("args", [])
+                if args:
+                    py_args = ", ".join(self._py_val(a) for a in args)
+                    self._emit(f"_caramel_print({py_args})")
+                else:
+                    self._emit("_caramel_print()")
+
+            elif op == "INPUT": # WALA PALA YUNG TEMP PAKI TEST IF VALID, also check if it does indeed print kase sa parser oks naman and child siya ni batter@
+                dest = self._py_var(instr.dest)
+                dtype = self._get_var_type(instr.dest) or instr.extra.get("array_elem_type")
+                prompt = instr.extra.get("prompt") or ""
+                prompt_arg = f"{prompt}" if prompt else "''"
+                if dtype == "bean":
+                    self._emit(f"{dest} = _caramel_input_bean({prompt_arg})")
+                elif dtype == "drip":
+                    self._emit(f"{dest} = _caramel_input_drip({prompt_arg})")
+                elif dtype == "temp":
+                    self._emit(f"_inp = _caramel_input({prompt_arg})")
+                    self._emit(f"{dest} = _inp.lower() in (\"hot\", \"true\", \"1\")")
+                else:
+                    self._emit(f"{dest} = _caramel_input({prompt_arg})")
             
-            if instr.arg1 == "__rand__":
-                use_float = instr.extra.get("use_float", False)
-                fn = "random.uniform" if use_float else "random.randint"
-                self._emit(f"{dest} = {fn}({', '.join(params)})")
-                return idx + 1
-            self._emit(f"{dest} = {func}({', '.join(params)})")
-
-        elif op == "PARAM":
-            pass  # handled by CALL
-
-        elif op == "CONCAT":
-            dest = self._py_var(instr.dest)
-            a = self._py_val(instr.arg1)
-            b = self._py_val(instr.arg2)
-            self._emit(f"{dest} = str({a}) + str({b})")
-
-        elif op == "ARR_DECLARE":
-            name = instr.dest
-            dims = instr.extra.get("dims", [])
-            init_vals = instr.extra.get("init", [])
-            dtype = instr.extra.get("type", "bean")
-            default = {"churro": "''", "blend": '""', "temp": "False", "drip": "0.0"}.get(dtype, "0")
-            var = name[6:] if name.startswith("order.") else name
-
-
-            if len(dims) == 2:
-                r, c = dims[0], dims[1]
-                if r == "***" or c == "***":
-                    self._emit(f"{var} = []")
-                elif init_vals and isinstance(init_vals[0], list):
-                    padded = []
-                    for row in init_vals:
-                        padded_row = list(row) + [default] * (c - len(row)) if isinstance(c, int) else list(row)
-                        padded.append(padded_row)
-                    while isinstance(r, int) and len(padded) < r:
-                        padded.append([default] * (c if isinstance(c, int) else 0))
-                    self._emit(f"{var} = {padded}")
-                else:
-                    self._emit(f"{var} = [[{default}] * {c} for _ in range({r})]")
-            elif len(dims) == 1:
-                d = dims[0]
-                if d == "***":
-                    if init_vals:
-                        self._emit(f"{var} = {list(init_vals)}")
+            elif op == "RETURN":
+                if instr.arg1 is not None:
+                    val = self._py_val(instr.arg1)
+                    rtype = instr.extra.get("return_type")
+                    if rtype == "drip":
+                        self._emit(f"return float({val})")
+                    elif rtype == "bean":
+                        self._emit(f"return int({val})")
+                    elif rtype == "temp":
+                        self._emit(f"return bool({val})")
                     else:
+                        self._emit(f"return {val}")
+                else:
+                    self._emit("return")
+
+            elif op == "CALL":
+                dest = self._py_var(instr.dest)
+                func = self._py_func_name(instr.arg1)
+                arg_count = instr.extra.get("arg_count", 0)
+                params = []
+                for j in range(max(0, idx - arg_count), idx):
+                    if j < len(self.ir) and self.ir[j].op == "PARAM":
+                        params.append(self._py_val(self.ir[j].arg1))
+                
+                if instr.arg1 == "__rand__":
+                    use_float = instr.extra.get("use_float", False)
+                    fn = "random.uniform" if use_float else "random.randint"
+                    self._emit(f"{dest} = {fn}({', '.join(params)})")
+                    return idx + 1
+                self._emit(f"{dest} = {func}({', '.join(params)})")
+
+            elif op == "PARAM":
+                pass  # handled by CALL
+
+            elif op == "CONCAT":
+                dest = self._py_var(instr.dest)
+                a = self._py_val(instr.arg1)
+                b = self._py_val(instr.arg2)
+                self._emit(f"{dest} = str({a}) + str({b})")
+
+            elif op == "ARR_DECLARE":
+                name = instr.dest
+                dims = instr.extra.get("dims", [])
+                init_vals = instr.extra.get("init", [])
+                dtype = instr.extra.get("type", "bean")
+                default = {"churro": "''", "blend": '""', "temp": "False", "drip": "0.0"}.get(dtype, "0")
+                var = name[6:] if name.startswith("order.") else name
+
+
+                if len(dims) == 2:
+                    r, c = dims[0], dims[1]
+                    if r == "***" or c == "***":
                         self._emit(f"{var} = []")
-                elif init_vals:
-                    if isinstance(d, int) and len(init_vals) < d:
-                        padded = list(init_vals) + [default] * (d - len(init_vals))
+                    elif init_vals and isinstance(init_vals[0], list):
+                        padded = []
+                        for row in init_vals:
+                            padded_row = list(row) + [default] * (c - len(row)) if isinstance(c, int) else list(row)
+                            padded.append(padded_row)
+                        while isinstance(r, int) and len(padded) < r:
+                            padded.append([default] * (c if isinstance(c, int) else 0))
                         self._emit(f"{var} = {padded}")
-                    elif not isinstance(d, int):
-                        self._emit(f"{var} = {list(init_vals)}")
-                        self._emit(f"while len({var}) < {d}: {var}.append({default})")
                     else:
-                        self._emit(f"{var} = {list(init_vals)}")
+                        self._emit(f"{var} = [[{default}] * {c} for _ in range({r})]")
+                elif len(dims) == 1:
+                    d = dims[0]
+                    if d == "***":
+                        if init_vals:
+                            self._emit(f"{var} = {list(init_vals)}")
+                        else:
+                            self._emit(f"{var} = []")
+                    elif init_vals:
+                        if isinstance(d, int) and len(init_vals) < d:
+                            padded = list(init_vals) + [default] * (d - len(init_vals))
+                            self._emit(f"{var} = {padded}")
+                        elif not isinstance(d, int):
+                            self._emit(f"{var} = {list(init_vals)}")
+                            self._emit(f"while len({var}) < {d}: {var}.append({default})")
+                        else:
+                            self._emit(f"{var} = {list(init_vals)}")
+                    else:
+                        self._emit(f"{var} = [{default}] * {d}")
                 else:
-                    self._emit(f"{var} = [{default}] * {d}")
-            else:
-                self._emit(f"{var} = []")
+                    self._emit(f"{var} = []")
 
-        elif op == "ARR_LOAD":
-            dest = self._py_var(instr.dest)
-            arr = self._py_var(instr.arg1)
-            idx_val = self._py_val(instr.arg2)
-            idx_val = getattr(self, '_elif_binops', {}).get(idx_val, idx_val)
-            is_2d = instr.extra.get("is_2d", False)
-            # Find if source array is dynamic
-            arr_decl = next((ins for ins in self.ir if ins.op == "ARR_DECLARE" and ins.dest == instr.arg1), None)
-            is_dynamic = arr_decl and (arr_decl.extra.get("dims") in (["***"], ["***", "***"]) or 
-                                    arr_decl.extra.get("dims", [None])[0] == "***")
-            if is_dynamic or is_2d:
-                expand_with = "[]" if is_2d else self._get_default_for(instr.arg1)
-                self._emit(f"while len({arr}) <= {idx_val}: {arr}.append({expand_with})")
-            self._emit(f"{dest} = {arr}[{idx_val}]")
+            elif op == "ARR_LOAD":
+                dest = self._py_var(instr.dest)
+                arr = self._py_var(instr.arg1)
+                idx_val = self._py_val(instr.arg2)
+                idx_val = getattr(self, '_elif_binops', {}).get(idx_val, idx_val)
+                is_2d = instr.extra.get("is_2d", False)
+                # Find if source array is dynamic
+                arr_decl = next((ins for ins in self.ir if ins.op == "ARR_DECLARE" and ins.dest == instr.arg1), None)
+                is_dynamic = arr_decl and (arr_decl.extra.get("dims") in (["***"], ["***", "***"]) or 
+                                        arr_decl.extra.get("dims", [None])[0] == "***")
+                if is_dynamic or is_2d:
+                    expand_with = "[]" if is_2d else self._get_default_for(instr.arg1)
+                    self._emit(f"while len({arr}) <= {idx_val}: {arr}.append({expand_with})")
+                self._emit(f"{dest} = {arr}[{idx_val}]")
 
-        elif op == "ARR_STORE":
-            arr = self._py_var(instr.dest)
-            idx_val = self._py_val(instr.arg1)
-            idx_val = getattr(self, '_elif_binops', {}).get(idx_val, idx_val)
-            val = self._py_val(instr.arg2)
-            if instr.dest and str(instr.dest).startswith("_t"):
-                # Temp subarray from 2D load — auto-expand with default
-                # Find original array type by tracing back through ARR_LOAD
-                orig_type = None
-                for ins in self.ir:
-                    if ins.op == "ARR_LOAD" and ins.dest == instr.dest:
-                        orig_type = self._get_var_type(ins.arg1)
-                        break
-                default = {"churro": "''", "blend": '""', "temp": "False", "drip": "0.0"}.get(orig_type, "0")
-                self._emit(f"while len({arr}) <= {idx_val}: {arr}.append({default})")
-                self._emit(f"{arr}[{idx_val}] = {val}")
-            else:
-                arr_decl = next((ins for ins in self.ir if ins.op == "ARR_DECLARE" and ins.dest == instr.dest), None)
-                is_dynamic = arr_decl and arr_decl.extra.get("dims", [None])[0] == "***"
-                if is_dynamic:
-                    self._emit(f"while len({arr}) <= {idx_val}: {arr}.append({self._get_default_for(instr.dest)})")
-                self._emit(f"{arr}[{idx_val}] = {val}")
+            elif op == "ARR_STORE":
+                arr = self._py_var(instr.dest)
+                idx_val = self._py_val(instr.arg1)
+                idx_val = getattr(self, '_elif_binops', {}).get(idx_val, idx_val)
+                val = self._py_val(instr.arg2)
+                if instr.dest and str(instr.dest).startswith("_t"):
+                    # Temp subarray from 2D load — auto-expand with default
+                    # Find original array type by tracing back through ARR_LOAD
+                    orig_type = None
+                    for ins in self.ir:
+                        if ins.op == "ARR_LOAD" and ins.dest == instr.dest:
+                            orig_type = self._get_var_type(ins.arg1)
+                            break
+                    default = {"churro": "''", "blend": '""', "temp": "False", "drip": "0.0"}.get(orig_type, "0")
+                    self._emit(f"while len({arr}) <= {idx_val}: {arr}.append({default})")
+                    self._emit(f"{arr}[{idx_val}] = {val}")
+                else:
+                    arr_decl = next((ins for ins in self.ir if ins.op == "ARR_DECLARE" and ins.dest == instr.dest), None)
+                    is_dynamic = arr_decl and arr_decl.extra.get("dims", [None])[0] == "***"
+                    if is_dynamic:
+                        self._emit(f"while len({arr}) <= {idx_val}: {arr}.append({self._get_default_for(instr.dest)})")
+                    self._emit(f"{arr}[{idx_val}] = {val}")
 
-        elif op == "MEMBER_ACC":
-            dest = self._py_var(instr.dest)
-            obj = self._py_var(instr.arg1)
-            member = instr.arg2
-            self._emit(f"{dest} = {obj}.get('{member}', None) if isinstance({obj}, dict) else getattr({obj}, '{member}', None)")
+            elif op == "MEMBER_ACC":
+                dest = self._py_var(instr.dest)
+                obj = self._py_var(instr.arg1)
+                member = instr.arg2
+                self._emit(f"{dest} = {obj}.get('{member}', None) if isinstance({obj}, dict) else getattr({obj}, '{member}', None)")
 
-        elif op == "SNAP":
-            self._emit("break")
+            elif op == "SNAP":
+                self._emit("break")
 
-        elif op == "SKIP":
-            self._emit("continue")
+            elif op == "SKIP":
+                self._emit("continue")
 
-            
-        elif op in ("FUNC_BEGIN", "FUNC_END", "LABEL", "GOTO",
-                    "IF_FALSE", "IF_TRUE", "NOP", "PARAM"):
-            pass  # handled elsewhere
+                
+            elif op in ("FUNC_BEGIN", "FUNC_END", "LABEL", "GOTO",
+                        "IF_FALSE", "IF_TRUE", "NOP", "PARAM"):
+                pass  # handled elsewhere
 
-        return idx + 1
+            return idx + 1
+        except Exception as e:
+            print(f"[GEN_SIMPLE FATAL] bi={idx} op={instr.op} dest={instr.dest} arg1={instr.arg1!r}: {e}")
+            traceback.print_exc()
+            return idx + 1
 
     def _get_var_type(self, var_name):
         if not isinstance(var_name, str):

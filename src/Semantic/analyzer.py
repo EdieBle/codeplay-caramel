@@ -291,7 +291,7 @@ class SemanticAnalyzer:
         self.symbol_table.pop_scope()
 
     def _visit_main_body(self, node):
-        print(f"[MAIN BODY DEBUG] children: {[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in node.children]}")
+        # print(f"[SEMANTIC MAIN BODY DEBUG] children: {[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in node.children]}")
         self._visit_children(node)
     
     # Functions
@@ -561,7 +561,7 @@ class SemanticAnalyzer:
     def _visit_dtype_dec(self, node):
         dtype = self._extract_type_from_node(node)
 
-        print(f"[_visit_dtype_dec] dtype={dtype}, node={node.name}") 
+        # print(f"[SEMANTIC _visit_dtype_dec] dtype={dtype}, node={node.name}") 
         if not dtype:
             self._visit_children(node)
             return
@@ -659,7 +659,7 @@ class SemanticAnalyzer:
                                 else:
                                     arr_init_count = self._count_arr_elements_2d(dc)
 
-            print(f"[DEBUG] Declaring '{id_token.value}' dtype='{dtype}' is_constant={is_constant} is_array={is_array} at scope_level={self.symbol_table.scope_level}")
+            # print(f"[SEMANTIC ID STATE DEBUG] Declaring '{id_token.value}' dtype='{dtype}' is_constant={is_constant} is_array={is_array} at scope_level={self.symbol_table.scope_level}")
 
             sym = Symbol(
                 id_token.value, "variable",
@@ -672,12 +672,12 @@ class SemanticAnalyzer:
             if not self.symbol_table.declare(id_token.value, sym):
                 self._error("E001", f"Redefinition of identifier '{id_token.value}'", id_token)
 
-            print(f"[SEMANTIC ARR_DEBUG] arr_size={arr_size} arr_init_count={arr_init_count} is_array={is_array} is_2d={is_2d}")
+            # print(f"[SEMANTIC ARR_DEBUG] arr_size={arr_size} arr_init_count={arr_init_count} is_array={is_array} is_2d={is_2d}")
             # Bounds check: initializer count must not exceed declared size
             if is_array and arr_size is not None and arr_init_count is not None:
                 print(not is_2d and arr_init_count > arr_size)
                 if not is_2d and arr_init_count > arr_size: 
-                    print(f"[SEMANTIC ARR_DEBUG] arr_size={arr_size} arr_init_count={arr_init_count} is_array={is_array} is_2d={is_2d}")
+                    # print(f"[SEMANTIC ARR_DEBUG] arr_size={arr_size} arr_init_count={arr_init_count} is_array={is_array} is_2d={is_2d}")
                     self._error(
                         "E_ARR",
                         f"Array '{id_token.value}' declared with size {arr_size} "
@@ -1137,7 +1137,7 @@ class SemanticAnalyzer:
         if node.name == "primary":
             return self._infer_primary_type(node)
         elif node.name == "expression":
-            print("expression hit")
+            # print("[SEMANTIC DEBUG EXPRESSION HIT INFER VAL]expression hit")
             return self._infer_expression_type(node)
         elif node.name == "assign_val":
             return self._infer_expression_type(node)

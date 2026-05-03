@@ -156,7 +156,7 @@ class IRGenerator:
         #     return self.instructions
         # debug
         for i, instr in enumerate(self.instructions):
-            print(f"[{i:03}] {instr}")
+            print(f"DEBUG IRGEN LIST [{i:03}]: {instr}")
         return self.instructions
     
     def get_ir_dicts(self):
@@ -329,7 +329,7 @@ class IRGenerator:
             var_name = id_tok.value
             self._var_types[var_name] = dtype
 
-            print(f"[DTYPE_DEC] registered '{var_name}' as '{dtype}' in _var_types")
+            # print(f"[IR_GEN DTYPE_DEC DEBUG] registered '{var_name}' as '{dtype}' in _var_types")
             self._emit("DECLARE", dest=var_name, type=dtype)
 
             # process the tail (opt_assign, array, etc.)
