@@ -635,10 +635,13 @@ class SemanticAnalyzer:
                         # Detect 2D: arr_dec_dim starts with OP_BRACKETS + arr_size_val
                         col_size = None
                         is_2d = False
-                        for dc in tc.children:
-                            if (self._is_parse_node(dc) and dc.name == "OP_BRACKETS") or \
-                            (not self._is_parse_node(dc) and hasattr(dc, 'type') and dc.type == "OP_BRACKETS"):
-                                is_2d = True
+                        for i, dc in enumerate(tc.children):
+                            if i == 0 and (
+                                (self._is_parse_node(dc) and dc.name == "OP_BRACKETS") or
+                                (not self._is_parse_node(dc) and hasattr(dc, 'type') and dc.type == "OP_BRACKETS")
+                            ):
+                                if len(tc.children) > 1 and self._is_parse_node(tc.children[1]) and tc.children[1].name == "arr_size_val":
+                                    is_2d = True
                             if self._is_parse_node(dc) and dc.name == "arr_size_val":
                                 for sc in dc.children:
                                     if not self._is_parse_node(sc) and hasattr(sc, 'type') and sc.type == "BEANLIT":
@@ -669,9 +672,12 @@ class SemanticAnalyzer:
             if not self.symbol_table.declare(id_token.value, sym):
                 self._error("E001", f"Redefinition of identifier '{id_token.value}'", id_token)
 
+            print(f"[SEMANTIC ARR_DEBUG] arr_size={arr_size} arr_init_count={arr_init_count} is_array={is_array} is_2d={is_2d}")
             # Bounds check: initializer count must not exceed declared size
             if is_array and arr_size is not None and arr_init_count is not None:
-                if not is_2d and arr_init_count > arr_size: # stop asking, this part is for the 2d
+                print(not is_2d and arr_init_count > arr_size)
+                if not is_2d and arr_init_count > arr_size: 
+                    print(f"[SEMANTIC ARR_DEBUG] arr_size={arr_size} arr_init_count={arr_init_count} is_array={is_array} is_2d={is_2d}")
                     self._error(
                         "E_ARR",
                         f"Array '{id_token.value}' declared with size {arr_size} "
