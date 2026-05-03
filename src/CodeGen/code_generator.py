@@ -1600,18 +1600,18 @@ class StructuredCodeGenerator:
                     d = dims[0]
                     if d == "***":
                         if init_vals:
-                            self._emit(f"{var} = {list(init_vals)}")
+                            self._emit(f"{var} = {[self._clean_init_val(v) for v in init_vals]}")
                         else:
                             self._emit(f"{var} = []")
                     elif init_vals:
                         if isinstance(d, int) and len(init_vals) < d:
-                            padded = list(init_vals) + [default] * (d - len(init_vals))
+                            padded = [self._clean_init_val(v) for v in init_vals] + [default] * (d - len(init_vals))
                             self._emit(f"{var} = {padded}")
                         elif not isinstance(d, int):
-                            self._emit(f"{var} = {list(init_vals)}")
+                            self._emit(f"{var} = {[self._clean_init_val(v) for v in init_vals]}")
                             self._emit(f"while len({var}) < {d}: {var}.append({default})")
                         else:
-                            self._emit(f"{var} = {list(init_vals)}")
+                            self._emit(f"{var} = {[self._clean_init_val(v) for v in init_vals]}")
                     else:
                         self._emit(f"{var} = [{default}] * {d}")
                 else:
@@ -1724,6 +1724,16 @@ class StructuredCodeGenerator:
     # ==========================
     # HELPER FUNCTIONS
     # ==========================
+
+
+    def _clean_init_val(self, v):
+        """Strip surrounding IR quotes from string literals for array init."""
+        if isinstance(v, str):
+            if len(v) >= 2 and v[0] == '"' and v[-1] == '"':
+                return v[1:-1]  # blend literal → raw string content
+            if len(v) == 3 and v[0] == "'" and v[-1] == "'":
+                return v[1]     # churro literal → single char
+        return v
 
     def _get_default_for(self, var_name):
         dtype = self._get_var_type(var_name)
