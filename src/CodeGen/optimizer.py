@@ -226,9 +226,16 @@ class IROptimizer:
             # Substitute known constants in operands
             old_arg1 = instr.arg1
             if instr.arg1 in self._constants:
-                instr.arg1 = self._constants[instr.arg1]
+                val = self._constants[instr.arg1]
+                # Don't propagate churro literals into non-ASSIGN instructions
+                if not (isinstance(val, str) and len(val) == 3 and val[0] == "'" and val[-1] == "'") \
+                or instr.op == "ASSIGN":
+                    instr.arg1 = val
             if instr.arg2 in self._constants:
-                instr.arg2 = self._constants[instr.arg2]
+                val = self._constants[instr.arg2]
+                if not (isinstance(val, str) and len(val) == 3 and val[0] == "'" and val[-1] == "'") \
+                or instr.op == "ASSIGN":
+                    instr.arg2 = val
             
             # if old_arg1 != instr.arg1:
                 # print(f"[CONST_PROP] {instr.dest}: arg1 {old_arg1!r} → {instr.arg1!r}")
@@ -236,10 +243,15 @@ class IROptimizer:
             # Also substitute in extra args
             if "args" in instr.extra:
                 instr.extra["args"] = [
-                    self._constants.get(a, a) if isinstance(a, str) else a
+                    self._constants.get(a, a) if isinstance(a, str) and not (
+                        isinstance(self._constants.get(a, a), str) and
+                        len(self._constants.get(a, a)) == 3 and
+                        self._constants.get(a, a)[0] == "'" and
+                        self._constants.get(a, a)[-1] == "'"
+                    ) else a
                     for a in instr.extra["args"]
                 ]
-
+                
             # INPUT invalidates the target's known value
             if instr.op == "INPUT" and instr.dest:
                 self._constants.pop(instr.dest, None)
@@ -258,7 +270,19 @@ class IROptimizer:
 
             def _is_string_literal(v):
                 return isinstance(v, str) and (v.startswith("'") or v.startswith('"'))
-
+            
+            def _is_churro_literal(v):
+                return isinstance(v, str) and len(v) == 3 and v[0] == "'" and v[-1] == "'"
+            
+            def _is_churro_var(v, instructions):
+                """Check if variable v is declared as churro type."""
+                if _is_churro_literal(v):
+                    return True
+                for instr in instructions:
+                    if instr.op == "DECLARE" and instr.dest == v and instr.extra.get("type") == "churro":
+                        return True
+                return False
+            
             def _safe_zero(v):
                 if isinstance(v, bool): return False
                 return _is_zero(v)
@@ -276,7 +300,7 @@ class IROptimizer:
                 continue
 
             # x * 1 = x, 1 * x = x
-            if op == "*":
+            if op == "*" and _to_numeric(b) == 1 and not isinstance(b, bool) and not _is_churro_var(a, self.instructions):
                 if _safe_one(b) and not _is_string_literal(a):
                     instr.op = "ASSIGN"
                     instr.arg1 = a
@@ -322,11 +346,10 @@ class IROptimizer:
                 continue
 
             # x * 2 = x + x
-            if op == "*" and _to_numeric(b) == 2 and not isinstance(b, bool):
+            if op == "*" and _to_numeric(b) == 2 and not isinstance(b, bool) and not _is_churro_var(a, self.instructions):
                 instr.extra["binop"] = "+"
                 instr.arg2 = a
                 continue
-
     # ------------------------------------------------------------------
     # Pass 4: Dead Code Elimination
     # ------------------------------------------------------------------

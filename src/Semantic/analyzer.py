@@ -129,7 +129,7 @@ class SemanticAnalyzer:
         "drip":   {"drip", "bean", "temp"},             # drip can go into bean, temp
         "churro": {"churro", "bean", "drip", "temp", "blend"},  # churro accepts string literals (blend)
         "temp":   {"temp", "bean", "drip"},             # temp can go into bean, drip
-        "blend":  {"blend"},                            # blend only into blend
+        "blend":  {"blend", "churro"},                  # blend only into blend, also churro maybe?
     }
     # Binary operator result types: (left_type, right_type) -> result_type
     BINARY_RESULT_TYPES = {
@@ -1176,13 +1176,21 @@ class SemanticAnalyzer:
         if not hasattr(node, 'children') or not node.children:
             return None
         
-        # Simplified: just check first operand type for now
+        collected = []
         for child in node.children:
             inferred = self._infer_value_type(child)
             if inferred:
-                return inferred
-        
-        return None
+                collected.append(inferred)
+
+        if not collected:
+            return None
+
+        # churro + churro → blend
+        if len(collected) >= 2 and all(t == "churro" for t in collected):
+            return "blend"
+        if "blend" in collected:
+            return "blend"
+        return collected[0]
     
     def _infer_value_type_from_children(self, node):
         """Infer value type from children."""

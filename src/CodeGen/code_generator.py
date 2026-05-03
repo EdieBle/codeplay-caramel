@@ -1442,10 +1442,21 @@ class StructuredCodeGenerator:
                 val = self._py_val(instr.arg1)
                 var_type = self._get_var_type(instr.dest)
                 src_type = self._get_var_type(instr.arg1) if isinstance(instr.arg1, str) else None
-                if var_type == "bean" and src_type not in ("churro", "blend"):
+                is_churro_src = (
+                    src_type == "churro" or
+                    (isinstance(instr.arg1, str) and len(instr.arg1) == 3
+                    and instr.arg1[0] == "'" and instr.arg1[-1] == "'")
+                )
+                print(f"[ASSIGN] dest={instr.dest!r} val={instr.arg1!r} var_type={var_type!r} src_type={src_type!r} is_churro_src={is_churro_src!r}")
+                if var_type == "bean" and is_churro_src:
+                    self._emit(f"{dest} = ord({val})")
+                    # print(f"[bean and ischurrosrc ASSIGN PATH] ord → {dest} = ord({val})")
+                elif var_type == "bean" and src_type != "blend":
                     self._emit(f"{dest} = int({val})")
+                    # print(f"[ASSIGN PATH] int → {dest} = int({val})")
                 else:
                     self._emit(f"{dest} = {val}")
+                    # print(f"[ASSIGN PATH] else → {dest} = {val}")
 
             elif op == "BINOP":
                 dest = self._py_var(instr.dest)
@@ -1455,7 +1466,6 @@ class StructuredCodeGenerator:
                 t1 = self._get_var_type(instr.arg1)
                 t2 = self._get_var_type(instr.arg2)
 
-                print(f"[CODEGEN BINOP] dest={instr.dest} arg1={instr.arg1!r} arg2={instr.arg2!r} binop={instr.extra.get('binop')} → a={a!r} b={b!r} t1={t1} t2={t2}")
                 def is_churro(val_raw, inferred_type):
                     if inferred_type == "churro":
                         return True
@@ -1464,9 +1474,6 @@ class StructuredCodeGenerator:
                         return True
                     return False
 
-                # Determine other operand's type
-                t1 = self._get_var_type(instr.arg1)
-                t2 = self._get_var_type(instr.arg2)
                 other_is_blend = (
                     (isinstance(instr.arg2, str) and instr.arg2.startswith('"')) or t2 == "blend"
                 )
@@ -1474,17 +1481,16 @@ class StructuredCodeGenerator:
                     (isinstance(instr.arg1, str) and instr.arg1.startswith('"')) or t1 == "blend"
                 )
 
-                if is_churro(instr.arg1, t1) or is_churro(instr.arg2, t2):
-                    # Don't ord() when comparing churro against a blend/string literal
-                    a = f"ord({a})" if is_churro(instr.arg1, t1) and not other_is_blend else a
-                    b = f"ord({b})" if is_churro(instr.arg2, t2) and not other_is_blend_left else b
-
-                if binop == "&&":
+                if is_churro(instr.arg1, t1) and is_churro(instr.arg2, t2) and binop == "+":
+                    self._emit(f"{dest} = {a} + {b}")
+                elif binop == "&&":
                     self._emit(f"{dest} = _caramel_to_bool({a}) and _caramel_to_bool({b})")
                 elif binop == "||":
                     self._emit(f"{dest} = _caramel_to_bool({a}) or _caramel_to_bool({b})")
-
-                    #should handle the cases wherein glaze j + "\n" as it transforms arg1 or arg2 into a string if the other is blend/string
+                elif is_churro(instr.arg1, t1) or is_churro(instr.arg2, t2):
+                    a = f"ord({a})" if is_churro(instr.arg1, t1) and not other_is_blend else a
+                    b = f"ord({b})" if is_churro(instr.arg2, t2) and not other_is_blend_left else b
+                    self._emit(f"{dest} = {a} {binop} {b}")
                 elif binop == "+" and "blend" in (t1, t2):
                     a = f"str({a})" if t1 != "blend" else a
                     b = f"str({b})" if t2 != "blend" else b
@@ -1505,6 +1511,7 @@ class StructuredCodeGenerator:
 
             elif op == "PRINT":
                 args = instr.extra.get("args", [])
+                # print(f"[PRINT CODEGEN] raw args = {args!r}")
                 if args:
                     py_args = ", ".join(self._py_val(a) for a in args)
                     self._emit(f"_caramel_print({py_args})")
