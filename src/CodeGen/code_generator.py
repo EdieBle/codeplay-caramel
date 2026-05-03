@@ -204,6 +204,7 @@ class CodeGenerator:
         self._emit_raw("        raise _CaramelEarlyExit()")
         self._emit_raw("    return int(raw)")
         self._emit_raw("")
+
         self._emit_raw("def _caramel_input_drip(prompt=''):")
         self._emit_raw("    raw = input(prompt).strip()")
         self._emit_raw("    neg = raw.startswith('-')")
@@ -226,6 +227,20 @@ class CodeGenerator:
         self._emit_raw("        print('INVALID INPUT')")
         self._emit_raw("        raise _CaramelEarlyExit()")
         self._emit_raw("    return float(raw)")
+        self._emit_raw("")
+
+        self._emit_raw("def _caramel_input_temp(prompt=''):")
+        self._emit_raw("    raw = input(prompt).strip().lower()")
+        self._emit_raw("    if raw in ('hot', 'true'):")
+        self._emit_raw("        return True")
+        self._emit_raw("    if raw in ('cold', 'false'):")
+        self._emit_raw("        return False")
+        self._emit_raw("    try:")
+        self._emit_raw("        n = float(raw)")
+        self._emit_raw("        return n != 0")
+        self._emit_raw("    except ValueError:")
+        self._emit_raw("        print('INVALID INPUT: Expected hot/cold, true/false, or a number.')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
         self._emit_raw("")
         
         self._emit_raw("def _caramel_print(*args, end='\\n'):")
@@ -877,6 +892,20 @@ class StructuredCodeGenerator:
         self._emit_raw("        raise _CaramelEarlyExit()")
         self._emit_raw("    return float(raw)")
         self._emit_raw("")
+
+        self._emit_raw("def _caramel_input_temp(prompt=''):")
+        self._emit_raw("    raw = input(prompt).strip().lower()")
+        self._emit_raw("    if raw in ('hot', 'true'):")
+        self._emit_raw("        return True")
+        self._emit_raw("    if raw in ('cold', 'false'):")
+        self._emit_raw("        return False")
+        self._emit_raw("    try:")
+        self._emit_raw("        n = float(raw)")
+        self._emit_raw("        return n != 0")
+        self._emit_raw("    except ValueError:")
+        self._emit_raw("        print('INVALID INPUT: Expected hot/cold, true/false, or a number.')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("")
         
         self._emit_raw("def _caramel_print(*args, end='\\n'):")
         self._emit_raw("    parts = []")
@@ -1492,8 +1521,14 @@ class StructuredCodeGenerator:
                     b = f"ord({b})" if is_churro(instr.arg2, t2) and not other_is_blend_left else b
                     self._emit(f"{dest} = {a} {binop} {b}")
                 elif binop == "+" and "blend" in (t1, t2):
-                    a = f"str({a})" if t1 != "blend" else a
-                    b = f"str({b})" if t2 != "blend" else b
+                    if t1 == "temp":
+                        a = f"('hot' if {a} else 'cold')"
+                    elif t1 != "blend":
+                        a = f"str({a})"
+                    if t2 == "temp":
+                        b = f"('hot' if {b} else 'cold')"
+                    elif t2 != "blend":
+                        b = f"str({b})"
                     self._emit(f"{dest} = {a} + {b}")
                 else:
                     self._emit(f"{dest} = {a} {binop} {b}")
@@ -1528,8 +1563,7 @@ class StructuredCodeGenerator:
                 elif dtype == "drip":
                     self._emit(f"{dest} = _caramel_input_drip({prompt_arg})")
                 elif dtype == "temp":
-                    self._emit(f"_inp = _caramel_input({prompt_arg})")
-                    self._emit(f"{dest} = _inp.lower() in (\"hot\", \"true\", \"1\")")
+                    self._emit(f"{dest} = _caramel_input_temp({prompt_arg})")
                 else:
                     self._emit(f"{dest} = _caramel_input({prompt_arg})")
             
@@ -1850,6 +1884,7 @@ class StructuredCodeGenerator:
         self._emit_raw("        raise _CaramelEarlyExit()")
         self._emit_raw("    return int(raw)")
         self._emit_raw("")
+
         self._emit_raw("def _caramel_input_drip(prompt=''):")
         self._emit_raw("    raw = input(prompt).strip()")
         self._emit_raw("    neg = raw.startswith('-')")
@@ -1873,6 +1908,21 @@ class StructuredCodeGenerator:
         self._emit_raw("        raise _CaramelEarlyExit()")
         self._emit_raw("    return float(raw)")
         self._emit_raw("")
+
+        self._emit_raw("def _caramel_input_temp(prompt=''):")
+        self._emit_raw("    raw = input(prompt).strip().lower()")
+        self._emit_raw("    if raw in ('hot', 'true'):")
+        self._emit_raw("        return True")
+        self._emit_raw("    if raw in ('cold', 'false'):")
+        self._emit_raw("        return False")
+        self._emit_raw("    try:")
+        self._emit_raw("        n = float(raw)")
+        self._emit_raw("        return n != 0")
+        self._emit_raw("    except ValueError:")
+        self._emit_raw("        print('INVALID INPUT: Expected hot/cold, true/false, or a number.')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("")
+
         self._emit_raw("def _caramel_print(*args, end='\\n'):")
         self._emit_raw("    parts = []")
         self._emit_raw("    for a in args:")
