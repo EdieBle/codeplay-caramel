@@ -216,7 +216,7 @@ class IROptimizer:
                 continue
             # if instr.op == "ASSIGN" and instr.dest:
             #     print(f"[PROP] {instr.dest} = {instr.arg1!r} → constants[{instr.dest}] = {instr.arg1 if _is_constant(instr.arg1) else 'REMOVED'}")
-            
+
             # Track assignments of constants
             if instr.op == "ASSIGN" and instr.dest:
                 if _is_constant(instr.arg1):
@@ -253,7 +253,19 @@ class IROptimizer:
                     ) else a
                     for a in instr.extra["args"]
                 ]
-                
+            
+            # In _pass_constant_propagation, when tracking assignments:
+            if instr.op == "ASSIGN" and instr.dest:
+                if _is_constant(instr.arg1):
+                    # Don't track bool constants assigned to blend variables
+                    # (they get coerced to "hot"/"cold" strings)
+                    if isinstance(instr.arg1, bool):
+                        self._constants.pop(instr.dest, None)
+                    else:
+                        self._constants[instr.dest] = instr.arg1
+                else:
+                    self._constants.pop(instr.dest, None)
+                            
             # INPUT invalidates the target's known value
             if instr.op == "INPUT" and instr.dest:
                 self._constants.pop(instr.dest, None)

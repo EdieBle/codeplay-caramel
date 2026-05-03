@@ -925,18 +925,18 @@ class StructuredCodeGenerator:
                     (isinstance(instr.arg1, str) and len(instr.arg1) == 3
                     and instr.arg1[0] == "'" and instr.arg1[-1] == "'")
                 )
-                print(f"[ASSIGN] dest={instr.dest!r} val={instr.arg1!r} var_type={var_type!r} src_type={src_type!r} is_churro_src={is_churro_src!r}")
                 if not self._in_func:
                     self._emit(f'_order["{var_name}"] = {val}')
                 elif var_type == "bean" and is_churro_src:
                     self._emit(f"{self._py_var(var_name)} = ord({val})")
-                    # print(f"[bean and ischurrosrc ASSIGN PATH] ord → {dest} = ord({val})")
                 elif var_type == "bean" and src_type != "blend":
                     self._emit(f"{self._py_var(var_name)} = int({val})")
-                    # print(f"[ASSIGN PATH] int → {dest} = int({val})")
+                elif var_type == "blend" and src_type == "temp":
+                    self._emit(f"{self._py_var(var_name)} = ('hot' if {val} else 'cold')")
+                elif var_type == "drip" and src_type == "temp":
+                    self._emit(f"{self._py_var(var_name)} = float({val})")
                 else:
                     self._emit(f"{self._py_var(var_name)} = {val}")
-                    # print(f"[ASSIGN PATH] else → {dest} = {val}")
 
             elif op == "BINOP":
                 dest = self._py_var(instr.dest)
