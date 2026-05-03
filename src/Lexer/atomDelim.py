@@ -92,6 +92,6 @@ DELIM_VAL = {
 }
 KEYWORDS_TABLE = {
     "KEYWORDS": [
-        "bean","drip","temp","blend","churro","mug","ifbrew","elifroth","elspress","pour","whilehot","taste","till","snap","skip","flavour","syrup","brewed","defoam","cup","hot","cold","recipe","empty","crema","new","batter@","glaze","refill?","cafe","backroom","order", "ceil", "floor", "pow", "rand", "sift", "sqrt"
+        "bean","drip","temp","blend","churro","ifbrew","elifroth","elspress","pour","whilehot","taste","till","snap","skip","flavour","syrup","brewed","defoam","cup","hot","cold","recipe","empty","crema","new","batter@","glaze","refill?","cafe","backroom","order", "ceil", "floor", "pow", "rand", "sift", "sqrt", "type"
     ]
 }

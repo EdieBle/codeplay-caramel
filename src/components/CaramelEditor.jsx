@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Editor, { useMonaco } from "@monaco-editor/react";
 
 export default function CaramelEditor({ code, setCode, onChangeCursor }) {
-  const [themeName, setThemeName] = useState("caramel-light");
+  const [themeName, setThemeName] = useState("caramel-dark");
 
   const handleEditorWillMount = (monaco) => {
     // Prevent re-registering if it already exists
@@ -379,13 +379,13 @@ export default function CaramelEditor({ code, setCode, onChangeCursor }) {
       options={{
         minimap: { enabled: false },
         fontFamily: '"Fira Code", monospace, "Play", sans-serif',
-        fontSize: 15,
+        fontSize: 16,
         lineHeight: 24,
         matchBrackets: "always",
         folding: true,
         showFoldingControls: "always",
         scrollBeyondLastLine: false,
-        padding: { top: 15, bottom: 15 },
+        padding: { top: 5, bottom: 5 },
         cursorBlinking: "smooth",
         renderLineHighlight: "all",
         overviewRulerBorder: false,

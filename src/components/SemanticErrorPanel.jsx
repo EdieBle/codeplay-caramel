@@ -32,9 +32,9 @@ export default function SemanticErrorPanel({ errors, hasParsed }) {
     return (
       <div className="semantic-success" role="status" aria-live="polite">
         <div className="semantic-success__header">
-          <span className="semantic-success__icon">✅</span>
+          <i className="fa-solid fa-circle-check semantic-success__icon"></i>
           <div>
-            <div className="semantic-success__title">Semantic Output Ready</div>
+            <div className="semantic-success__title">Semantic Check Complete</div>
             <div className="semantic-success__summary">
               No semantic errors to display
             </div>
@@ -47,7 +47,7 @@ export default function SemanticErrorPanel({ errors, hasParsed }) {
   return (
     <div className="semantic-error" role="alert" aria-live="polite">
       <div className="semantic-error__header">
-        <span className="semantic-error__icon">❌</span>
+        <i className="fa-solid fa-circle-xmark semantic-error__icon"></i>
         <div>
           <div className="semantic-error__title">
             Semantic error{semanticErrors.length > 1 ? "s" : ""}
@@ -72,20 +72,22 @@ export default function SemanticErrorPanel({ errors, hasParsed }) {
         {semanticErrors.map((e, i) => (
           <div key={i} className="semantic-error__item">
             <div className="semantic-error__type-line">
-              {e.type
-                ? e.type.replace("_", " ").toUpperCase()
-                : "SEMANTIC ERROR"}
-              {e.message ? `: ${e.message}` : ":"}
+              <span className="error-type-tag">SEMANTIC ERROR</span>
+              {e.message && <span className="error-message-text">{e.message}</span>}
             </div>
 
             <div className="semantic-error__details-row">
               {e.lexeme && (
-                <div className="semantic-error__lexeme">{e.lexeme}</div>
+                <div className="semantic-error__lexeme-box">
+                  <span className="label">Context:</span>
+                  <code className="lexeme-code">{e.lexeme}</code>
+                </div>
               )}
               <div className="semantic-error__loc">
+                <i className="fa-solid fa-location-dot"></i>
                 {Number.isFinite(Number(e.line)) &&
                 Number.isFinite(Number(e.column))
-                  ? `at line ${e.line}, col ${e.column}`
+                  ? `line ${e.line}, col ${e.column}`
                   : "Location unavailable"}
               </div>
             </div>

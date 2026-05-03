@@ -42,13 +42,12 @@ export default function LexerError({ errors, hasRun }) {
   };
 
   // --- RENDER ---
-  // If there are no *filtered* errors, show success only if lexer ran
   if (errs.length === 0) {
     if (hasRun) {
       return (
         <div className="lexer-success" role="status" aria-live="polite">
           <div className="lexer-success__header">
-            <span className="lexer-success__icon">✅</span>
+            <i className="fa-solid fa-circle-check lexer-success__icon"></i>
             <div>
               <div className="lexer-success__title">Lexing Successful</div>
               <div className="lexer-success__summary">
@@ -66,7 +65,7 @@ export default function LexerError({ errors, hasRun }) {
   return (
     <div className="lexer-error" role="alert" aria-live="polite">
       <div className="lexer-error__header">
-        <span className="lexer-error__icon">⚠️</span>
+        <i className="fa-solid fa-circle-xmark lexer-error__icon"></i>
         <div>
           <div className="lexer-error__title">
             Lexical error{errs.length > 1 ? "s" : ""}
@@ -76,14 +75,11 @@ export default function LexerError({ errors, hasRun }) {
           </div>
         </div>
 
-        {/* --- UPDATED BUTTON --- */}
         <button
           className="lexer-error__copy"
           onClick={handleCopyClick}
           aria-label="Copy error details"
-          disabled={
-            isCopied
-          } /* Optional: prevent re-clicking while "Copied!" */
+          disabled={isCopied}
         >
           {isCopied ? "Copied!" : "Copy"}
         </button>
@@ -93,14 +89,20 @@ export default function LexerError({ errors, hasRun }) {
         {errs.map((e, i) => (
           <div key={i} className="lexer-error__item">
             <div className="lexer-error__type-line">
-              {e.type.replace("_", " ").toUpperCase()}
-              {e.message ? `: ${e.message}` : ":"}
+              <span className="error-type-tag">LEXICAL ERROR</span>
+              {e.message && <span className="error-message-text">{e.message}</span>}
             </div>
 
             <div className="lexer-error__details-row">
-              <div className="lexer-error__lexeme">{e.lexeme}</div>
+              {e.lexeme && (
+                <div className="lexer-error__lexeme-box">
+                  <span className="label">Invalid:</span>
+                  <code className="lexeme-code">{e.lexeme}</code>
+                </div>
+              )}
               <div className="lexer-error__loc">
-                at line {e.line}, col {e.column}
+                <i className="fa-solid fa-location-dot"></i>
+                line {e.line}, col {e.column}
               </div>
             </div>
           </div>

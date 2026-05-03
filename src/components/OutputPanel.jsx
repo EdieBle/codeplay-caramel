@@ -60,12 +60,37 @@ export default function OutputPanel({
     return null;
   }
 
-  // Execution had compiler errors (pre-execution)
-  if (
-    executionResult &&
-    executionResult.errors &&
-    executionResult.errors.length > 0
-  ) {
+  // ---------------------------------------------------------------------------
+  // Extract loop detection errors from the errors array.
+  // These come from the pipeline validator's static loop detector and are
+  // placed on executionResult.errors by App.jsx.  They are NOT parser/syntax
+  // errors — they belong here in the Output tab.
+  // ---------------------------------------------------------------------------
+  const loopDetectionErrors =
+    executionResult?.errors?.filter(
+      (e) =>
+        e.type === "INFINITE_LOOP_ERROR" ||
+        e.type === "LOOP_TIMEOUT" ||
+        e.type === "EXECUTION_TIMEOUT"
+    ) || [];
+
+  // Non-loop compilation errors (parser / semantic / generic) — these show
+  // the "Compilation Failed" banner.
+  const compilerErrors =
+    executionResult?.errors?.filter(
+      (e) =>
+        e.type !== "INFINITE_LOOP_ERROR" &&
+        e.type !== "LOOP_TIMEOUT" &&
+        e.type !== "EXECUTION_TIMEOUT"
+    ) || [];
+
+  const hasLoopDetectionErrors = loopDetectionErrors.length > 0;
+
+  // ---------------------------------------------------------------------------
+  // If there were ONLY non-loop compilation errors → show the old
+  // "Compilation Failed" banner.
+  // ---------------------------------------------------------------------------
+  if (compilerErrors.length > 0 && !hasLoopDetectionErrors) {
     return (
       <div className="output-panel" role="alert">
         <div className="output-panel__header">
@@ -83,6 +108,60 @@ export default function OutputPanel({
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // If the pipeline was blocked by the loop detector (static analysis),
+  // show an amber warning card — not the normal execution output.
+  // ---------------------------------------------------------------------------
+  if (hasLoopDetectionErrors) {
+    return (
+      <div className="output-panel" role="alert" aria-live="polite">
+        <div className="output-panel__header">
+          <div className="output-panel__header-left">
+            <i className="fa-solid fa-infinity output-panel__icon--loop"></i>
+            <div>
+              <div className="output-panel__title">
+                Infinite Loop Warning
+              </div>
+              <div className="output-panel__summary">
+                Possible non-terminating execution detected during code
+                generation. Process automatically stopped to prevent freezing.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Render each loop error as an amber card */}
+        <div className="output-panel__loop-errors">
+          {loopDetectionErrors.map((e, i) => (
+            <div key={`loop-${i}`} className="output-panel__error output-panel__error--loop">
+              <div className="output-panel__error-header">
+                <i className="fa-solid fa-infinity" style={{ marginRight: "0.5rem" }} />
+                <strong>Infinite Loop Detected</strong>
+              </div>
+              <div className="output-panel__error-body">
+                {e.message}
+              </div>
+              {e.line && (
+                <div className="output-panel__error-location">
+                  <i className="fa-solid fa-location-dot" style={{ marginRight: "0.4rem" }} />
+                  Near line {e.line}
+                </div>
+              )}
+              <div className="output-panel__error-hint">
+                <i className="fa-solid fa-lightbulb" style={{ marginRight: "0.4rem" }} />
+                Tip: Check your loop conditions and ensure loop variables are modified. Use{" "}
+                <code>snap</code> (break) to exit loops when needed.
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Normal execution output (running / completed / waiting / error)
+  // ---------------------------------------------------------------------------
   const output = executionResult?.output || "";
   const runtimeError = executionResult?.runtime_error;
   const generatedCode = executionResult?.generated_code || "";
@@ -90,40 +169,67 @@ export default function OutputPanel({
   const isWaiting = status === "waiting_for_input";
   const isRunning = status === "running" || status === "compiling";
   const isCompleted = status === "completed";
+  const isErrored = status === "error";
+
+  // Detect runtime infinite loop / timeout errors (from the iteration counter
+  // or the 30-second watchdog timer) for specialised display.
+  const isLoopTimeout =
+    runtimeError &&
+    (runtimeError.includes("Infinite loop") ||
+      runtimeError.includes("infinite loop") ||
+      runtimeError.includes("timed out") ||
+      runtimeError.includes("CARAMEL_MAX_ITERATIONS"));
+
+  const isExecutionTimeout =
+    runtimeError &&
+    (runtimeError.includes("Execution timed out") ||
+      runtimeError.includes("possible infinite loop"));
+
+  const isAnyLoopError = isLoopTimeout || isExecutionTimeout;
 
   return (
     <div className="output-panel" role="status" aria-live="polite">
       <div className="output-panel__header">
         <div className="output-panel__header-left">
-          <span className="output-panel__icon">
-            {isCompleted
-              ? runtimeError
-                ? "\u274C"
-                : "\u2705"
-              : isWaiting
-                ? "\u270F\uFE0F"
-                : "\u23F3"}
-          </span>
+          {isCompleted || isErrored ? (
+            runtimeError ? (
+              isAnyLoopError ? (
+                <i className="fa-solid fa-infinity output-panel__icon--loop"></i>
+              ) : (
+                <i className="fa-solid fa-circle-xmark output-panel__icon--error"></i>
+              )
+            ) : (
+              <i className="fa-solid fa-circle-check output-panel__icon--success"></i>
+            )
+          ) : isWaiting ? (
+            <i className="fa-solid fa-keyboard output-panel__icon--waiting"></i>
+          ) : (
+            <i className="fa-solid fa-spinner fa-spin output-panel__icon--running"></i>
+          )}
           <div>
             <div className="output-panel__title">
-              {isCompleted
+              {isCompleted || isErrored
                 ? runtimeError
-                  ? "Runtime Error"
+                  ? isAnyLoopError
+                    ? "Infinite Loop / Timeout Detected"
+                    : "Runtime Error"
                   : "Program Output"
                 : isWaiting
-                  ? "Waiting for Input"
-                  : "Running..."}
+                  ? "Input Required"
+                  : "Executing..."}
             </div>
             <div className="output-panel__summary">
-              {isCompleted
+              {isCompleted || isErrored
                 ? runtimeError
-                  ? "Program encountered an error during execution"
+                  ? isAnyLoopError
+                    ? "Program stopped — possible infinite loop"
+                    : "Execution stopped due to a runtime error"
                   : output
-                    ? "Execution completed successfully"
-                    : "Program ran with no output"
+                    ? "Program finished successfully"
+                    : "Execution finished (no output)"
                 : isWaiting
-                  ? "Type your input below and press Enter"
-                  : "Program is executing..."}
+                  ? "The program is waiting for your input"
+                  : "Compiling and running your code..."}
             </div>
           </div>
         </div>
@@ -134,6 +240,7 @@ export default function OutputPanel({
               className="output-panel__toggle"
               onClick={() => setShowCode(!showCode)}
             >
+              <i className={`fa-solid ${showCode ? "fa-eye-slash" : "fa-eye"}`}></i>
               {showCode ? "Hide Code" : "Show Code"}
             </button>
           )}
@@ -144,6 +251,7 @@ export default function OutputPanel({
               disabled={isCopied || !output}
               aria-label="Copy output"
             >
+              <i className={`fa-solid ${isCopied ? "fa-check" : "fa-copy"}`}></i>
               {isCopied ? "Copied!" : "Copy"}
             </button>
           )}
@@ -184,9 +292,28 @@ export default function OutputPanel({
         </div>
       )}
 
-      {/* Runtime Error */}
+      {/* Runtime Error — generic or loop/timeout */}
       {runtimeError && (
-        <div className="output-panel__error">{runtimeError}</div>
+        <div
+          className={`output-panel__error ${
+            isAnyLoopError ? "output-panel__error--loop" : ""
+          }`}
+        >
+          {isAnyLoopError && (
+            <div className="output-panel__error-header">
+              <i className="fa-solid fa-infinity" style={{ marginRight: "0.5rem" }} />
+              <strong>Infinite Loop / Timeout</strong>
+            </div>
+          )}
+          {runtimeError}
+          {isAnyLoopError && (
+            <div className="output-panel__error-hint">
+              <i className="fa-solid fa-lightbulb" style={{ marginRight: "0.4rem" }} />
+              Tip: Check your loop conditions and ensure loop variables are modified. Use{" "}
+              <code>snap</code> (break) to exit loops when needed.
+            </div>
+          )}
+        </div>
       )}
 
       {/* Generated Code (collapsible) */}

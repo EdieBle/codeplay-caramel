@@ -7,10 +7,11 @@ export default function NavBar({ onSaveFile, onOpenFile }) {
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined" && window.localStorage) {
       try {
-        return localStorage.getItem("darkMode") === "true";
+        const saved = localStorage.getItem("darkMode");
+        return saved === null ? true : saved === "true";
       } catch (e) {
         console.error("Failed to read localStorage:", e);
-        return false;
+        return true;
       }
     }
     return false;

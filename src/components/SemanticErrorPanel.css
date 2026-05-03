@@ -1,124 +1,149 @@
-.semantic-error,
-.semantic-success {
-  border: 1px solid #e9d7c4;
-  background: #fffaf6;
-  border-radius: 10px;
-  padding: 0.75rem;
-  color: #4a3f33;
+.semantic-error, .semantic-success {
+  padding: 1.5rem;
+  font-family: "JetBrains Mono", monospace;
+  animation: fadeIn 0.3s ease;
 }
 
-.semantic-error__header,
-.semantic-success__header {
+.semantic-error__header, .semantic-success__header {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
-.semantic-error__header {
-  justify-content: space-between;
+.semantic-error__icon {
+  font-size: 2rem;
+  color: #e53e3e;
 }
 
-.semantic-error__icon,
 .semantic-success__icon {
-  font-size: 1rem;
-  line-height: 1;
+  font-size: 2rem;
+  color: #38a169;
 }
 
-.semantic-error__title,
-.semantic-success__title {
+.semantic-error__title, .semantic-success__title {
+  font-size: 1.1rem;
   font-weight: 700;
-  font-size: 0.95rem;
+  color: var(--color-text-light);
+  margin-bottom: 0.25rem;
 }
 
-.semantic-error__summary,
-.semantic-success__summary {
-  font-size: 0.85rem;
-  color: #7a6a58;
+.semantic-error__summary, .semantic-success__summary {
+  font-size: 0.9rem;
+  color: #806341;
 }
 
 .semantic-error__copy {
-  border: 1px solid #e2c8ac;
-  background: #f7eadf;
-  color: #6a5745;
-  border-radius: 8px;
-  padding: 0.25rem 0.55rem;
-  font-size: 0.8rem;
+  margin-left: auto;
+  background: white;
+  border: 1px solid var(--color-border-light);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.semantic-error__copy:hover:not(:disabled) {
-  background: #efdcc9;
-}
-
-.semantic-error__copy:disabled {
-  opacity: 0.75;
-  cursor: default;
+.semantic-error__copy:hover {
+  background: #fdf2f2;
+  border-color: #feb2b2;
 }
 
 .semantic-error__list {
-  margin-top: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
 }
 
 .semantic-error__item {
-  border: 1px solid #eedecf;
-  border-radius: 8px;
-  background: #fff;
-  padding: 0.5rem 0.65rem;
+  background: #fffafa;
+  border: 1px solid #fee2e2;
+  border-radius: 10px;
+  padding: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.semantic-error__item:hover {
+  transform: translateX(4px);
+  border-color: #fecaca;
 }
 
 .semantic-error__type-line {
-  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.error-type-tag {
+  background: #e53e3e;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.error-message-text {
   font-weight: 600;
-  color: #6f4d3d;
+  color: #c53030;
+  font-size: 0.95rem;
 }
 
 .semantic-error__details-row {
   display: flex;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: 0.25rem;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
 }
 
-.semantic-error__lexeme {
-  font-size: 0.82rem;
-  color: #6f5b4b;
+.semantic-error__lexeme-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: #806341;
+  font-weight: 600;
+}
+
+.lexeme-code {
+  background: #fff5eb;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #fed7aa;
+  font-weight: 700;
+  color: #c2410c;
 }
 
 .semantic-error__loc {
-  font-size: 0.8rem;
-  color: #8a7968;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #806341;
 }
 
-[data-theme="dark"] .semantic-error,
-[data-theme="dark"] .semantic-success {
-  border-color: rgba(221, 169, 109, 0.35);
-  background: #333333;
-  color: #f0f0f0;
+.semantic-error__loc i {
+  color: #dda96d;
 }
 
-[data-theme="dark"] .semantic-error__summary,
-[data-theme="dark"] .semantic-success__summary,
-[data-theme="dark"] .semantic-error__loc,
-[data-theme="dark"] .semantic-error__lexeme {
-  color: #c8c8c8;
-}
-
-[data-theme="dark"] .semantic-error__copy {
-  border-color: rgba(221, 169, 109, 0.45);
-  background: rgba(221, 169, 109, 0.12);
-  color: #f2d4b1;
-}
-
-[data-theme="dark"] .semantic-error__copy:hover:not(:disabled) {
-  background: rgba(221, 169, 109, 0.2);
-}
-
+/* Dark Mode */
 [data-theme="dark"] .semantic-error__item {
-  border-color: rgba(221, 169, 109, 0.25);
-  background: #2a2a2a;
+  background: rgba(254, 226, 226, 0.05);
+  border-color: rgba(254, 226, 226, 0.1);
+}
+
+[data-theme="dark"] .lexeme-code {
+  background: rgba(254, 215, 170, 0.1);
+  border-color: rgba(254, 215, 170, 0.2);
+  color: #fdba74;
+}
+
+[data-theme="dark"] .error-message-text {
+  color: #feb2b2;
 }

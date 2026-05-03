@@ -1,198 +1,149 @@
-.lexer-error {
-  background: #fff5f5; /* Light red/pink background */
-  border: 1px solid rgba(241, 76, 76, 0.3); /* Red border */
-  color: #b33a3a; /* Dark red text for contrast */
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  margin-top: 0.75rem;
-  box-shadow: 0 4px 10px rgba(85, 77, 64, 0.1); /* Light mode shadow */
+.lexer-error, .lexer-success {
+  padding: 1.5rem;
   font-family: "JetBrains Mono", monospace;
+  animation: fadeIn 0.3s ease;
 }
 
-.lexer-error__header {
+.lexer-error__header, .lexer-success__header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .lexer-error__icon {
-  font-size: 1.2rem;
-  margin-right: 0.25rem;
+  font-size: 2rem;
+  color: #e53e3e;
 }
 
-.lexer-error__title {
+.lexer-success__icon {
+  font-size: 2rem;
+  color: #38a169;
+}
+
+.lexer-error__title, .lexer-success__title {
+  font-size: 1.1rem;
   font-weight: 700;
-  color: #c53030; /* Strong, dark red title */
+  color: var(--color-text-light);
+  margin-bottom: 0.25rem;
 }
 
-.lexer-error__summary {
-  font-size: 0.85rem;
-  color: #b33a3a; /* Dark red text */
+.lexer-error__summary, .lexer-success__summary {
+  font-size: 0.9rem;
+  color: #806341;
 }
 
 .lexer-error__copy {
-  background: transparent;
-  border: 1px solid rgba(197, 48, 48, 0.3); /* Dark red border */
-  color: #c53030; /* Dark red text */
-  padding: 0.25rem 0.5rem;
+  margin-left: auto;
+  background: white;
+  border: 1px solid var(--color-border-light);
+  padding: 0.4rem 0.8rem;
   border-radius: 6px;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s ease;
 }
+
 .lexer-error__copy:hover {
-  background: rgba(241, 76, 76, 0.05); /* Faint red hover */
+  background: #fdf2f2;
+  border-color: #feb2b2;
 }
 
 .lexer-error__list {
-  margin-top: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
-/* Each error block */
 .lexer-error__item {
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  background: rgba(241, 76, 76, 0.05); /* Faint red background */
-  border: 1px solid rgba(241, 76, 76, 0.15); /* Faint red border */
+  background: #fffafa;
+  border: 1px solid #fee2e2;
+  border-radius: 10px;
+  padding: 1rem;
+  transition: transform 0.2s ease;
 }
 
-/* Top line: LEXICAL ERROR: + optional message */
+.lexer-error__item:hover {
+  transform: translateX(4px);
+  border-color: #fecaca;
+}
+
 .lexer-error__type-line {
-  font-weight: 700;
-  color: #c53030; /* Strong dark red */
-  letter-spacing: 0.5px;
-  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
 }
 
-/* Row below: "lexeme" + location */
+.error-type-tag {
+  background: #e53e3e;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.error-message-text {
+  font-weight: 600;
+  color: #c53030;
+  font-size: 0.95rem;
+}
+
 .lexer-error__details-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fff5eb; /* Secondary Light bg from your palette */
-  border-radius: 5px;
-  padding: 0.25rem 0.6rem;
+  gap: 1rem;
 }
 
-.lexer-error__lexeme {
-  color: #554d40; /* Main light-mode text */
+.lexer-error__lexeme-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: #806341;
   font-weight: 600;
+}
+
+.lexeme-code {
+  background: #fff5eb;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #fed7aa;
+  font-weight: 700;
+  color: #c2410c;
 }
 
 .lexer-error__loc {
-  color: #806341; /* Muted light-mode text */
-  font-size: 0.85rem;
-}
-
-/* Optional footer, if you use one later */
-.lexer-error__footer {
-  margin-top: 0.75rem;
-  font-size: 0.85rem;
-  color: #806341; /* Muted light-mode text */
-  text-align: right;
-}
-.lexer-error__footer a {
-  color: #c53030; /* Strong red link */
-  text-decoration: none;
-  font-weight: 600;
-}
-.lexer-error__footer a:hover {
-  text-decoration: underline;
-}
-
-/* Success state for lexer (mirrors syntax-success styling) */
-.lexer-success {
-  background: #f0fff4;
-  border: 1px solid rgba(34, 197, 94, 0.35);
-  color: #166534;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  margin-top: 0.75rem;
-  box-shadow: 0 4px 10px rgba(34, 197, 94, 0.1);
-  font-family: "JetBrains Mono", monospace;
-}
-
-.lexer-success__header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-}
-
-.lexer-success__icon {
-  font-size: 1.2rem;
-  margin-right: 0.25rem;
-}
-
-.lexer-success__title {
-  font-weight: 700;
-  color: #166534;
-}
-
-.lexer-success__summary {
+  gap: 0.4rem;
   font-size: 0.85rem;
-  color: #166534;
+  color: #806341;
 }
 
-/* ==================== DARK MODE STYLES ==================== */
-[data-theme="dark"] .lexer-error {
-  background: #3d2d2d;
-  border: 1px solid rgba(197, 48, 48, 0.4);
-  color: #ff6b6b;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+.lexer-error__loc i {
+  color: #dda96d;
 }
 
-[data-theme="dark"] .lexer-error__title {
-  color: #ff6b6b;
-}
-
-[data-theme="dark"] .lexer-error__summary {
-  color: #ff8888;
-}
-
-[data-theme="dark"] .lexer-error__copy {
-  border: 1px solid rgba(255, 107, 107, 0.4);
-  color: #ff6b6b;
-}
-
-[data-theme="dark"] .lexer-error__copy:hover {
-  background: rgba(255, 107, 107, 0.1);
-}
-
+/* Dark Mode */
 [data-theme="dark"] .lexer-error__item {
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.2);
+  background: rgba(254, 226, 226, 0.05);
+  border-color: rgba(254, 226, 226, 0.1);
 }
 
-[data-theme="dark"] .lexer-error__type-line {
-  color: #ff6b6b;
+[data-theme="dark"] .lexeme-code {
+  background: rgba(254, 215, 170, 0.1);
+  border-color: rgba(254, 215, 170, 0.2);
+  color: #fdba74;
 }
 
-[data-theme="dark"] .lexer-error__details-row {
-  background: #3d3d3d;
-}
-
-[data-theme="dark"] .lexer-error__lexeme {
-  color: #b0b0b0;
-}
-
-[data-theme="dark"] .lexer-error__loc {
-  color: #888888;
-}
-
-[data-theme="dark"] .lexer-success {
-  background: #2d3d2d;
-  border: 1px solid rgba(76, 175, 80, 0.4);
-  color: #4caf50;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-}
-
-[data-theme="dark"] .lexer-success__title {
-  color: #4caf50;
-}
-
-[data-theme="dark"] .lexer-success__summary {
-  color: #7cb342;
+[data-theme="dark"] .error-message-text {
+  color: #feb2b2;
 }

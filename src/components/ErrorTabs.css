@@ -1,162 +1,138 @@
-.error-tabs-container {
+.error-section-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  background: #fffbf9;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid rgba(85, 77, 64, 0.1);
-  margin-top: 0.75rem;
-}
-
-/* Tab Navigation */
-.error-tabs-nav {
-  display: flex;
-  gap: 0;
-  background: #fff5f0;
-  border-bottom: 2px solid rgba(85, 77, 64, 0.1);
-  padding: 0;
-}
-
-.error-tab-btn {
+  width: 100%;
   flex: 1;
-  padding: 0.75rem 1rem;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: #554d40;
-  transition: all 0.2s ease;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Matching the editor-container rounding and shadow */
+.error-content-box {
+  background: var(--color-bg-light);
+  border-top-left-radius: 0;
+  border-top-right-radius: 12px;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  border: 1px solid var(--color-border-light);
+  box-shadow: 0 4px 20px var(--color-shadow-light);
+  overflow: hidden;
+  flex: 1;
+  min-height: 0; /* Remove the 200px restriction */
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border-bottom: 3px solid transparent;
-  margin-bottom: -2px;
-  position: relative;
+  flex-direction: column;
 }
 
-.error-tab-btn:hover {
-  background: rgba(85, 77, 64, 0.05);
-  color: #3d3a36;
-}
-
-.error-tab-btn.active {
-  color: #dda96d;
-  border-bottom-color: #dda96d;
-  background: rgba(241, 76, 76, 0.03);
-}
-
-.error-tab-label {
-  white-space: nowrap;
-}
-
-.error-tab-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.5rem;
-  height: 1.5rem;
-  padding: 0 0.4rem;
-  background: #c53030;
-  color: white;
-  border-radius: 50%;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.error-tab-btn.active .error-tab-badge {
-  background: #9b2c2c;
-}
-
-.error-tab-badge--success {
-  background: #38a169 !important;
-  font-size: 0.7rem;
-}
-
-.error-tab-btn.active .error-tab-badge--success {
-  background: #2f855a !important;
-}
-
-/* Tab Content */
 .error-tabs-content {
-  padding: 0.75rem 1rem;
-  min-height: 60px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .error-tab-pane {
-  animation: fadeIn 0.2s ease;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  animation: fadeIn 0.3s ease;
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-/* Ensure error panels inside tabs don't have extra margins */
-.error-tab-pane .lexer-error,
-.error-tab-pane .syntax-error,
-.error-tab-pane .syntax-success,
-.error-tab-pane .semantic-error,
-.error-tab-pane .semantic-success,
-.error-tab-pane .output-panel,
-.error-tab-pane .output-panel--empty {
-  margin-top: 0;
+/* Red Theme for Error Tabs */
+.editor-tab-title.tab--has-errors {
+  color: #e53e3e; /* Error Red */
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
-  .error-tab-btn {
-    font-size: 0.85rem;
-    padding: 0.6rem 0.75rem;
-  }
-
-  .error-tab-label {
-    display: none;
-  }
-
-  .error-tab-btn {
-    justify-content: center;
-  }
+.editor-tab-title.tab--has-errors.active {
+  background-color: #fff5f5; /* Light Red background when active */
+  border-top-color: #e53e3e;
 }
 
-/* ==================== DARK MODE STYLES ==================== */
-[data-theme="dark"] .error-tabs-container {
+.error-tab-badge {
+  background: #e53e3e;
+  color: white;
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-left: 0.5rem;
+}
+
+/* Icons */
+.editor-tab-title i {
+  margin-right: 0.6rem;
+  font-size: 1rem;
+}
+
+.tab-icon--success {
+  color: #38a169;
+  margin-left: 0.5rem;
+}
+
+.tab-icon--error {
+  color: #e53e3e;
+  margin-left: 0.5rem;
+}
+
+/* Tab button specific reset */
+button.editor-tab-title {
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+button.editor-tab-title:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+button.editor-tab-title.active:hover {
+  background-color: var(--color-bg-light);
+}
+
+[data-theme="dark"] .error-content-box {
   background: var(--color-bg-light);
-  border: 1px solid var(--color-border-light);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border-color: var(--color-border-light);
 }
 
-[data-theme="dark"] .error-tabs-nav {
-  background: var(--color-secondary-light);
-  border-bottom: 2px solid var(--color-border-light);
+[data-theme="dark"] .editor-tab-title.tab--has-errors {
+  color: #fc8181;
 }
 
-[data-theme="dark"] .error-tab-btn {
-  color: var(--color-text-muted-light);
+[data-theme="dark"] .editor-tab-title.tab--has-errors.active {
+  background-color: rgba(252, 129, 129, 0.1);
 }
 
-[data-theme="dark"] .error-tab-btn:hover {
-  background: rgba(221, 169, 109, 0.08);
-  color: var(--color-text-light);
+/* === Expand / Collapse Button === */
+.expand-toggle-btn {
+  margin-left: auto !important;
+  padding: 0.5rem 0.75rem !important;
+  gap: 0 !important;
 }
 
-[data-theme="dark"] .error-tab-btn.active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
-  background: rgba(221, 169, 109, 0.12);
+.expand-toggle-btn i {
+  margin-right: 0 !important;
+  font-size: 0.85rem;
 }
 
-[data-theme="dark"] .error-tabs-content,
-[data-theme="dark"] .error-tab-pane {
-  background: var(--color-bg-light);
+.expand-toggle-btn:hover {
+  color: var(--color-primary) !important;
+}
+
+/* Expanded state for content box */
+.error-content-box--expanded {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.error-content-box--expanded .error-tabs-content {
+  height: 100%;
+}
+
+.error-content-box--expanded .error-tab-pane {
+  height: 100%;
 }

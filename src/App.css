@@ -20,11 +20,15 @@
 [data-theme="dark"] {
   --color-primary: #dda96d;
   --color-primary-hover: #e6b280;
-  --color-secondary-light: #161616; /* New deeper panel background */
-  --color-bg-light: #0d0d0d;       /* New deepest background */
-  --color-text-light: #f5f5f5;      /* Crisp white text */
+  --color-secondary-light: #161616;
+  /* New deeper panel background */
+  --color-bg-light: #0d0d0d;
+  /* New deepest background */
+  --color-text-light: #f5f5f5;
+  /* Crisp white text */
   --color-text-muted-light: #999999;
-  --color-border-light: rgba(221, 169, 109, 0.15); /* Tinted borders */
+  --color-border-light: rgba(221, 169, 109, 0.15);
+  /* Tinted borders */
   --color-shadow-light: rgba(0, 0, 0, 0.6);
 }
 
@@ -40,9 +44,11 @@
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
@@ -51,6 +57,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -85,7 +92,10 @@
   font-weight: bold;
   transition: color 0.3s ease;
 }
-[data-theme="dark"] .token-datatype { color: #64b5f6; }
+
+[data-theme="dark"] .token-datatype {
+  color: #64b5f6;
+}
 
 /* 2. REMAINING KEYWORDS -> LIGHT BLUE */
 .token-keyword {
@@ -93,7 +103,10 @@
   font-weight: bold;
   transition: color 0.3s ease;
 }
-[data-theme="dark"] .token-keyword { color: #4dd0e1; }
+
+[data-theme="dark"] .token-keyword {
+  color: #4dd0e1;
+}
 
 /* 3. ORANGE KEYWORDS (recipe, empty, crema, new) */
 .token-keyword-orange {
@@ -101,7 +114,10 @@
   font-weight: bold;
   transition: color 0.3s ease;
 }
-[data-theme="dark"] .token-keyword-orange { color: #ffb74d; }
+
+[data-theme="dark"] .token-keyword-orange {
+  color: #ffb74d;
+}
 
 /* 4. GREEN KEYWORDS (cafe, backroom, order, brewed) */
 .token-keyword-green {
@@ -109,7 +125,10 @@
   font-weight: bold;
   transition: color 0.3s ease;
 }
-[data-theme="dark"] .token-keyword-green { color: #66bb6a; }
+
+[data-theme="dark"] .token-keyword-green {
+  color: #66bb6a;
+}
 
 /* 5. PINK KEYWORDS (sift) */
 .token-keyword-pink {
@@ -117,7 +136,10 @@
   font-weight: bold;
   transition: color 0.3s ease;
 }
-[data-theme="dark"] .token-keyword-pink { color: #f48fb1; }
+
+[data-theme="dark"] .token-keyword-pink {
+  color: #f48fb1;
+}
 
 /* 6. COMMENTS -> GRAY */
 .token-comment {
@@ -125,7 +147,10 @@
   font-style: italic;
   transition: color 0.3s ease;
 }
-[data-theme="dark"] .token-comment { color: #a8a8a8; }
+
+[data-theme="dark"] .token-comment {
+  color: #a8a8a8;
+}
 
 /* 7. OPERATORS -> RED (Keep as is) */
 .token-operator {
@@ -133,7 +158,10 @@
   font-weight: bold;
   transition: color 0.3s ease;
 }
-[data-theme="dark"] .token-operator { color: #ff6b6b; }
+
+[data-theme="dark"] .token-operator {
+  color: #ff6b6b;
+}
 
 /* 8. SYMBOLS / PUNCTUATION -> GRAY (Keep as is) */
 .token-punctuation {
@@ -141,14 +169,20 @@
   font-weight: bold;
   transition: color 0.3s ease;
 }
-[data-theme="dark"] .token-punctuation { color: #b0b0b0; }
+
+[data-theme="dark"] .token-punctuation {
+  color: #b0b0b0;
+}
 
 /* 9. LITERALS -> YELLOW/GREEN (Keep as is) */
 .token-literal {
   color: #556b2f;
   transition: color 0.3s ease;
 }
-[data-theme="dark"] .token-literal { color: #a5d6a7; }
+
+[data-theme="dark"] .token-literal {
+  color: #a5d6a7;
+}
 
 /* 10. IDENTIFIERS -> RED */
 .token-identifier {
@@ -156,27 +190,16 @@
   font-weight: normal;
   transition: color 0.3s ease;
 }
-[data-theme="dark"] .token-identifier { color: #e57373; }
+
+[data-theme="dark"] .token-identifier {
+  color: #e57373;
+}
 
 /* =========================================
    LAYOUT EXPANSION LOGIC
    ========================================= */
-.layout-row-top--expanded .editor {
-  flex: 1;
-  width: 100%;
-  max-width: 100%;
-}
 
-.layout-row-top--expanded .editor-container {
-  width: 100%;
-  max-width: 100%;
-}
-
-.layout-row-top {
-  display: flex;
-  width: 100%;
-  gap: 1rem;
-}
+/* Override the global 'text-align: center' from #root */
 
 /* Override the global 'text-align: center' from #root */
 .layout-panel-bottom {
@@ -189,46 +212,11 @@
    ErrorTabs component structure. But typically, this keeps it clean: */
 .layout-panel-bottom h3,
 .layout-panel-bottom h2 {
-  text-align: center; /* Keep headers centered if desired */
+  text-align: center;
+  /* Keep headers centered if desired */
 }
 
-/* =========================================
-   PERFECT ALIGNMENT FIX
-   ========================================= */
-
-.editor-container {
-  display: block; 
-  position: relative;
-  background-color: var(--color-bg-light);
-  height: 55vh; /* Responsive height */
-  overflow: hidden;
-  border-radius: 12px;
-  border: 1px solid var(--color-border-light);
-  box-shadow: 0 4px 20px var(--color-shadow-light);
-  transition: all 0.3s ease;
-}
-
-/* =========================================
-   EDITOR SECTION HEADER STYLING
-   ========================================= */
-
-.editor h3 {
-  margin: 0;
-  padding: 0 0 1rem 0;
-  border-bottom: 2px solid var(--color-border-light);
-  background: linear-gradient(
-    135deg,
-    rgba(221, 169, 109, 0.03) 0%,
-    transparent 100%
-  );
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: var(--color-text-light);
-  letter-spacing: 0.3px;
-  transition:
-    border-color 0.3s ease,
-    color 0.3s ease;
-}
+/* Redundant editor styles removed - now handled by .ide-box in styles.css */
 
 .caramel-string-bracket-light {
   color: #556b2f !important;

@@ -806,6 +806,29 @@ class StructuredCodeGenerator:
         self._emit_raw("class _CaramelEarlyExit(Exception):")
         self._emit_raw("    pass")
         self._emit_raw("")
+        self._emit_raw("class _CaramelLoopTimeout(Exception):")
+        self._emit_raw("    pass")
+        self._emit_raw("")
+        # --- Runtime loop guard -------------------------------------------------
+        # Each while/pour/taste-till loop is assigned a unique ID string.
+        # _caramel_check_loop() increments the iteration counter for that loop
+        # and raises _CaramelLoopTimeout when the hard limit is exceeded.
+        # This prevents infinite loops from freezing the IDE or the executable.
+        self._emit_raw("_CARAMEL_MAX_ITERATIONS = 100_000  # Hard iteration limit per loop")
+        self._emit_raw("_caramel_loop_counters = {}        # loop_id -> iteration count")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_check_loop(loop_id):")
+        self._emit_raw("    _caramel_loop_counters[loop_id] = _caramel_loop_counters.get(loop_id, 0) + 1")
+        self._emit_raw("    if _caramel_loop_counters[loop_id] > _CARAMEL_MAX_ITERATIONS:")
+        self._emit_raw("        del _caramel_loop_counters[loop_id]  # reset for safety")
+        self._emit_raw("        raise _CaramelLoopTimeout(")
+        self._emit_raw("            f'Infinite loop detected: loop {loop_id!r} exceeded '")
+        self._emit_raw("            f'{_CARAMEL_MAX_ITERATIONS:,} iterations.'")
+        self._emit_raw("        )")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_reset_loop(loop_id):")
+        self._emit_raw("    _caramel_loop_counters.pop(loop_id, None)")
+        self._emit_raw("")
         self._emit_raw("def _caramel_input_bean(prompt=''):")
         self._emit_raw("    raw = input(prompt).strip()")
         self._emit_raw("    neg = raw.startswith('-')")
@@ -1049,6 +1072,14 @@ class StructuredCodeGenerator:
 
         self._push()
 
+        # --- Runtime infinite-loop guard ----------------------------------------
+        # Emit a unique loop-ID string derived from the IR position so that
+        # nested loops each get their own independent counter.  The guard
+        # raises _CaramelLoopTimeout after _CARAMEL_MAX_ITERATIONS iterations.
+        loop_guard_id = f"loop_{start}"
+        self._emit(f"_caramel_check_loop({loop_guard_id!r})")
+        # -----------------------------------------------------------------------
+
         # Body runs from after IF_FALSE up to (but not including) the back-GOTO
         body_start = (cond_idx + 1) if cond_idx else start + 1
         body_end = back_goto_idx if back_goto_idx is not None else end
@@ -1103,6 +1134,8 @@ class StructuredCodeGenerator:
                     self._gen_simple(self.ir[j], j)
 
         self._pop()
+        # Reset the loop counter once the loop exits normally (not via exception)
+        self._emit(f"_caramel_reset_loop({loop_guard_id!r})")
         return end + 1
     
     def _gen_if_block(self, start, boundary, is_elif=False):
@@ -1658,3 +1691,189 @@ class StructuredCodeGenerator:
     def _get_default_for(self, var_name):
         dtype = self._get_var_type(var_name)
         return {"churro": "''", "blend": '""', "temp": "False", "drip": "0.0"}.get(dtype, "0")
+
+    # ------------------------------------------------------------------
+    # Standalone / EXE Generation
+    # ------------------------------------------------------------------
+
+    def generate_standalone(self):
+        """
+        Generate a self-contained Python script suitable for packaging into
+        a Windows executable via PyInstaller.
+
+        Key differences from generate():
+          - Uses real sys.stdin / sys.stdout (no mock I/O patching).
+          - Wraps the entry point in `if __name__ == '__main__':` so that
+            PyInstaller's multiprocessing bootstrap does not re-run the
+            program body on every worker spawn.
+          - The _CaramelEarlyExit exception is used for controlled exits
+            (e.g. invalid input) and results in sys.exit(0) so the console
+            window closes cleanly.
+
+        Returns the generated Python source code as a string.
+        """
+        # Reset generator state for a fresh pass
+        self._lines = []
+        self._indent = 0
+        self._declared = set()
+        self._in_func = False
+
+        # Emit header (same helpers, but _caramel_input/print use real I/O)
+        self._emit_standalone_header()
+        # Translate the IR instructions exactly as in the regular path
+        self._translate(0, len(self.ir))
+        # Emit a standalone-safe footer
+        self._emit_standalone_footer()
+
+        return "\n".join(self._lines)
+
+    def _emit_standalone_header(self):
+        """
+        Emit the Python file header for standalone / PyInstaller mode.
+
+        This is identical to _emit_header() except:
+          - _caramel_input delegates to the real built-in input().
+          - _caramel_print delegates to the real built-in print().
+        Both are already the case in the existing header because the mocking
+        only happens inside execute() at runtime; the generated source itself
+        always calls `input` / `print`. We re-use _emit_header() unchanged.
+        """
+        self._emit_raw("# === Generated CARAMEL Program (Standalone) ===")
+        self._emit_raw("# This file was produced by the Caramel compiler.")
+        self._emit_raw("# It is intended to be packaged with PyInstaller.")
+        self._emit_raw("")
+        self._emit_raw("import sys")
+        self._emit_raw("import math")
+        self._emit_raw("import random")
+        self._emit_raw("")
+        # ------------------------------------------------------------------
+        # Runtime helpers (identical to the interactive-mode header)
+        # ------------------------------------------------------------------
+        self._emit_raw("def _caramel_to_bool(val):")
+        self._emit_raw("    if isinstance(val, bool): return val")
+        self._emit_raw("    if isinstance(val, (int, float)): return val != 0")
+        self._emit_raw("    if isinstance(val, str): return len(val) > 0")
+        self._emit_raw("    return bool(val)")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_input(prompt=''):")
+        self._emit_raw("    return input(prompt)")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_type(val):")
+        self._emit_raw("    if isinstance(val, bool): return 'temp'")
+        self._emit_raw("    if isinstance(val, int): return 'bean'")
+        self._emit_raw("    if isinstance(val, float): return 'drip'")
+        self._emit_raw("    if isinstance(val, str) and len(val) == 1: return 'churro'")
+        self._emit_raw("    if isinstance(val, str): return 'blend'")
+        self._emit_raw("    if isinstance(val, list): return 'array'")
+        self._emit_raw("    return 'unknown'")
+        self._emit_raw("")
+        self._emit_raw("class _CaramelEarlyExit(Exception):")
+        self._emit_raw("    pass")
+        self._emit_raw("")
+        self._emit_raw("class _CaramelLoopTimeout(Exception):")
+        self._emit_raw("    pass")
+        self._emit_raw("")
+        # --- Runtime loop guard (standalone / EXE mode) -------------------------
+        # Identical to the interactive-mode guard; included here so the packaged
+        # .exe is fully self-contained without importing server-side modules.
+        self._emit_raw("_CARAMEL_MAX_ITERATIONS = 100_000  # Hard iteration limit per loop")
+        self._emit_raw("_caramel_loop_counters = {}        # loop_id -> iteration count")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_check_loop(loop_id):")
+        self._emit_raw("    _caramel_loop_counters[loop_id] = _caramel_loop_counters.get(loop_id, 0) + 1")
+        self._emit_raw("    if _caramel_loop_counters[loop_id] > _CARAMEL_MAX_ITERATIONS:")
+        self._emit_raw("        del _caramel_loop_counters[loop_id]")
+        self._emit_raw("        raise _CaramelLoopTimeout(")
+        self._emit_raw("            f'Infinite loop detected: loop {loop_id!r} exceeded '")
+        self._emit_raw("            f'{_CARAMEL_MAX_ITERATIONS:,} iterations.'")
+        self._emit_raw("        )")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_reset_loop(loop_id):")
+        self._emit_raw("    _caramel_loop_counters.pop(loop_id, None)")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_input_bean(prompt=''):")
+        self._emit_raw("    raw = input(prompt).strip()")
+        self._emit_raw("    neg = raw.startswith('-')")
+        self._emit_raw("    digits = raw[1:] if neg else raw")
+        self._emit_raw("    if not digits.isdigit() or len(digits) > 10:")
+        self._emit_raw("        print('INVALID INPUT: Number too large.')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    if neg and digits == '0':")
+        self._emit_raw("        print('INVALID INPUT: Negative symbol and a zero are not allowed.')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    return int(raw)")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_input_drip(prompt=''):")
+        self._emit_raw("    raw = input(prompt).strip()")
+        self._emit_raw("    neg = raw.startswith('-')")
+        self._emit_raw("    body = raw[1:] if neg else raw")
+        self._emit_raw("    if '.' in body:")
+        self._emit_raw("        parts = body.split('.')")
+        self._emit_raw("        if len(parts) != 2:")
+        self._emit_raw("            print('INVALID INPUT')")
+        self._emit_raw("            raise _CaramelEarlyExit()")
+        self._emit_raw("        whole, frac = parts[0], parts[1]")
+        self._emit_raw("    else:")
+        self._emit_raw("        whole, frac = body, ''")
+        self._emit_raw("    if not whole.isdigit() or (frac and not frac.isdigit()):")
+        self._emit_raw("        print('INVALID INPUT')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    if len(whole) > 10 or len(frac) > 10:")
+        self._emit_raw("        print('INVALID INPUT: Number too large.')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    if neg and float(body) == 0.0:")
+        self._emit_raw("        print('INVALID INPUT: Negative symbol and a zero are not allowed.')")
+        self._emit_raw("        raise _CaramelEarlyExit()")
+        self._emit_raw("    return float(raw)")
+        self._emit_raw("")
+        self._emit_raw("def _caramel_print(*args, end='\\n'):")
+        self._emit_raw("    parts = []")
+        self._emit_raw("    for a in args:")
+        self._emit_raw("        if isinstance(a, bool):")
+        self._emit_raw('            parts.append("hot" if a else "cold")')
+        self._emit_raw("        elif isinstance(a, str) and len(a) >= 2 and a[0] == '\"' and a[-1] == '\"':")
+        self._emit_raw("            parts.append(a[1:-1])")
+        self._emit_raw("        elif isinstance(a, str) and len(a) >= 2 and a[0] == \"'\" and a[-1] == \"'\":")
+        self._emit_raw("            parts.append(a[1:-1])")
+        self._emit_raw("        else:")
+        self._emit_raw("            parts.append(str(a))")
+        self._emit_raw('    print("".join(parts), end="")')
+        self._emit_raw("")
+        self._emit_raw("_order = {}")
+        self._emit_raw("_functions = {}")
+        self._emit_raw("")
+
+    def _emit_standalone_footer(self):
+        """
+        Emit the program entry point for standalone / PyInstaller mode.
+
+        Uses `if __name__ == '__main__':` to prevent double-execution when
+        PyInstaller spawns worker processes (required on Windows with the
+        'spawn' multiprocessing start method).
+
+        On _CaramelEarlyExit (e.g. invalid user input) the process exits
+        cleanly with code 0 so the console window disappears without an
+        unhandled-exception traceback.
+        """
+        self._emit_raw("")
+        self._emit_raw("# --- Standalone entry point ---")
+        self._emit_raw("if __name__ == '__main__':")
+        self._emit_raw("    import time as _time")
+        self._emit_raw("    try:")
+        self._emit_raw("        _main_cup()")
+        self._emit_raw("    except _CaramelEarlyExit:")
+        self._emit_raw("        # Controlled exit (e.g. invalid input) — show a short pause")
+        self._emit_raw("        pass")
+        self._emit_raw("    except _CaramelLoopTimeout as _lte:")
+        self._emit_raw("        # Infinite loop detected at runtime")
+        self._emit_raw("        print(f'\\n[CARAMEL RUNTIME ERROR] {_lte}')")
+        self._emit_raw("    except KeyboardInterrupt:")
+        self._emit_raw("        print('\\n[Execution interrupted by user.]')")
+        self._emit_raw("    except Exception as _exc:")
+        self._emit_raw("        print(f'\\n[CARAMEL RUNTIME ERROR] {type(_exc).__name__}: {_exc}')")
+        self._emit_raw("    # --- 10-second auto-close window ----------------------------")
+        self._emit_raw("    # Keeps the console open so the user can read the output")
+        self._emit_raw("    # before the window closes automatically.")
+        self._emit_raw("    print('\\n\\nProgram finished. This window will close in 10 seconds...')")
+        self._emit_raw("    _time.sleep(10)")
+        self._emit_raw("    sys.exit(0)")

@@ -1,180 +1,175 @@
-.syntax-error {
-  background: #fff1f1;
-  border: 1px solid rgba(220, 38, 38, 0.35);
-  color: #9b2c2c;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  margin-top: 0.75rem;
-  box-shadow: 0 4px 10px rgba(85, 77, 64, 0.1);
+.syntax-error, .syntax-success {
+  padding: 1.5rem;
   font-family: "JetBrains Mono", monospace;
+  animation: fadeIn 0.3s ease;
 }
 
-.syntax-error__header {
+.syntax-error__header, .syntax-success__header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .syntax-error__icon {
-  font-size: 1.2rem;
-  margin-right: 0.25rem;
+  font-size: 2rem;
+  color: #e53e3e;
 }
 
-.syntax-error__title {
+.syntax-success__icon {
+  font-size: 2rem;
+  color: #38a169;
+}
+
+.syntax-error__title, .syntax-success__title {
+  font-size: 1.1rem;
   font-weight: 700;
-  color: #9b2c2c;
+  color: var(--color-text-light);
+  margin-bottom: 0.25rem;
 }
 
-.syntax-error__summary {
-  font-size: 0.85rem;
-  color: #9b2c2c;
+.syntax-error__summary, .syntax-success__summary {
+  font-size: 0.9rem;
+  color: #806341;
 }
 
 .syntax-error__copy {
-  background: transparent;
-  border: 1px solid rgba(155, 44, 44, 0.35);
-  color: #9b2c2c;
-  padding: 0.25rem 0.5rem;
+  margin-left: auto;
+  background: white;
+  border: 1px solid var(--color-border-light);
+  padding: 0.4rem 0.8rem;
   border-radius: 6px;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .syntax-error__copy:hover {
-  background: rgba(220, 38, 38, 0.08);
+  background: #fdf2f2;
+  border-color: #feb2b2;
 }
 
 .syntax-error__list {
-  margin-top: 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .syntax-error__item {
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  background: rgba(220, 38, 38, 0.08);
-  border: 1px solid rgba(220, 38, 38, 0.2);
+  background: #fffafa;
+  border: 1px solid #fee2e2;
+  border-radius: 10px;
+  padding: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.syntax-error__item:hover {
+  transform: translateX(4px);
+  border-color: #fecaca;
 }
 
 .syntax-error__type-line {
-  font-weight: 700;
-  color: #9b2c2c;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.error-type-tag {
+  background: #e53e3e;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
   letter-spacing: 0.5px;
-  margin-bottom: 0.35rem;
+}
+
+.error-message-text {
+  font-weight: 600;
+  color: #c53030;
+  font-size: 0.95rem;
 }
 
 .syntax-error__details-row {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  background: #fff5eb;
-  border-radius: 5px;
-  padding: 0.35rem 0.6rem;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.syntax-error__expected {
-  color: #554d40;
+.syntax-error__expected-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: #806341;
   font-weight: 600;
 }
 
+.expected-code {
+  background: #fff5eb;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #fed7aa;
+  font-weight: 700;
+  color: #c2410c;
+}
+
 .syntax-error__loc {
-  color: #806341;
-  font-size: 0.85rem;
-}
-
-.syntax-success {
-  background: #f0fff4;
-  border: 1px solid rgba(34, 197, 94, 0.35);
-  color: #166534;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  margin-top: 0.75rem;
-  box-shadow: 0 4px 10px rgba(34, 197, 94, 0.1);
-  font-family: "JetBrains Mono", monospace;
-}
-
-.syntax-success__header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-}
-
-.syntax-success__icon {
-  font-size: 1.2rem;
-  margin-right: 0.25rem;
-}
-
-.syntax-success__title {
-  font-weight: 700;
-  color: #166534;
-}
-
-.syntax-success__summary {
+  gap: 0.4rem;
   font-size: 0.85rem;
-  color: #166534;
+  color: #806341;
 }
 
-/* ==================== DARK MODE STYLES ==================== */
-[data-theme="dark"] .syntax-error {
-  background: #3d2d2d;
-  border: 1px solid rgba(220, 38, 38, 0.4);
-  color: #ff6b6b;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+.syntax-error__loc i {
+  color: #dda96d;
 }
 
-[data-theme="dark"] .syntax-error__title {
-  color: #ff6b6b;
-}
-
-[data-theme="dark"] .syntax-error__summary {
-  color: #ff8888;
-}
-
-[data-theme="dark"] .syntax-error__copy {
-  background: transparent;
-  border: 1px solid rgba(255, 107, 107, 0.4);
-  color: #ff6b6b;
-}
-
-[data-theme="dark"] .syntax-error__copy:hover {
-  background: rgba(255, 107, 107, 0.1);
-}
-
+/* Dark Mode */
 [data-theme="dark"] .syntax-error__item {
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.2);
+  background: rgba(254, 226, 226, 0.05);
+  border-color: rgba(254, 226, 226, 0.1);
 }
 
-[data-theme="dark"] .syntax-error__type-line {
-  color: #ff6b6b;
+[data-theme="dark"] .expected-code {
+  background: rgba(254, 215, 170, 0.1);
+  border-color: rgba(254, 215, 170, 0.2);
+  color: #fdba74;
 }
 
-[data-theme="dark"] .syntax-error__details-row {
-  background: #3d3d3d;
+[data-theme="dark"] .error-message-text {
+  color: #feb2b2;
 }
 
-[data-theme="dark"] .syntax-error__expected {
-  color: #b0b0b0;
+/* === Infinite Loop Error Items (amber / warning style) === */
+.syntax-error__item--loop {
+  background: #fffbeb;
+  border-color: #fcd34d;
+  border-left: 4px solid #f59e0b;
 }
 
-[data-theme="dark"] .syntax-error__loc {
-  color: #888888;
+.syntax-error__item--loop:hover {
+  border-color: #f59e0b;
+  transform: translateX(4px);
 }
 
-[data-theme="dark"] .syntax-success {
-  background: #2d3d2d;
-  border: 1px solid rgba(76, 175, 80, 0.4);
-  color: #4caf50;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+/* Amber tag for INFINITE LOOP errors */
+.error-type-tag--loop {
+  background: #f59e0b;
+  color: #1c1917;
+  display: inline-flex;
+  align-items: center;
 }
 
-[data-theme="dark"] .syntax-success__title {
-  color: #4caf50;
-}
-
-[data-theme="dark"] .syntax-success__summary {
-  color: #7cb342;
+[data-theme="dark"] .syntax-error__item--loop {
+  background: rgba(245, 158, 11, 0.07);
+  border-color: rgba(245, 158, 11, 0.25);
 }
