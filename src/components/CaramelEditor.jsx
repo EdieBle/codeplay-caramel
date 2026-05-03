@@ -20,7 +20,7 @@ export default function CaramelEditor({ code, setCode, onChangeCursor }) {
           [/~\./, { token: "comment", next: "@comment_state" }], // multi line start
 
           // 2. Data Types
-          [/\b(?:bean|drip|churro|temp|mug|blend)\b/, "datatype"],
+          [/\b(?:bean|drip|churro|temp|blend)\b/, "datatype"],
 
           // 3. Orange Keywords
           [/\b(?:recipe|empty|crema|new)\b/, "keywordOrange"],
@@ -158,7 +158,7 @@ export default function CaramelEditor({ code, setCode, onChangeCursor }) {
 
     // Caramel Autocomplete / Intellisense
     const caramelKeywords = [
-      "bean", "drip", "churro", "temp", "mug", "blend",
+      "bean", "drip", "churro", "temp", "blend",
       "recipe", "empty", "crema", "new",
       "cafe", "backroom", "order", "brewed",
       "sift", "ceil", "floor", "pow", "rand", "sqrt", "type",
