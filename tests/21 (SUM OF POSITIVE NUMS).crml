@@ -13,8 +13,6 @@ bean cup() [
             sum = sum + num
         }
     }
-    glaze("Sum of positive integers: ")
-    glaze(sum)
-    glaze("\n")
+    glaze("Sum of positive integers: " + sum + "\n")
     refill? 0
 ]

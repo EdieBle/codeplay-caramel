@@ -11,9 +11,9 @@ bean cup() [
 	}
 	
 	ifbrew(sum_of_arr == x) {
-		glaze("Result: " + sum_of_arr + " is a neon number!")
+		glaze("Result: " + x + " is a neon number!")
 	} elspress {
-		glaze("Result: " + sum_of_arr + " is not a neon number!")
+		glaze("Result: " + x + " is not a neon number!")
 	}
 	refill? 0
 ]

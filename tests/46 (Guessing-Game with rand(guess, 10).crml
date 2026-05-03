@@ -1,0 +1,54 @@
+bean cup() [
+  bean hiddennum, guess, counter = 6, choice = -1
+  hiddennum = rand(guess, 10)
+  temp flag = cold
+	blend hilo
+
+  glaze("================ GUESSING NUMBER GAME ================\n")
+    whilehot(flag == cold && counter > 0) {
+        batter@guess("\nInput your guess: ")
+
+        ifbrew(guess != hiddennum) {
+            counter--
+			ifbrew(guess < hiddennum) {
+				hilo = "higher!"
+			} elspress {
+				hilo = "lower!"
+			}
+            glaze("\nOops! Try again! Your guess should be "+hilo+" (Remaining attempts: " + counter + ")")
+			
+            ifbrew(counter == 0) {
+                glaze("\nNo more attempts :<. Try again?\n")
+                choice = -1
+                whilehot(choice < 0 || choice > 1) {
+                    batter@choice("Input choice (0/1): ")
+                    ifbrew(choice < 0 || choice > 1) {
+                        glaze("\nInvalid Input!\n")
+                        skip
+                    }
+                }
+                ifbrew(choice == 1) {
+                    counter = 6
+                } elspress {
+                    flag = hot
+                }
+            }
+        } elspress {
+            glaze("\nYou got it! Try again?\n")
+            choice = -1
+            whilehot(choice < 0 || choice > 1) {
+                batter@choice("Input choice (0/1): ")
+                ifbrew(choice < 0 || choice > 1) {
+                    glaze("\nInvalid Input!\n")
+                    skip
+                }
+            }
+            ifbrew(choice == 1) {
+                counter = 6
+            } elspress {
+                flag = hot
+            }
+        }
+    }
+    refill? 0
+]

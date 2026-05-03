@@ -37,40 +37,26 @@ bean cup() [
     batter@ choice
 
     ifbrew (choice == 1) {
-        glaze("Enter radius: ")
-        batter@ radius
+        batter@ radius("Enter radius: ")
         result = circlearea(radius)
-        glaze("Area: ")
-        glaze(result)
-        glaze("\n")
+        glaze("Area: " + result + "\n")
     }
     elifroth (choice == 2) {
-        glaze("Enter base: ")
-        batter@ base
-        glaze("Enter height: ")
-        batter@ height
+        batter@ base("Enter base: ")
+        batter@ height("Enter height: ")
         result = triarea(base, height)
-        glaze("Area: ")
-        glaze(result)
-        glaze("\n")
+        glaze("Area: " + result + "\n")
     }
     elifroth (choice == 3) {
-        glaze("Enter side: ")
-        batter@ side
+        batter@ side("Enter side: ")
         result = sqarea(side)
-        glaze("Area: ")
-        glaze(result)
-        glaze("\n")
+        glaze("Area: " + result + "\n")
     }
     elifroth (choice == 4) {
-        glaze("Enter length: ")
-        batter@ length
-        glaze("Enter width: ")
-        batter@ width
+        batter@ length("Enter length: ")
+        batter@ width("Enter width: ")
         result = rectarea(length, width)
-        glaze("Area: ")
-        glaze(result)
-        glaze("\n")
+        glaze("Area: " + result + "\n")
     }
     elspress {
         glaze("Invalid Input\n")

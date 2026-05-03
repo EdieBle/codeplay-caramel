@@ -17,8 +17,6 @@ bean cup() [
         refill? 0
     }
     count = count_dig(n)
-    glaze("The number of digits in the number is: ")
-    glaze(count)
-    glaze("\n")
+    glaze("The number of digits in the number is: " + count + "\n")
     refill? 0
 ]

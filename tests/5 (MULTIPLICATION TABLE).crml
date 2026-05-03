@@ -1,21 +1,21 @@
 bean cup() [
     bean rows = 0
     bean cols = 0
-    glaze("Enter number of rows: ")
-    batter@ rows
-    glaze("Enter number of columns: ")
-    batter@ cols
+    batter@ rows("Enter number of rows: ")
+    batter@ cols("Enter number of columns: ")
+    
     ifbrew (rows <= 0) {
         glaze("Error: Invalid Input\n")
         refill? 0
     }
+
     ifbrew (cols <= 0) {
         glaze("Error: Invalid Input\n")
         refill? 0
     }
     pour (bean i = 1; i <= rows; i++) {
         pour (bean j = 1; j <= cols; j++) {
-            glaze(i * j)
+            glaze(i * j) 
             glaze("\t")
         }
         glaze("\n")

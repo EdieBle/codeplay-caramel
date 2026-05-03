@@ -1,5 +1,4 @@
 bean arr[10]
-
 recipe bean find_max(bean n, bean current_max) [
     ifbrew (n == 0) {
         refill? (current_max)
@@ -13,20 +12,15 @@ recipe bean find_max(bean n, bean current_max) [
 ]
 
 bean cup() [
-    bean n, max_val
-    
-    batter@n("How many elements (max 10)? ")
-    
-    glaze("Enter elements:\n")
-    pour(bean i = 0; i < n; i++) {
-        batter@order.arr[i]
-    }
-    
-    max_val = find_max(n, order.arr[0])
-    
-    glaze("Largest element: ")
-    glaze(max_val)
-    glaze("\n")
-    
-    refill? 0
+  bean n, max_val
+  batter@n("How many elements (max 10)? ")
+  glaze("Enter elements:\n")
+
+  pour(bean i = 0; i < n; i++) {
+      batter@order.arr[i]
+  }
+
+  max_val = find_max(n, order.arr[0])
+  glaze("Largest element: " + max_val + "\n")
+  refill? 0
 ]

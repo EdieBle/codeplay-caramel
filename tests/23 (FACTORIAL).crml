@@ -13,10 +13,6 @@ bean cup() [
         fact = fact * i
         i = i - 1
     }
-    glaze("Factorial of ")
-    glaze(n)
-    glaze(" is ")
-    glaze(fact)
-    glaze("\n")
+    glaze("Factorial of " + n + " is " + fact + "\n")
     refill? 0
 ]

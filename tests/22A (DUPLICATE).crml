@@ -22,9 +22,7 @@ bean cup() [
             }
         }
         ifbrew (dupcount >= 1) {
-            glaze("Duplicate found: ")
-            glaze(num)
-            glaze("\n")
+            glaze("Duplicate found: " + num + "\n")
             found = 1
         }
         ifbrew (found == 0) {
@@ -36,8 +34,6 @@ bean cup() [
             }
         }
     }
-    glaze("Total numbers entered: ")
-    glaze(count)
-    glaze("\n")
+    glaze("Total numbers entered: " + count + "\n")
     refill? 0
 ]

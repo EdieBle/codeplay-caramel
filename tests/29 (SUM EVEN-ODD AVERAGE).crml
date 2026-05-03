@@ -1,43 +1,32 @@
 bean cup() [
-    bean n, even_sum, odd_count
-    drip odd_sum, odd_avg
-    
-	glaze("Enter N: ")
-    batter@n
-    
-    even_sum = 0
-    odd_sum = 0.0
-    odd_count = 0
-    
-    pour(bean i = 1; i <= n; i++) {
-        ifbrew (i % 2 == 0) {
-            even_sum = even_sum + i
-        } elspress {
-            odd_sum = odd_sum + i
-            odd_count++
-        }
-    }
-    
+  bean n, even_sum, odd_count
+  drip odd_sum, odd_avg
 
-	glaze("odd_count: ")
-	glaze(odd_count)
-	glaze("\n")
-	glaze("odd_sum: ")
-	glaze(odd_sum)
-	glaze("\n")
+	batter@n("Enter N: ")
+  even_sum = 0
+  odd_sum = 0.0
+  odd_count = 0
 
-    ifbrew (odd_count > 0) {
-        odd_avg = odd_sum / odd_count
+  pour(bean i = 1; i <= n; i++) {
+    ifbrew (i % 2 == 0) {
+      even_sum = even_sum + i
     } elspress {
-        odd_avg = 0.0
+        odd_sum = odd_sum + i
+        odd_count++
     }
+  }
+
+	glaze("odd_count: " + odd_count + "\n")
+	glaze("odd_sum: " + odd_sum + "\n")
+
+  ifbrew (odd_count > 0) {
+    odd_avg = odd_sum / odd_count
+  } elspress {
+      odd_avg = 0.0
+  }
     
-    glaze("Sum of even numbers: ")
-    glaze(even_sum)
-    glaze("\n")
-    glaze("Average of odd numbers: ")
-    glaze(odd_avg)
-    glaze("\n")
+  glaze("Sum of even numbers: " + even_sum + "\n")
+  glaze("Average of odd numbers: " + odd_avg + "\n")
     
-    refill? 0
+  refill? 0
 ]

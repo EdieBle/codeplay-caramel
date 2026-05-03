@@ -11,7 +11,7 @@ bean cup() [
     batter@ n
     ifbrew (n <= 0) {
         n *= -1
-		is_neg = hot
+		    is_neg = hot
     }
     num = n
     whilehot (num > 0) {
@@ -28,11 +28,7 @@ bean cup() [
 		sumdig *= -1
 	}
 
-    glaze("Sum of digits: ")
-    glaze(sumdig)
-    glaze("\n")
-    glaze("Reverse: ")
-    glaze(rev)
-    glaze("\n")
+    glaze("Sum of digits: " + sumdig + "\n")
+    glaze("Reverse: " + rev + "\n")
     refill? 0
 ]

@@ -29,9 +29,7 @@ bean cup() [
         right = right - 1
     }
     
-    glaze("Word: ")
-    glaze(word)
-    glaze("\n")
+    glaze("Word: " + word + "\n")
     
     ifbrew (is_palin == 1) {
         glaze("The word is a palindrome\n")

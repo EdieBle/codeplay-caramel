@@ -1,7 +1,6 @@
 recipe bean printnums(bean n, bean curr) [
     ifbrew (curr <= n) {
-        glaze(curr)
-        glaze(" ")
+        glaze(curr + " ")
         bean dummy = printnums(n, curr + 1)
     }
     refill? (0)

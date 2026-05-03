@@ -16,9 +16,7 @@ bean cup() [
         refill? 0
     }
     pour (bean i = 0; i < n; i++) {
-        glaze("element - ")
-        glaze(i)
-        glaze(" : ")
+        glaze("element - " + i + " : ")
         batter@ val
         order.arr[i] = val
     }
@@ -54,8 +52,7 @@ bean cup() [
     }
     glaze("Sorted array: ")
     pour (bean i = 0; i < n; i++) {
-        glaze(order.arr[i])
-        glaze(" ")
+        glaze(order.arr[i] + " ")
     }
     glaze("\n")
     refill? 0

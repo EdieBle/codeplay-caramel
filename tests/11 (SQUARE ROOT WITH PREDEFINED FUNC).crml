@@ -1,0 +1,10 @@
+bean cup() [
+    drip n = 0
+    batter@ n ("Enter a number: ")
+    ifbrew (n <= 0) {
+        glaze("Error: Invalid Input\n")
+        refill? 0
+    }
+    glaze("Square root: " + sqrt(n))
+    refill? 0
+]
