@@ -195,7 +195,7 @@ class SemanticAnalyzer:
         
         except Exception as e:
             # Silently skip analysis errors
-            print(f"[ANALYSIS CRASH] {e}")
+            print(f"[SEMANTIC ANALYSIS CRASH] {e}")
             import traceback
             traceback.print_exc()
             pass
@@ -676,15 +676,17 @@ class SemanticAnalyzer:
             # print(f"[SEMANTIC ARR_DEBUG] arr_size={arr_size} arr_init_count={arr_init_count} is_array={is_array} is_2d={is_2d}")
             # Bounds check: initializer count must not exceed declared size
             if is_array and arr_size is not None and arr_init_count is not None:
-                print(not is_2d and arr_init_count > arr_size)
-                if not is_2d and arr_init_count > arr_size: 
-                    # print(f"[SEMANTIC ARR_DEBUG] arr_size={arr_size} arr_init_count={arr_init_count} is_array={is_array} is_2d={is_2d}")
-                    self._error(
-                        "E_ARR",
-                        f"Array '{id_token.value}' declared with size {arr_size} "
-                        f"but initialized with {arr_init_count} element(s)",
-                        arr_size_token or id_token
-                    )
+                if is_array and arr_size is not None and arr_init_count is not None:
+                    if arr_size != "***" and not is_2d and arr_init_count > arr_size:
+                        print(not is_2d and arr_init_count > arr_size)
+                        if not is_2d and arr_init_count > arr_size: 
+                            # print(f"[SEMANTIC ARR_DEBUG] arr_size={arr_size} arr_init_count={arr_init_count} is_array={is_array} is_2d={is_2d}")
+                            self._error(
+                                "E_ARR",
+                                f"Array '{id_token.value}' declared with size {arr_size} "
+                                f"but initialized with {arr_init_count} element(s)",
+                                arr_size_token or id_token
+                            )
 
 
         if id_token:
@@ -934,12 +936,11 @@ class SemanticAnalyzer:
                                     if self._is_parse_node(bc) and bc.name in ("arr_elem", "expression", "assign_val", "value"):
                                         inferred = self._infer_value_type(bc)
                                         if inferred and inferred != symbol.dtype:
-                                            if not (symbol.dtype in ("bean", "drip") and inferred in ("bean", "drip")):
-                                                self._error(
-                                                    "E_ARR_TYPE",
-                                                    f"Cannot assign '{inferred}' value to '{symbol.dtype}' array '{var_name}'",
-                                                    id_token
-                                                )
+                                            self._error(
+                                                "E_ARR_TYPE",
+                                                f"Cannot assign '{inferred}' value to '{symbol.dtype}' array '{var_name}'",
+                                                id_token
+                                            )
 
         self._visit_children(node)    
     def _visit_update_id(self, node):
