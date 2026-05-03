@@ -568,6 +568,40 @@ class IRGenerator:
                 return False
             if self._is_node(child):
                 return self._visit(child)
+            if self._is_token(child) and child.type == "ORDER":
+                # order.field or order.field[idx]
+                id_tok = None
+                indices = []
+                for c2 in children[i + 1:]:
+                    if self._is_token(c2) and c2.type == "ID":
+                        id_tok = c2
+                    if self._is_token(c2) and c2.type == "OP_BRACKETS":
+                        # collect index
+                        pass
+                if id_tok:
+                    arr_name = f"order.{id_tok.value}"
+                    # Check for array indices in remaining children
+                    idx_list = []
+                    j = i + 1
+                    while j < len(children):
+                        if self._is_token(children[j]) and children[j].type == "OP_BRACKETS":
+                            j += 1
+                            if j < len(children) and self._is_node(children[j]):
+                                idx = self._visit(children[j])
+                                idx_list.append(idx)
+                            j += 1  # skip CL_BRACKETS
+                        else:
+                            j += 1
+                    if idx_list:
+                        t = self._new_temp()
+                        current = arr_name
+                        for idx in idx_list:
+                            t = self._new_temp()
+                            self._emit("ARR_LOAD", dest=t, arg1=current, arg2=idx)
+                            current = t
+                        return current
+                    return arr_name 
+                
         return None
 
     def _visit_blend_term_id_tail(self, var_name, tail_node):
@@ -582,12 +616,21 @@ class IRGenerator:
         if self._is_node(first) and first.name == "_empty":
             return var_name
 
-        # Array access: [index]
+        # Array access: [index] with optional second dimension
         if (self._is_token(first) and first.type == "OP_BRACKETS") or \
         (self._is_node(first) and first.name == "OP_BRACKETS"):
             idx = self._extract_array_index(tail_node)
             t = self._new_temp()
-            self._emit("ARR_LOAD", dest=t, arg1=var_name, arg2=idx)
+            self._emit("ARR_LOAD", dest=t, arg1=var_name, arg2=idx, is_2d=False)
+            # Check for second dimension in arr_call_tail
+            for c in children:
+                if self._is_node(c) and c.name == "arr_call_tail":
+                    for c2 in self._get_children(c):
+                        if self._is_node(c2) and c2.name == "array_index":
+                            col_idx = self._visit(c2)
+                            t2 = self._new_temp()
+                            self._emit("ARR_LOAD", dest=t2, arg1=t, arg2=col_idx)
+                            return t2
             return t
 
         # Function call: (args)

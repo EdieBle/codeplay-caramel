@@ -734,11 +734,17 @@ class RDParser:
                 self.parse_blend_term_id_tail()
             ])
         if t == "ORDER":
-            return self._node("blend_term", [
+            children = [
                 self._expect("ORDER"),
                 self._expect("DOT_ACC"),
                 self._expect("ID")
-            ])
+            ]
+            # Handle optional array indexing: order.arr[i] or order.arr[i][j]
+            while self._current().type == "OP_BRACKETS":
+                children.append(self._expect("OP_BRACKETS"))
+                children.append(self.parse_array_index())
+                children.append(self._expect("CL_BRACKETS"))
+            return self._node("blend_term", children)
         if t == "OP_PAREN":
             return self._node("blend_term", [
                 self._expect("OP_PAREN"),
