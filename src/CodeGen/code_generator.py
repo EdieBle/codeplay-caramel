@@ -1569,7 +1569,10 @@ class StructuredCodeGenerator:
             elif len(dims) == 1:
                 d = dims[0]
                 if d == "***":
-                    self._emit(f"{var} = []")
+                    if init_vals:
+                        self._emit(f"{var} = {list(init_vals)}")
+                    else:
+                        self._emit(f"{var} = []")
                 elif init_vals:
                     if isinstance(d, int) and len(init_vals) < d:
                         padded = list(init_vals) + [default] * (d - len(init_vals))
