@@ -1791,12 +1791,15 @@ class RDParser:
     def parse_arr_cont_1d(self):
         """Parse rule: arr_cont_1d -> elem array_elements | λ"""
         if self._is_start_expression():
-            return self._node("arr_cont_1d", [
+            result = self._node("arr_cont_1d", [
                 self.parse_arr_elem(),
                 self.parse_ext_arr_elem()
             ])
+            if self._current().type not in {"CL_BRACKETS"}:
+                self._error({"CL_BRACKETS", "COMMA"})
+            return result
         return self._node("arr_cont_1d", [self._node("_empty")])
-
+    
     # ---------------------------------------------------------------
     # CFG#72# opt_arr_elems -> arr_elem ext_arr_elem | λ
     # Optional element list for one row of a 2D numeric array.
