@@ -195,8 +195,9 @@ class SemanticAnalyzer:
         
         except Exception as e:
             # Silently skip analysis errors
-            # print(f"[ANALYSIS CRASH] {e}")
-            # traceback.print_exc()
+            print(f"[ANALYSIS CRASH] {e}")
+            import traceback
+            traceback.print_exc()
             pass
         
         return [err.to_dict() for err in self.errors]
@@ -890,10 +891,7 @@ class SemanticAnalyzer:
     
     # ID stuff
     def _visit_id_dec_stmt(self, node):
-        """Visit id_dec_stmt: ID = value
-        
-        FIX: Scan for the ID token leaf directly so we get real line/col.
-        """
+        """Visit id_dec_stmt: ID = value"""
         var_name = None
         id_token = None
         for child in node.children:
@@ -904,15 +902,30 @@ class SemanticAnalyzer:
 
         if var_name:
             symbol = self.symbol_table.lookup(var_name)
-            # print(f"[ID_DEC_STMT DEBUG] var={var_name} symbol={symbol} is_constant={getattr(symbol, 'is_constant', None)}")
+            print(f"[ID_DEC] dtype repr: {repr(symbol.dtype)} type: {type(symbol.dtype)}")
+            print(f"[ID_DEC_STMT] var={var_name} symbol={symbol} dtype={getattr(symbol,'dtype',None)} is_array={getattr(symbol,'is_array',None)}")
             if not symbol:
                 self._error("E002", f"Undeclared identifier '{var_name}'", id_token)
-            elif symbol.is_constant:
+                self._visit_children(node)
+                return
+
+            if symbol.is_constant:
                 self._error("E005", f"Cannot modify constant identifier '{var_name}'", id_token)
 
-            # CHECK: so you stop the user from assigning a value to the array not of its type
-            elif symbol.is_array and symbol.dtype:
-                # Find id_bracket_tail to get the assigned value
+            # Check ++/-- on non-numeric types
+            if symbol.dtype in ("blend", "churro", "temp"):
+                for child in node.children:
+                    if self._is_parse_node(child) and child.name == "id_dec_tail":
+                        for tc in child.children:
+                            if not self._is_parse_node(tc) and hasattr(tc, 'type') and tc.type in ("INCREMENT", "DECREMENT"):
+                                self._error("E_TYPE", f"Cannot apply '++/--' to '{symbol.dtype}' variable '{var_name}'", id_token)
+                            elif self._is_parse_node(tc) and tc.name == "unary_op":
+                                for uc in tc.children:
+                                    if not self._is_parse_node(uc) and hasattr(uc, 'type') and uc.type in ("INCREMENT", "DECREMENT"):
+                                        self._error("E_TYPE", f"Cannot apply '++/--' to '{symbol.dtype}' variable '{var_name}'", id_token)
+
+            # Check array element assignment type
+            if symbol.is_array and symbol.dtype:
                 for child in node.children:
                     if self._is_parse_node(child) and child.name == "id_dec_tail":
                         for tc in child.children:
@@ -927,8 +940,8 @@ class SemanticAnalyzer:
                                                     f"Cannot assign '{inferred}' value to '{symbol.dtype}' array '{var_name}'",
                                                     id_token
                                                 )
-        self._visit_children(node)
-    
+
+        self._visit_children(node)    
     def _visit_update_id(self, node):
         """Visit update_id: ID assignment"""
         var_name = self._extract_name_from_node(node, depth=0)

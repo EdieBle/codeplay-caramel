@@ -692,7 +692,7 @@ class IRGenerator:
 
         var_name = id_tok.value
         var_name = self._shadow_map.get(var_name, var_name)
-        print(f"\n[DEBUG id_dec_stmt] var_name={var_name}")
+        # print(f"\n[DEBUG id_dec_stmt] var_name={var_name}")
         for child in self._get_children(node):
             print(f"  child: is_node={self._is_node(child)}, is_token={self._is_token(child)}, "
                 f"name={getattr(child, 'name', None)}, type={getattr(child, 'type', None)}, "
