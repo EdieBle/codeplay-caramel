@@ -1,5 +1,18 @@
-from .atomDelim import ATOMIC_VAL, DELIM_VAL 
+from .atomDelim import ATOMIC_VAL, DELIM_VAL    # This is where we import the used dictionaries: ATOMIC_VAL and DELIMITERS
 
+""" This is where we start the simulation of our DFA.
+    Given our class named State, we have following:
+        - Constructor def __init__ Parameters including the following:
+            chars: list[str] - Expected input characters that the state can accept
+            branches: list[int] - What next state number can go next. It has a default val of empty list
+            end = False: marks whether this is a final state
+            token_Type: determines what kind of token that the state represents
+            
+    self.chars - If chars is a single string, convert it into a list. Else if it's already a list, keep the values appending.
+    self.brances - If branches is a single integer, then create a list. Else if it's already a list, keep the values appending.
+    self.isEnd - determine if the state is the final state.
+    self.token_type - stores what kind of token this state represents
+"""
 class State:
     def __init__(self, chars: list[str], branches: list[int] = [], end = False, token_type=None):
         self.chars = [chars] if type(chars) is str else chars
@@ -10,11 +23,21 @@ class State:
 
 
 TRANSITIONS_DFA = {
+    # We have 0 as our initial state (our starting point), then it can branched out to reference other initial stattes.
+    # Remember in DFA, it should always start with 0 as our initial states. 
+    # For example, (0) -> goto state (31) -> (31, 'c') -> (32. 'a') -> (33, 'f') -> (34, 'e')
     0: State('initial', [1, 31, 58, 69, 90, 102, 108, 112, 119, 123, 129, 136, 153, 175, 193, 
                         202, 206, 212, 218, 225, 229, 231, 235, 239, 243, 246, 249, 251, 253,
                         255, 256, 258, 259, 261, 263, 265, 267, 268, 309, 315, 320, 350]),
 
-    # Backroom, batter@, bean, blend, brewed
+    # 1 is our state number
+    # State('b', [2,16,20,25]) -> b is the content of state 1, [2,16,20,25] -> from state 1, it can go to these state numbers next.
+    # Delimiters: State(DELIM_VAL['space_delim'], end = True, token_type = backroom)
+    # The valid delimiters is space_delim ('\t', ' ') that will be read after the token
+    # end = True -> this is where the state ends (the final state)
+    # token_type -> after forming the DFA, this is the token that it represents 
+    
+    # backroom, batter@, bean, blend, brewed
     1: State('b', [2, 16, 20, 25]), 2: State('a', [3, 10]), 3: State('c', 4), 4: State('k', 5), 5: State('r', 6), 6: State('o', 7), 7: State('o', 8), 8: State('m', 9), 9: State(DELIM_VAL['space_delim'], end = True, token_type="backroom"),
                                     10: State('t', 11), 11: State('t', 12), 12: State('e', 13), 13: State('r', 14), 14: State('@', 15), 15: State(DELIM_VAL['batter@_delim'], end = True, token_type="batter@"),
         16: State('e', 17), 17: State('a', 18), 18: State('n', 19), 19: State(DELIM_VAL['space_delim'], end = True, token_type="bean"),
@@ -50,7 +73,6 @@ TRANSITIONS_DFA = {
     102: State('g', 103), 103: State('l', 104), 104: State('a', 105), 105: State('z', 106), 106: State('e', 107), 107: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="glaze"),
     108: State('h', 109), 109: State('o', 110), 110: State('t', 111), 111: State(DELIM_VAL['temp_delim'], end = True, token_type="hot"),
     112: State('i', 113), 113: State('f', 114), 114: State('b', 115), 115: State('r', 116), 116: State('e', 117), 117: State('w', 118), 118: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="ifbrew"),
-    # 119: State('m', 120), 120: State('u', 121), 121: State('g', 122), 122: State(DELIM_VAL['space_delim'], end = True, token_type="mug"),
     119: State('n', 120), 120: State('e', 121), 121: State('w', 122), 122: State(DELIM_VAL['space_delim'], end = True, token_type="new"),
     123: State('o', 124), 124: State('r', 125), 125: State('d', 126), 126: State('e', 127), 127: State('r', 128), 128: State('.', end = True, token_type="order"),
     
@@ -167,9 +189,8 @@ TRANSITIONS_DFA = {
     267: State('\n', end = True, token_type="newline"),
     
     
-    # Literals
-    # BEANLIT *positive number issues
-    # status: messy in particular to state 253
+    # Literals - START DFA
+    # BEANLIT - 10 digits limit
     268: State([*ATOMIC_VAL['whole']], [269, 270, 288]), 269: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"),
         270: State(ATOMIC_VAL['whole'], [271, 272, 288]), 271: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"),
         272: State(ATOMIC_VAL['whole'], [273, 274, 288]), 273: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"),
@@ -181,7 +202,7 @@ TRANSITIONS_DFA = {
         284: State(ATOMIC_VAL['whole'], [285, 286, 288]), 285: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"), 
         286: State(ATOMIC_VAL['whole'], [287, 288]), 287: State(DELIM_VAL['numeric_delim'], end = True, token_type = "beanlit"), 
         
-        # DRIPLIT
+        # DRIPLIT - 10 decimal points limit
         288: State('.' , 289),
             289: State(ATOMIC_VAL['whole'], [290, 291]), 290: State(DELIM_VAL['numeric_delim'], end = True, token_type = "driplit"), 
             291: State(ATOMIC_VAL['whole'], [292, 293]), 292: State(DELIM_VAL['numeric_delim'], end = True, token_type = "driplit"), 
@@ -236,7 +257,7 @@ TRANSITIONS_DFA = {
 
 
 
-        # IDENTIFIERS (gotta limit to 15 characters lang with a starting small letter, and everything after can only be underscore or number)
+        # IDENTIFIERS (limit of 15 characters lang with a starting small letter, and everything after can only be underscore or number)
         # Start with lowercase letter, can include digits or underscores
         320: State(ATOMIC_VAL["alpha_small"], [321, 322]), 
                 321: State(DELIM_VAL['id_delim'], end=True, token_type="id"),
@@ -273,7 +294,6 @@ TRANSITIONS_DFA = {
 
         # SINGLE LINE COMMENT
         # Pattern: ~~ comment until newline
-        # status: okay
         350: State('~', [351, 354]),
             351: State('~', 352),
             352: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL["escapeseq_let"]], [353, 352]),
@@ -281,11 +301,9 @@ TRANSITIONS_DFA = {
 
         # MULTI LINE COMMENT
         # Pattern: ~. comment content .~
-        # status: ambiguity due to atomDelim
             354: State('.', 355),
             355: State([*ATOMIC_VAL['text_content'], *ATOMIC_VAL['sp_symbols'], *ATOMIC_VAL['escapeseq_let'], '\n'], [356, 355]),
                 356: State('.', [357, 355]),
                 357: State('~', 358),
                 358: State([*DELIM_VAL['space_delim'], '\n'], end=True, token_type="ml_comment")
-
 }
