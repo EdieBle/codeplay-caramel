@@ -955,9 +955,24 @@ class SemanticAnalyzer:
 
     def _check_input_args(self, node):
         """Recursively check all input target IDs are declared and not constant."""
-        for child in node.children:
+        children = list(node.children) if hasattr(node, 'children') else []
+        i = 0
+        while i < len(children):
+            child = children[i]
             if not self._is_parse_node(child):
-                if hasattr(child, 'type') and child.type == "ID":
+                if hasattr(child, 'type') and child.type == "ORDER":
+                    # order.field — next two tokens are DOT_ACC and ID
+                    if i + 2 < len(children):
+                        id_tok = children[i + 2]
+                        if hasattr(id_tok, 'type') and id_tok.type == "ID":
+                            symbol = self.symbol_table.lookup_global(id_tok.value)
+                            if symbol and symbol.is_constant:
+                                self._error("E005",
+                                    f"Cannot modify constant identifier '{id_tok.value}'",
+                                    id_tok)
+                            i += 3
+                            continue
+                elif hasattr(child, 'type') and child.type == "ID":
                     symbol = self.symbol_table.lookup(child.value)
                     if not symbol:
                         self._error("E002", f"Undeclared identifier '{child.value}'", child)
@@ -966,6 +981,7 @@ class SemanticAnalyzer:
             else:
                 if child.name not in ("_empty", "input_val"):
                     self._check_input_args(child)
+            i += 1
 
     def _visit_if_cond(self, node):
         """Visit if condition: create block scope"""
@@ -1099,62 +1115,20 @@ class SemanticAnalyzer:
         self._visit_children(node)
 
     def _visit_var_dec_const_init(self, node):
-        """Visit variable declaration with initialization"""
-        id_tok = self._find_child_token(node, "ID")
-        if id_tok:
-            var_name = id_tok.value
-            dtype = self._var_types.get(var_name)
-            if not dtype:
-                dtype = self._extract_dtype(node)
-            if dtype:
-                self._var_types[var_name] = dtype
-
-        # Only emit if we haven't already emitted for this var at current scope
-        # The type=None emit at [000] happens because dtype_brewed_body visits
-        # this before _visit_dtype_dec registers the type — skip if dtype is None
-        if dtype is not None:
-            self._emit("DECLARE", dest=var_name, type=dtype, constant=True)
-        elif self._current_func is None:
-            # Global scope brewed with no dtype — still emit
-            self._emit("DECLARE", dest=var_name, type=dtype, constant=True)
-        # else: skip — will be handled by _visit_dtype_dec
-        for child in self._get_children(node):
-            if self._is_node(child) and child.name in ("value", "assign_val",
-                                                         "expression", "opt_assign"):
-                val = self._visit(child)
-                if val is not None:
-                    self._emit("ASSIGN", dest=var_name, arg1=val)
-                return
-            
+        """Visit variable declaration with initialization for brewed constants."""
         if self.current_var_type:
             var_name = self._extract_var_name(node)
-            # print(f"[SEMANTIC CONST INIT DEBUG] var={var_name} dtype={self.current_var_type} is_constant=True")
-
             if var_name:
-                symbol = Symbol(
-                    var_name,
-                    "variable",
+                sym = Symbol(
+                    var_name, "variable",
                     dtype=self.current_var_type,
-                    is_constant=True,  # BREWED = constant
-                    scope_level=self.symbol_table.scope_level,
-                    line=getattr(node, 'line', None),
-                    # is_initialized=True
+                    is_constant=True,
+                    scope_level=self.symbol_table.scope_level
                 )
-                
-                if not self.symbol_table.declare(var_name, symbol):
-                    self.errors.append(SemanticError(           # Emits E001 if identifier is already declared in the same scope
-                        "E001",
-                        f"Redefinition of identifier '{var_name}'",
-                        line=getattr(node, 'line', None)
-                    ))
-                else:
-                    # Check initialization type
-                    self._check_assignment_type(var_name, symbol, node)
-        
-        # print(f"[SEMANTIC CONST INIT DEBUG] children: {[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in node.children]}")
+                if not self.symbol_table.declare(var_name, sym):
+                    self._error("E001", f"Redefinition of identifier '{var_name}'", node)
         self._visit_children(node)
-        # print(f"[SEMANTIC CONST INIT DEBUG] done visiting children")
-    
+
     def _visit_opt_assign(self, node):
         """ _visit_opt_assign -> checks type of initialization value if it is valid to the implicit conversions
             Example: bean x = 3.14 -> RHS is "drip", target is "bean"
@@ -1216,12 +1190,12 @@ class SemanticAnalyzer:
     
     def _visit_dtype_brewed_body(self, node):
         """Visit data type brewed (constant) body"""
-        dtype = self._extract_dtype(node)
-        id_tok = self._find_child_token(node, "ID")
-        if id_tok and dtype:
-            self._var_types[id_tok.value] = dtype
-        self._visit_children_all(node)
-    
+        dtype = self._extract_type_from_node(node)
+        if dtype:
+            self.current_var_type = dtype
+        self._visit_children(node)
+        self.current_var_type = None
+
     def _visit_blend_id_tail(self, node):
         """Visit blend variable declaration"""
         var_name = self._extract_name_from_node(node, depth=0)
@@ -1238,7 +1212,7 @@ class SemanticAnalyzer:
                 self.errors.append(SemanticError(
                     "E001",
                     f"Redefinition of identifier '{var_name}'",
-                    line=getattr(node, 'line', None)
+                    line=getattr(node, 'line id_tok = self._find_child_token(node, "ID")', None)
                 ))
         
         self._visit_children(node)

@@ -352,8 +352,24 @@ class IRGenerator:
             self._visit_children_all(node)
 
     def _visit_dtype_brewed_body(self, node):
-        """Handle constant declaration: brewed data_type ID = value"""
+        """Handle constant declaration: brewed data_type ID = value.
+        Must store dtype in _var_types BEFORE visiting children so
+        _visit_var_dec_const_init can look it up by var name."""
         dtype = self._extract_dtype(node)
+        if dtype:
+            # Recursively find ID token in children
+            def find_id(n):
+                for c in self._get_children(n):
+                    if self._is_token(c) and c.type == "ID":
+                        return c
+                    if self._is_node(c):
+                        result = find_id(c)
+                        if result:
+                            return result
+                return None
+            id_tok = find_id(node)
+            if id_tok:
+                self._var_types[id_tok.value] = dtype
         self._visit_children_all(node)
 
     def _visit_acc_brewed_body(self, node):
@@ -461,22 +477,27 @@ class IRGenerator:
         return None
     
     def _visit_var_dec_const_init(self, node):
-        """Handle constant variable initialization: ID = value"""
+        """Handle constant variable initialization: ID = value.
+        Only emits DECLARE if dtype is known — skips if None to avoid
+        a global DECLARE being emitted before FUNC_BEGIN."""
         id_tok = self._find_child_token(node, "ID")
         if id_tok:
             var_name = id_tok.value
-            # Find dtype from context (parent should have extracted it)
+            # Prefer type from _var_types (set by _visit_dtype_brewed_body)
+            # over _extract_dtype which may return None for nested nodes
             dtype = self._var_types.get(var_name)
             if not dtype:
                 dtype = self._extract_dtype(node)
             if dtype:
                 self._var_types[var_name] = dtype
-            self._emit("DECLARE", dest=var_name, type=dtype, constant=True)
-
-            # find and visit the value/expression child
+            # Only emit DECLARE when dtype is known — if None, parent
+            # _visit_dtype_dec will emit the proper DECLARE instead
+            if dtype is not None:
+                self._emit("DECLARE", dest=var_name, type=dtype, constant=True)
+            # Visit value/expression child to emit ASSIGN
             for child in self._get_children(node):
                 if self._is_node(child) and child.name in ("value", "assign_val",
-                                                             "expression", "opt_assign"):
+                                                            "expression", "opt_assign"):
                     val = self._visit(child)
                     if val is not None:
                         self._emit("ASSIGN", dest=var_name, arg1=val)
@@ -1535,14 +1556,28 @@ class IRGenerator:
     
     def _collect_input_targets(self, node):
         targets = []
-        for child in self._get_children(node):
-            if self._is_token(child) and child.type == "ID":
+        children = self._get_children(node)
+        i = 0
+        while i < len(children):
+            child = children[i]
+            if self._is_token(child) and child.type == "ORDER":
+                # Look ahead for DOT_ACC and ID
+                if i + 2 < len(children):
+                    dot = children[i + 1]
+                    id_tok = children[i + 2]
+                    if self._is_token(dot) and dot.type == "DOT_ACC" and \
+                    self._is_token(id_tok) and id_tok.type == "ID":
+                        targets.append(f"order.{id_tok.value}")
+                        i += 3
+                        continue
+            elif self._is_token(child) and child.type == "ID":
                 name = child.value
                 targets.append(self._shadow_map.get(name, name))
-            elif self._is_node(child) and child.name not in ("_empty", "input_val"):  # ← add input_val
+            elif self._is_node(child) and child.name not in ("_empty", "input_val"):
                 targets.extend(self._collect_input_targets(child))
+            i += 1
         return targets
-    
+        
     def _visit_input_args(self, node):
         self._visit_children_all(node)
 
