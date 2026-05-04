@@ -39,7 +39,6 @@ class StructuredCodeGenerator:
         "churro": "''",
         "temp": "False",
         "blend": '""',
-        "mug": "{}",
     }
 
     # CARAMEL type → Python type coercion

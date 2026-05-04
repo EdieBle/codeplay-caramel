@@ -20,16 +20,15 @@ Organization:
   10. Expression Hierarchy (Logic, Relational, Arithmetic, Unary, Primary)
   11. Arrays
   12. Functions & Arguments
-  13. Mug (Struct) Declarations
-  14. Objects
-  15. Recipes (Functions)
-  16. Empty (Void Functions)
-  17. Crema (Classes)
-  18. Main Definitions
+  13. Objects
+  14. Recipes (Functions)
+  15. Empty (Void Functions)
+  16. Crema (Classes)
+  17. Main Definitions
   19. Statements
-  20. Input/Output
-  21. Control Flow (If/Switch/Loops)
-  22. Interrupt Statements
+  19. Input/Output
+  20. Control Flow (If/Switch/Loops)
+  21. Interrupt Statements
 - Parser Wrapper Class: High-level parsing interface with error handling
 """
 
@@ -256,7 +255,7 @@ class RDParser:
         t = self._current().type
         return t in {
             "CAFE", "BACKROOM", "BREWED", "BLEND", "BEAN", "DRIP", "CHURRO", "TEMP",
-            "ID", "ORDER", "INCREMENT", "DECREMENT", "MUG", "NEW",
+            "ID", "ORDER", "INCREMENT", "DECREMENT", "NEW",
             "BATTER", "GLAZE", "IFBREW", "FLAVOUR", "POUR", "WHILEHOT", "TASTE",
             "SNAP", "SKIP", "REFILL"
         }
@@ -272,7 +271,7 @@ class RDParser:
             return False
         return t in {
             "CAFE", "BACKROOM", "BREWED", "BLEND", "BEAN", "DRIP", "CHURRO", "TEMP",
-            "ID", "ORDER", "MUG", "NEW", "CREMA", "RECIPE", "EMPTY"
+            "ID", "ORDER", "NEW", "CREMA", "RECIPE", "EMPTY"
         }
 
     def _has_boolean_content(self, node):
@@ -361,7 +360,7 @@ class RDParser:
         if merged.index is not None and merged.index == checkpoint:
             PROGRAM_FIRST = {
                 "CAFE", "BACKROOM", "BREWED", "BLEND", "ID", "ORDER",
-                "BEAN", "DRIP", "CHURRO", "TEMP", "MUG", "NEW",
+                "BEAN", "DRIP", "CHURRO", "TEMP", "NEW",
                 "RECIPE", "EMPTY", "CREMA"
             }
             enriched = set(merged.expected).union(PROGRAM_FIRST)
@@ -390,11 +389,11 @@ class RDParser:
 
     # ---------------------------------------------------------------
     # CFG#4# global_dec -> acc_mod_dec | id_dec_stmt | order_dec_stmt
-    #                    | mug_dec | object_def | crema_def
+    #                    | object_def | crema_def
     #                    | recipe_def | empty_def
-    # Eight-way dispatch on the first token.  Covers every top-level
+    # Seven-way dispatch on the first token.  Covers every top-level
     # declaration form: access-modified vars, assignments via identifier,
-    # struct defs (mug), class defs (crema), and both function shapes.
+    # class defs (crema), and both function shapes.
     # ---------------------------------------------------------------
     def parse_global_dec(self):
         """Parse rule: global_dec -> various declaration types"""
@@ -405,8 +404,6 @@ class RDParser:
             return self._node("global_dec", [self.parse_id_dec_stmt()])
         if t == "ORDER":
             return self._node("global_dec", [self.parse_order_dec_stmt()])
-        if t == "MUG":
-            return self._node("global_dec", [self.parse_mug_dec()])
         if t == "NEW":
             return self._node("global_dec", [self.parse_object_def()])
         if t == "CREMA":
@@ -417,7 +414,7 @@ class RDParser:
             return self._node("global_dec", [self.parse_empty_def()])
         self._error({
             "CAFE", "BACKROOM", "BREWED", "BLEND", "BEAN", "DRIP", "CHURRO", "TEMP",
-            "ID", "ORDER", "MUG", "NEW", "CREMA", "RECIPE", "EMPTY"
+            "ID", "ORDER", "NEW", "CREMA", "RECIPE", "EMPTY"
         })
 
     # ========================================================================
@@ -430,7 +427,7 @@ class RDParser:
 
     # ---------------------------------------------------------------
     # CFG#5# dec -> acc_mod_dec | id_dec_stmt | order_dec_stmt
-    #            |  pre_unary_dec | mug_dec | object_def
+    #            |  pre_unary_dec | object_def
     # Statement-level dispatch.  Mirrors parse_global_dec but also allows
     # pre-unary increments/decrements (++ / --) which are not valid at
     # the global scope.
@@ -446,13 +443,11 @@ class RDParser:
             return self._node("dec", [self.parse_order_dec_stmt()])
         if t in {"INCREMENT", "DECREMENT"}:
             return self._node("dec", [self.parse_pre_unary_dec()])
-        if t == "MUG":
-            return self._node("dec", [self.parse_mug_dec()])
         if t == "NEW":
             return self._node("dec", [self.parse_object_def()])
         self._error({
             "CAFE", "BACKROOM", "BREWED", "BLEND", "BEAN", "DRIP", "CHURRO", "TEMP",
-            "ID", "ORDER", "INCREMENT", "DECREMENT", "MUG", "NEW"
+            "ID", "ORDER", "INCREMENT", "DECREMENT", "NEW"
         })
 
     # ---------------------------------------------------------------
@@ -1100,12 +1095,11 @@ class RDParser:
     # ---------------------------------------------------------------
     # CFG#37# order_dec_tail -> OP_BRACKETS array_index CL_BRACKETS EQUALS assign_val
     #                        |  EQUALS assign_val
-    #                        |  DOT_ACC ID order_mug_tail
-    # Three-way LL(1) split on the token after "order.field":
-    # [ = array element assignment, = = field assignment, . = deeper member.
+    # Two-way LL(1) split on the token after "order.field":
+    # [ = array element assignment, = = field assignment.
     # ---------------------------------------------------------------
     def parse_order_dec_tail(self):
-        """Parse rule: order_dec_tail -> [index] = value | = value | . ID tail | λ"""
+        """Parse rule: order_dec_tail -> [index] = value | = value | λ"""
         t = self._current().type
         if t == "OP_BRACKETS":
             return self._node("order_dec_tail", [
@@ -1120,25 +1114,7 @@ class RDParser:
                 self._expect("EQUALS"),
                 self.parse_assign_val()
             ])
-        if t == "DOT_ACC":
-            return self._node("order_dec_tail", [
-                self._expect("DOT_ACC"),
-                self._expect("ID"),
-                self.parse_order_mug_tail()
-            ])
-        self._error({"OP_BRACKETS", "EQUALS", "DOT_ACC"})
-
-    # ---------------------------------------------------------------
-    # CFG#38# order_mug_tail -> EQUALS assign_val
-    # Assignment to a doubly-nested order member (order.outer.inner = val).
-    # No λ alternative — reaching this rule means an assignment is required.
-    # ---------------------------------------------------------------
-    def parse_order_mug_tail(self):
-        """Parse rule: order_mug_tail -> = value | λ"""
-        return self._node("order_mug_tail", [
-            self._expect("EQUALS"),
-            self.parse_assign_val()
-        ])
+        self._error({"OP_BRACKETS", "EQUALS"})
 
     # ========================================================================
     # 8. UNARY OPERATIONS
@@ -1148,7 +1124,7 @@ class RDParser:
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#39# pre_unary_dec -> unary_op ID
+    # CFG#38# pre_unary_dec -> unary_op ID
     # Statement-level prefix increment/decrement: ++ or -- followed by a
     # single identifier.  The _allow_unary_ops flag guards this in contexts
     # where in-place mutation is not safe (e.g., array element positions).
@@ -1161,7 +1137,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#40# unary_op -> INCREMENT | DECREMENT
+    # CFG#39# unary_op -> INCREMENT | DECREMENT
     # Matches either ++ or -- and wraps it in a "unary_op" node.
     # Shared by both prefix and postfix unary contexts.
     # ---------------------------------------------------------------
@@ -1180,7 +1156,7 @@ class RDParser:
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#41# data_type -> BEAN | DRIP | CHURRO | TEMP
+    # CFG#40# data_type -> BEAN | DRIP | CHURRO | TEMP
     # Matches exactly one type keyword token from DATA_TYPE and wraps it.
     # blend (string) is deliberately excluded here — it has its own
     # sub-grammar because its expressions differ structurally.
@@ -1193,7 +1169,7 @@ class RDParser:
         self._error(self.DATA_TYPE)
 
     # ---------------------------------------------------------------
-    # CFG#42# var_dec_const_init -> ID EQUALS value
+    # CFG#41# var_dec_const_init -> ID EQUALS value
     # Single mandatory-initializer variable in a brewed (const) declaration.
     # Unlike opt_assign, this form requires = and a value — no bare names.
     # ---------------------------------------------------------------
@@ -1206,7 +1182,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#43# var_dec_const_tail -> (COMMA ID EQUALS value)* | λ
+    # CFG#42# var_dec_const_tail -> (COMMA ID EQUALS value)* | λ
     # Additional const-initialized variables in the same brewed declaration.
     # Every variable in the list must have an initializer (= value).
     # ---------------------------------------------------------------
@@ -1223,7 +1199,7 @@ class RDParser:
         return self._node("var_dec_const_tail", children)
 
     # ---------------------------------------------------------------
-    # CFG#44# var_dec_init -> ID opt_assign
+    # CFG#43# var_dec_init -> ID opt_assign
     # Single variable with an optional initializer.  Used for mutable
     # declarations (non-brewed) where = val is allowed but not required.
     # ---------------------------------------------------------------
@@ -1235,7 +1211,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#45# opt_assign -> EQUALS value | λ
+    # CFG#44# opt_assign -> EQUALS value | λ
     # Optional initializer: if EQUALS is present, consume it and parse
     # the RHS value; otherwise emit λ (variable is declared but unset).
     # ---------------------------------------------------------------
@@ -1249,7 +1225,7 @@ class RDParser:
         return self._node("opt_assign", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#46# var_dec_tail -> (COMMA var_dec_init)* | λ
+    # CFG#45# var_dec_tail -> (COMMA var_dec_init)* | λ
     # Comma-separated additional variables in a mutable type declaration.
     # Each sibling may carry its own optional initializer via var_dec_init.
     # ---------------------------------------------------------------
@@ -1264,7 +1240,7 @@ class RDParser:
         return self._node("var_dec_tail", children)
 
     # ---------------------------------------------------------------
-    # CFG#47# value -> expression
+    # CFG#46# value -> expression
     # Thin wrapper that promotes any expression to the "value" nonterminal.
     # Providing a named wrapper keeps the AST readable and matches the CFG.
     # ---------------------------------------------------------------
@@ -1288,7 +1264,7 @@ class RDParser:
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#48# expression -> not_factor logic_expr_tail
+    # CFG#47# expression -> not_factor logic_expr_tail
     # Lowest-precedence level: logical operators && and ||.  Delegates to
     # not_factor for its left operand, then logic_expr_tail for the rest.
     # ---------------------------------------------------------------
@@ -1300,7 +1276,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#49# logic_expr_tail -> (logic_op not_factor)* | λ
+    # CFG#48# logic_expr_tail -> (logic_op not_factor)* | λ
     # Right tail for logical expressions.  Loops while AND/OR are present,
     # consuming one operator + not_factor per iteration (left-associative).
     # ---------------------------------------------------------------
@@ -1315,7 +1291,7 @@ class RDParser:
         return self._node("logic_expr_tail", children)
 
     # ---------------------------------------------------------------
-    # CFG#50# logic_op -> AND | OR
+    # CFG#49# logic_op -> AND | OR
     # Matches exactly one logical operator token and wraps it in a node
     # so the IR generator can identify the operation without inspecting
     # the raw token value.
@@ -1328,7 +1304,7 @@ class RDParser:
         self._error(self.LOGIC_OP)
 
     # ---------------------------------------------------------------
-    # CFG#51# not_factor -> NOT rel_expr | rel_expr
+    # CFG#50# not_factor -> NOT rel_expr | rel_expr
     # Handles the prefix ! (logical negation).  If NOT is absent the rule
     # falls straight through to rel_expr — no alternative AST node created.
     # ---------------------------------------------------------------
@@ -1342,7 +1318,7 @@ class RDParser:
         return self._node("not_factor", [self.parse_rel_expr()])
 
     # ---------------------------------------------------------------
-    # CFG#52# rel_expr -> arith_expr rel_expr_tail
+    # CFG#51# rel_expr -> arith_expr rel_expr_tail
     # Relational comparison level.  Left operand is an arithmetic expression;
     # rel_expr_tail chains zero or more relational operators.
     # ---------------------------------------------------------------
@@ -1354,7 +1330,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#53# rel_expr_tail -> (rel_op arith_expr)* | λ
+    # CFG#52# rel_expr_tail -> (rel_op arith_expr)* | λ
     # Loops while REL_OP tokens (>, <, ==, !=, >=, <=) are present.
     # Left-associative: each iteration produces a pair (op, right-operand).
     # ---------------------------------------------------------------
@@ -1369,7 +1345,7 @@ class RDParser:
         return self._node("rel_expr_tail", children)
 
     # ---------------------------------------------------------------
-    # CFG#54# rel_op -> GREATER_THAN | LESSER_THAN | EQ_EQUALS
+    # CFG#53# rel_op -> GREATER_THAN | LESSER_THAN | EQ_EQUALS
     #                |  NOT_EQUAL | GREATER_EQUAL | LESSER_EQUAL
     # Matches one relational operator from the REL_OP set.
     # ---------------------------------------------------------------
@@ -1381,7 +1357,7 @@ class RDParser:
         self._error(self.REL_OP)
 
     # ---------------------------------------------------------------
-    # CFG#55# arith_expr -> unary_expr arith_expr_tail
+    # CFG#54# arith_expr -> unary_expr arith_expr_tail
     # Arithmetic level: + - * / %.  Left operand is a unary expression;
     # arith_expr_tail loops over additive/multiplicative operators.
     # ---------------------------------------------------------------
@@ -1393,7 +1369,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#56# arith_expr_tail -> (arithm_op unary_expr)* | λ
+    # CFG#55# arith_expr_tail -> (arithm_op unary_expr)* | λ
     # Loops while ARITHM_OP tokens are the lookahead.  Mixing + with * in
     # the same tail is intentional — operator precedence is handled by the
     # IR generator, not the parser.
@@ -1409,7 +1385,7 @@ class RDParser:
         return self._node("arith_expr_tail", children)
 
     # ---------------------------------------------------------------
-    # CFG#57# arithm_op -> PLUS | MINUS | MULTIPLY | DIVIDE | MODULO
+    # CFG#56# arithm_op -> PLUS | MINUS | MULTIPLY | DIVIDE | MODULO
     # Matches one arithmetic operator from ARITHM_OP and wraps it.
     # ---------------------------------------------------------------
     def parse_arithm_op(self):
@@ -1420,7 +1396,7 @@ class RDParser:
         self._error(self.ARITHM_OP)
 
     # ---------------------------------------------------------------
-    # CFG#58# unary_expr -> INCREMENT ID   (prefix ++ inside expression)
+    # CFG#57# unary_expr -> INCREMENT ID   (prefix ++ inside expression)
     #                    |  DECREMENT ID   (prefix --)
     #                    |  MINUS neg_operand  (arithmetic negation)
     #                    |  primary
@@ -1449,7 +1425,7 @@ class RDParser:
         return self._node("unary_expr", [self.parse_primary()])
 
     # ---------------------------------------------------------------
-    # CFG#59# neg_operand -> ID | OP_PAREN expression CL_PAREN
+    # CFG#58# neg_operand -> ID | OP_PAREN expression CL_PAREN
     # The operand of a unary minus: either a bare identifier or a
     # parenthesized expression.  This restriction avoids ambiguity with
     # the binary minus operator in arith_expr.
@@ -1467,7 +1443,7 @@ class RDParser:
         self._error({"ID", "OP_PAREN"})
 
     # ---------------------------------------------------------------
-    # CFG#60# primary -> ID primary_id_tail
+    # CFG#59# primary -> ID primary_id_tail
     #                 |  ORDER DOT_ACC ID primary_order_tail
     #                 |  literal  (BEANLIT | DRIPLIT | CHURROLIT | HOT | COLD | BLENDLIT)
     #                 |  OP_PAREN expression CL_PAREN
@@ -1562,7 +1538,7 @@ class RDParser:
         })
 
     # ---------------------------------------------------------------
-    # CFG#61# primary_id_tail -> DOT_ACC ID primary_dot_tail
+    # CFG#60# primary_id_tail -> DOT_ACC ID primary_dot_tail
     #                         |  OP_PAREN function_args function_args_tail CL_PAREN
     #                         |  OP_BRACKETS array_index CL_BRACKETS arr_call_tail
     #                         |  unary_op
@@ -1598,7 +1574,7 @@ class RDParser:
         return self._node("primary_id_tail", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#62# primary_dot_tail -> DOT_ACC crema_member_inner
+    # CFG#61# primary_dot_tail -> DOT_ACC crema_member_inner
     #                          |  OP_BRACKETS array_index CL_BRACKETS arr_call_tail
     #                          |  OP_PAREN function_args function_args_tail CL_PAREN
     #                          |  λ
@@ -1630,7 +1606,7 @@ class RDParser:
         return self._node("primary_dot_tail", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#63# primary_order_tail -> OP_BRACKETS array_index CL_BRACKETS
+    # CFG#62# primary_order_tail -> OP_BRACKETS array_index CL_BRACKETS
     #                            |  DOT_ACC ID
     #                            |  λ
     # After "order.ID" in an expression: read an array element ([idx]),
@@ -1660,7 +1636,7 @@ class RDParser:
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#64# arr_call_tail -> OP_BRACKETS array_index CL_BRACKETS | λ
+    # CFG#63# arr_call_tail -> OP_BRACKETS array_index CL_BRACKETS | λ
     # Optional second-dimension index after an array read: arr[i][j].
     # If [ is absent, the preceding single-index access is the full reference.
     # ---------------------------------------------------------------
@@ -1675,7 +1651,7 @@ class RDParser:
         return self._node("arr_call_tail", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#65# array_index -> expression
+    # CFG#64# array_index -> expression
     # The index inside [ ] is any full expression (constant, variable, or
     # arithmetic).  Thin wrapper keeps the AST node labelled "array_index".
     # ---------------------------------------------------------------
@@ -1684,7 +1660,7 @@ class RDParser:
         return self._node("array_index", [self.parse_expression()])
 
     # ---------------------------------------------------------------
-    # CFG#66# arr_size_val -> BEANLIT | ID | FLEX_ASTERISK
+    # CFG#65# arr_size_val -> BEANLIT | ID | FLEX_ASTERISK
     # The size between [ ] in an array declaration.  BEANLIT is a literal
     # integer, ID allows a named constant, and *** (FLEX_ASTERISK) means
     # the size is inferred from the initializer list at runtime.
@@ -1701,7 +1677,7 @@ class RDParser:
         self._error({"BEANLIT", "ID", "FLEX_ASTERISK"})
 
     # ---------------------------------------------------------------
-    # CFG#67# arr_dec_dim -> OP_BRACKETS arr_size_val CL_BRACKETS EQUALS
+    # CFG#66# arr_dec_dim -> OP_BRACKETS arr_size_val CL_BRACKETS EQUALS
     #                        OP_BRACKETS arr_cont_2d CL_BRACKETS   (2D)
     #                     |  EQUALS OP_BRACKETS arr_cont_1d CL_BRACKETS   (1D)
     #                     |  λ   (declaration without initializer)
@@ -1733,7 +1709,7 @@ class RDParser:
         return self._node("arr_dec_dim", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#68# blend_arr_dec_dim -> OP_BRACKETS arr_size_val CL_BRACKETS EQUALS
+    # CFG#67# blend_arr_dec_dim -> OP_BRACKETS arr_size_val CL_BRACKETS EQUALS
     #                              OP_BRACKETS blend_arr_cont_2d CL_BRACKETS
     #                           |  EQUALS OP_BRACKETS blend_arr_cont_1d CL_BRACKETS
     # Same shape as arr_dec_dim but delegates to the blend-specific content
@@ -1759,7 +1735,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#69# arr_elem -> expression  (with _allow_unary_ops = False)
+    # CFG#68# arr_elem -> expression  (with _allow_unary_ops = False)
     # An expression used as an array element value.  _allow_unary_ops is
     # temporarily set to False so ++ / -- cannot appear as side-effects
     # inside an array literal (prevents accidental mutation).
@@ -1775,7 +1751,7 @@ class RDParser:
         return result
 
     # ---------------------------------------------------------------
-    # CFG#70# ext_arr_elem -> (COMMA arr_elem)* | λ
+    # CFG#69# ext_arr_elem -> (COMMA arr_elem)* | λ
     # Comma-separated additional elements in a 1D numeric array literal.
     # Loops while COMMA is present; an empty array body yields λ.
     # ---------------------------------------------------------------
@@ -1790,7 +1766,7 @@ class RDParser:
         return self._node("ext_arr_elem", children)
 
     # ---------------------------------------------------------------
-    # CFG#71# arr_cont_1d -> arr_elem ext_arr_elem | λ
+    # CFG#70# arr_cont_1d -> arr_elem ext_arr_elem | λ
     # Full contents of a 1D numeric array literal.  Guarded by
     # _is_start_expression so an empty [] resolves to λ cleanly.
     # ---------------------------------------------------------------
@@ -1807,7 +1783,7 @@ class RDParser:
         return self._node("arr_cont_1d", [self._node("_empty")])
     
     # ---------------------------------------------------------------
-    # CFG#72# opt_arr_elems -> arr_elem ext_arr_elem | λ
+    # CFG#71# opt_arr_elems -> arr_elem ext_arr_elem | λ
     # Optional element list for one row of a 2D numeric array.
     # Used inside parse_arr_cont_2d for each [row] sub-literal.
     # ---------------------------------------------------------------
@@ -1821,7 +1797,7 @@ class RDParser:
         return self._node("opt_arr_elems", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#73# arr_cont_2d -> OP_BRACKETS opt_arr_elems CL_BRACKETS
+    # CFG#72# arr_cont_2d -> OP_BRACKETS opt_arr_elems CL_BRACKETS
     #                        COMMA
     #                        OP_BRACKETS opt_arr_elems CL_BRACKETS
     #                        arr_cont_2d_tail
@@ -1842,7 +1818,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#74# arr_cont_2d_tail -> (COMMA OP_BRACKETS opt_arr_elems CL_BRACKETS)* | λ
+    # CFG#73# arr_cont_2d_tail -> (COMMA OP_BRACKETS opt_arr_elems CL_BRACKETS)* | λ
     # Third and subsequent rows of a 2D numeric array literal.
     # Loops while COMMA is present, parsing each additional [row].
     # ---------------------------------------------------------------
@@ -1866,7 +1842,7 @@ class RDParser:
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#75# function_call -> ID OP_PAREN function_args function_args_tail CL_PAREN
+    # CFG#74# function_call -> ID OP_PAREN function_args function_args_tail CL_PAREN
     # Standalone function call (ID + arg list).  Used when the parser
     # encounters a call that is not handled by an ID-led statement path.
     # ---------------------------------------------------------------
@@ -1881,7 +1857,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#76# sift_call -> ID OP_PAREN CL_PAREN
+    # CFG#75# sift_call -> ID OP_PAREN CL_PAREN
     # The built-in sift() (length) call with no arguments — only the
     # target variable is passed via the outer sift_arg node.
     # ---------------------------------------------------------------
@@ -1894,7 +1870,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#77# sift_arg -> expression
+    # CFG#76# sift_arg -> expression
     # The single argument to sift() — the array or string whose length
     # is requested.  Any expression is syntactically valid here.
     # ---------------------------------------------------------------
@@ -1903,7 +1879,7 @@ class RDParser:
         return self._node("sift_arg", [self.parse_expression()])
     
     # ---------------------------------------------------------------
-    # CFG#78# function_args -> BLENDLIT | expression | λ
+    # CFG#77# function_args -> BLENDLIT | expression | λ
     # First (or only) argument in a call.  BLENDLIT is a separate LL(1)
     # branch because string literals are not in EXPR_START (they are not
     # part of the numeric expression hierarchy).  λ = no arguments.
@@ -1918,7 +1894,7 @@ class RDParser:
         return self._node("function_args", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#79# function_args_tail -> (COMMA function_args)* | λ
+    # CFG#78# function_args_tail -> (COMMA function_args)* | λ
     # Additional comma-separated arguments after the first.  Loops while
     # COMMA is present; each additional argument uses the same function_args
     # rule (allowing BLENDLIT or expression or λ per slot).
@@ -1934,88 +1910,14 @@ class RDParser:
         return self._node("function_args_tail", children)
 
     # ========================================================================
-    # 13. MUG (STRUCT) DECLARATIONS
-    # mug is CARAMEL's struct keyword.  A mug declaration names the struct
-    # and lists its typed fields inside [ ].  Fields may be brewed (const),
-    # plain data types, or blend types.
-    # ========================================================================
-
-    # ---------------------------------------------------------------
-    # CFG#80# mug_dec -> MUG ID OP_BRACKETS dtype_mug_var mug_var_dec_cont CL_BRACKETS
-    # Struct definition: MUG keyword, name, then one or more typed fields
-    # inside [ ].  At least one field is required (dtype_mug_var is mandatory).
-    # ---------------------------------------------------------------
-    def parse_mug_dec(self):
-        """Parse rule: mug_dec -> mug ID [var_list]"""
-        return self._node("mug_dec", [
-            self._expect("MUG"),
-            self._expect("ID"),
-            self._expect("OP_BRACKETS"),
-            self.parse_dtype_mug_var(),
-            self.parse_mug_var_dec_cont(),
-            self._expect("CL_BRACKETS")
-        ])
-
-    # ---------------------------------------------------------------
-    # CFG#81# dtype_mug_var -> BREWED mug_brewed_body
-    #                       |  data_type var_dec_init var_dec_tail
-    # Single field group in a mug: brewed (const) fields require = init;
-    # plain data-type fields may be uninitialized (opt_assign).
-    # ---------------------------------------------------------------
-    def parse_dtype_mug_var(self):
-        """Parse rule: dtype_mug_var -> brewed body | data_type var_init"""
-        t = self._current().type
-        if t == "BREWED":
-            return self._node("dtype_mug_var", [
-                self._expect("BREWED"),
-                self.parse_mug_brewed_body()
-            ])
-        if t in self.DATA_TYPE:
-            return self._node("dtype_mug_var", [
-                self.parse_data_type(),
-                self.parse_var_dec_init(),
-                self.parse_var_dec_tail()
-            ])
-        self._error({"BREWED"}.union(self.DATA_TYPE))
-
-    # ---------------------------------------------------------------
-    # CFG#82# mug_brewed_body -> data_type var_dec_const_init var_dec_const_tail
-    # A brewed field group inside a mug: all variables must have initializers.
-    # ---------------------------------------------------------------
-    def parse_mug_brewed_body(self):
-        """Parse rule: mug_brewed_body -> data_type const_init_list"""
-        t = self._current().type
-        if t in self.DATA_TYPE:
-            return self._node("mug_brewed_body", [
-                self.parse_data_type(),
-                self.parse_var_dec_const_init(),
-                self.parse_var_dec_const_tail()
-            ])
-        self._error(self.DATA_TYPE)
-
-    # ---------------------------------------------------------------
-    # CFG#83# mug_var_dec_cont -> (dtype_mug_var)* | λ
-    # Second and subsequent field groups inside a mug declaration.
-    # Loops while BREWED or any DATA_TYPE token is the lookahead.
-    # ---------------------------------------------------------------
-    def parse_mug_var_dec_cont(self):
-        """Parse rule: mug_var_dec_cont -> (dtype_mug_var)* | λ"""
-        children = []
-        while self._current().type in {"BREWED"}.union(self.DATA_TYPE):
-            children.append(self.parse_dtype_mug_var())
-        if not children:
-            children.append(self._node("_empty"))
-        return self._node("mug_var_dec_cont", children)
-
-    # ========================================================================
-    # 14. OBJECTS
+    # 13. OBJECTS
     # Object instantiation: "new VarName = ClassName".  This creates an
     # instance of a crema (class) and binds it to VarName.  The syntax
     # mirrors many C-family "new" expressions but is statement-level only.
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#84# object_def -> NEW ID EQUALS ID
+    # CFG#79# object_def -> NEW ID EQUALS ID
     # Object instantiation statement.  First ID is the variable name,
     # second ID is the crema class name.  The = is required (not optional).
     # ---------------------------------------------------------------
@@ -2029,7 +1931,7 @@ class RDParser:
         ])
 
     # ========================================================================
-    # 15. RECIPES (FUNCTIONS)
+    # 14. RECIPES (FUNCTIONS)
     # recipe = typed (non-void) function.  The definition always ends with
     # a mandatory refill? (return) statement parsed by parse_refill_final.
     # Parameters use the dtype_param / add_param pair; the body stops
@@ -2037,7 +1939,7 @@ class RDParser:
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#85# recipe_def -> RECIPE recipe_ret_type ID OP_PAREN parameter CL_PAREN
+    # CFG#80# recipe_def -> RECIPE recipe_ret_type ID OP_PAREN parameter CL_PAREN
     #                       OP_BRACKETS recipe_body refill_final CL_BRACKETS
     # Typed function definition.  recipe_ret_type constrains the return
     # type to DATA_TYPE; refill_final enforces a mandatory return value.
@@ -2058,7 +1960,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#86# recipe_ret_type -> data_type
+    # CFG#81# recipe_ret_type -> data_type
     # The return type of a recipe.  Only the four base numeric/bool types
     # are allowed; blend (string) returns are handled differently.
     # ---------------------------------------------------------------
@@ -2069,7 +1971,7 @@ class RDParser:
         self._error(self.DATA_TYPE)
 
     # ---------------------------------------------------------------
-    # CFG#87# parameter -> dtype_param add_param | λ
+    # CFG#82# parameter -> dtype_param add_param | λ
     # Formal parameter list.  If DATA_TYPE is the lookahead, parse the
     # first parameter then add_param handles comma-separated siblings.
     # λ means no parameters (empty parentheses).
@@ -2084,7 +1986,7 @@ class RDParser:
         return self._node("parameter", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#88# dtype_param -> data_type var_dec_init
+    # CFG#83# dtype_param -> data_type var_dec_init
     # Single typed parameter.  The name and optional default value are
     # parsed together by var_dec_init (ID opt_assign).
     # ---------------------------------------------------------------
@@ -2099,7 +2001,7 @@ class RDParser:
         self._error({"BLEND"}.union(self.DATA_TYPE))
 
     # ---------------------------------------------------------------
-    # CFG#89# param_brewed_body -> data_type var_dec_const_init var_dec_const_tail
+    # CFG#84# param_brewed_body -> data_type var_dec_const_init var_dec_const_tail
     # Brewed (const) parameter group — all parameters in the group
     # must be given default values (mandatory = init).
     # ---------------------------------------------------------------
@@ -2115,7 +2017,7 @@ class RDParser:
         self._error({"BLEND"}.union(self.DATA_TYPE))
 
     # ---------------------------------------------------------------
-    # CFG#90# param_dtype_body -> BREWED data_type var_dec_const_init var_dec_const_tail
+    # CFG#85# param_dtype_body -> BREWED data_type var_dec_const_init var_dec_const_tail
     #                          |  data_type var_dec_init
     # A parameter group that may be const (BREWED prefix) or mutable.
     # Commented-out var_dec_tail call intentionally left as is — single
@@ -2140,7 +2042,7 @@ class RDParser:
         self._error({"BREWED"}.union(self.DATA_TYPE))
 
     # ---------------------------------------------------------------
-    # CFG#91# param_id_tail -> DOT_ACC ID
+    # CFG#86# param_id_tail -> DOT_ACC ID
     # Member access tail used inside parameter contexts (e.g. order.field
     # as a parameter default or type hint).
     # ---------------------------------------------------------------
@@ -2152,7 +2054,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#92# add_param -> (COMMA dtype_param)* | λ
+    # CFG#87# add_param -> (COMMA dtype_param)* | λ
     # Additional formal parameters after the first.  Each is a typed
     # parameter (dtype_param).  Loops while COMMA is the lookahead.
     # ---------------------------------------------------------------
@@ -2167,7 +2069,7 @@ class RDParser:
         return self._node("add_param", children)
 
     # ---------------------------------------------------------------
-    # CFG#93# recipe_body -> statement* | λ  (stops before REFILL)
+    # CFG#88# recipe_body -> statement* | λ  (stops before REFILL)
     # The body of a recipe: zero or more statements, halting when the
     # next token is REFILL (so refill_final can own that token) or when
     # _is_start_statement() returns False (end of block).
@@ -2187,7 +2089,7 @@ class RDParser:
         return self._node("recipe_body", children)
 
     # ---------------------------------------------------------------
-    # CFG#94# refill_final -> REFILL refill_arg
+    # CFG#89# refill_final -> REFILL refill_arg
     # Mandatory return statement at the end of a recipe.  Called by
     # parse_recipe_def after parse_recipe_body stops consuming statements.
     # ---------------------------------------------------------------
@@ -2199,7 +2101,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#95# refill_arg -> OP_PAREN refill_content extra_refill_val CL_PAREN
+    # CFG#90# refill_arg -> OP_PAREN refill_content extra_refill_val CL_PAREN
     #                    |  ZERO
     # The value(s) returned: a parenthesized expression/string list, or
     # the literal 0 (used by main and void returns to signal "no value").
@@ -2216,7 +2118,7 @@ class RDParser:
         return self._node("refill_arg", [self._expect("ZERO")])
 
     # ---------------------------------------------------------------
-    # CFG#96# refill_content -> BLENDLIT | expression
+    # CFG#91# refill_content -> BLENDLIT | expression
     # The actual value being returned.  BLENDLIT is a separate LL(1)
     # branch so string literals can be returned from blend-typed recipes.
     # ---------------------------------------------------------------
@@ -2227,7 +2129,7 @@ class RDParser:
         return self._node("refill_content", [self.parse_expression()])
 
     # ---------------------------------------------------------------
-    # CFG#97# extra_refill_val -> (COMMA refill_content)* | λ
+    # CFG#92# extra_refill_val -> (COMMA refill_content)* | λ
     # Supports multiple return values: refill?(a, b, c).  Loops while
     # COMMA is present after the first refill_content.
     # ---------------------------------------------------------------
@@ -2242,13 +2144,13 @@ class RDParser:
         return self._node("extra_refill_val", children)
 
     # ========================================================================
-    # 16. EMPTY (VOID FUNCTIONS)
+    # 15. EMPTY (VOID FUNCTIONS)
     # empty is CARAMEL's void keyword.  The definition ends with a required
     # REFILL token (without a return value) to close the function body.
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#98# empty_def -> EMPTY ID OP_PAREN parameter CL_PAREN
+    # CFG#93# empty_def -> EMPTY ID OP_PAREN parameter CL_PAREN
     #                      OP_BRACKETS empty_body REFILL CL_BRACKETS
     # Void function definition.  The REFILL at the end is consumed here
     # (not by a separate refill_final rule) since void functions return no value.
@@ -2268,7 +2170,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#99# empty_body -> statement* | λ  (stops before REFILL)
+    # CFG#94# empty_body -> statement* | λ  (stops before REFILL)
     # Body of a void function.  Stops when the next token is REFILL or
     # is not a valid statement start, leaving REFILL for parse_empty_def.
     # ---------------------------------------------------------------
@@ -2283,7 +2185,7 @@ class RDParser:
         return self._node("empty_body", children)
 
     # ========================================================================
-    # 17. CREMA (CLASSES)
+    # 16. CREMA (CLASSES)
     # crema is CARAMEL's class keyword.  A crema body may contain methods
     # (recipe / empty) and fields (brewed or plain data-type) with optional
     # access modifiers (cafe = public, backroom = private).  The crema_body_cont
@@ -2291,7 +2193,7 @@ class RDParser:
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#100# crema_def -> CREMA ID OP_BRACKETS crema_body CL_BRACKETS
+    # CFG#95# crema_def -> CREMA ID OP_BRACKETS crema_body CL_BRACKETS
     # Class definition: CREMA keyword, name, then members inside { }.
     # ---------------------------------------------------------------
     def parse_crema_def(self):
@@ -2305,7 +2207,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#101# crema_body -> crema_body_cont* | λ
+    # CFG#96# crema_body -> crema_body_cont* | λ
     # Zero or more member definitions inside a class.  Loops while the
     # current token is a valid member-start: access modifier (CAFE /
     # BACKROOM), method keyword (RECIPE / EMPTY), or data type.
@@ -2322,7 +2224,7 @@ class RDParser:
         return self._node("crema_body", children)
 
     # ---------------------------------------------------------------
-    # CFG#102# crema_body_cont -> CAFE crema_acc_body
+    # CFG#97# crema_body_cont -> CAFE crema_acc_body
     #                          |  BACKROOM crema_acc_body
     #                          |  crema_dtype_body
     # Single member of a class.  CAFE/BACKROOM are optional access modifiers;
@@ -2344,7 +2246,7 @@ class RDParser:
         return self._node("crema_body_cont", [self.parse_crema_dtype_body()])
 
     # ---------------------------------------------------------------
-    # CFG#103# crema_acc_body -> RECIPE crema_recipe_type ID OP_PAREN parameter CL_PAREN
+    # CFG#98# crema_acc_body -> RECIPE crema_recipe_type ID OP_PAREN parameter CL_PAREN
     #                            OP_BRACKETS recipe_body refill_final CL_BRACKETS
     #                         |  EMPTY ID OP_PAREN parameter CL_PAREN
     #                            OP_BRACKETS empty_body REFILL CL_BRACKETS
@@ -2395,7 +2297,7 @@ class RDParser:
         self._error({"RECIPE", "EMPTY", "BREWED"}.union(self.DATA_TYPE))
 
     # ---------------------------------------------------------------
-    # CFG#104# crema_acc_brewed_body -> data_type var_dec_const_init var_dec_const_tail
+    # CFG#99# crema_acc_brewed_body -> data_type var_dec_const_init var_dec_const_tail
     # Constant field group in an access-modified context.  All fields must
     # have initializers (brewed = const semantic).
     # ---------------------------------------------------------------
@@ -2411,7 +2313,7 @@ class RDParser:
         self._error(self.DATA_TYPE)
 
     # ---------------------------------------------------------------
-    # CFG#105# crema_dtype_body -> RECIPE crema_recipe_type ID OP_PAREN ... CL_BRACKETS
+    # CFG#100# crema_dtype_body -> RECIPE crema_recipe_type ID OP_PAREN ... CL_BRACKETS
     #                           |  EMPTY ID OP_PAREN ... CL_BRACKETS
     #                           |  BREWED crema_dtype_brewed_body
     #                           |  data_type ID crema_dtype_id_tail
@@ -2460,7 +2362,7 @@ class RDParser:
         self._error({"RECIPE", "EMPTY", "BREWED"}.union(self.DATA_TYPE))
 
     # ---------------------------------------------------------------
-    # CFG#106# crema_recipe_type -> data_type
+    # CFG#101# crema_recipe_type -> data_type
     # Return type of a method inside a class.  Equivalent to
     # parse_recipe_ret_type — a thin named wrapper for AST clarity.
     # ---------------------------------------------------------------
@@ -2471,7 +2373,7 @@ class RDParser:
         self._error(self.DATA_TYPE)
 
     # ---------------------------------------------------------------
-    # CFG#107# crema_dtype_brewed_body -> data_type var_dec_const_init var_dec_const_tail
+    # CFG#102# crema_dtype_brewed_body -> data_type var_dec_const_init var_dec_const_tail
     # Constant field group without access modifier.  All fields must be
     # initialized — same semantics as acc_brewed_body.
     # ---------------------------------------------------------------
@@ -2487,7 +2389,7 @@ class RDParser:
         self._error(self.DATA_TYPE)
 
     # ---------------------------------------------------------------
-    # CFG#108# crema_dtype_id_tail -> OP_BRACKETS arr_size_val CL_BRACKETS arr_dec_dim
+    # CFG#103# crema_dtype_id_tail -> OP_BRACKETS arr_size_val CL_BRACKETS arr_dec_dim
     #                              |  opt_assign var_dec_tail
     # After "type ID" in a class body: [ means the field is an array;
     # otherwise it is a scalar with an optional default and sibling list.
@@ -2507,14 +2409,14 @@ class RDParser:
         ])
 
     # ========================================================================
-    # 18. MAIN DEFINITIONS
+    # 17. MAIN DEFINITIONS
     # The program entry point: "bean cup() { ... refill? 0 }".  The return
     # statement refill? 0 is mandatory but may appear anywhere in the body
     # (parse_main_body recurses into itself until it finds the REFILL).
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#109# main_def -> BEAN CUP OP_PAREN CL_PAREN OP_BRACKETS main_body
+    # CFG#104# main_def -> BEAN CUP OP_PAREN CL_PAREN OP_BRACKETS main_body
     # Parses the mandatory program entry point.  bean cup is the fixed
     # signature; the body is handled by parse_main_body which enforces
     # that refill? 0 is present.
@@ -2531,7 +2433,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#110# refill_main -> REFILL ZERO refill_main_tail
+    # CFG#105# refill_main -> REFILL ZERO refill_main_tail
     # The exit point of main: "refill? 0" (equivalent to C's "return 0;").
     # refill_main_tail handles whether the closing } follows or more
     # statements follow the zero (which would be unreachable).
@@ -2545,7 +2447,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#111# refill_main_tail -> CL_BRACKETS | main_body
+    # CFG#106# refill_main_tail -> CL_BRACKETS | main_body
     # After "refill? 0": if } follows, close the main block; if another
     # statement or REFILL follows, continue parsing main_body (handles
     # patterns like "refill? 0 \n bean x = 1 \n refill? 0 }").
@@ -2561,7 +2463,7 @@ class RDParser:
         self._error({"CL_BRACKETS"})
 
     # ---------------------------------------------------------------
-    # CFG#112# main_body -> statement main_body | refill_main
+    # CFG#107# main_body -> statement main_body | refill_main
     # Recursive descent through main statements, terminating when REFILL
     # is encountered (which triggers refill_main for the "return 0" token).
     # Left-recursion-free: the base case (refill_main) is REFILL-guarded.
@@ -2576,7 +2478,7 @@ class RDParser:
         return self._node("main_body", [self.parse_refill_main()])
 
     # ========================================================================
-    # 19. STATEMENTS
+    # 18. STATEMENTS
     # Top-level statement dispatcher.  Uses _is_start_statement() to guard
     # the outer while loops and this method as the inner routing switch.
     # Every non-declaration statement keyword (BATTER, GLAZE, IFBREW, etc.)
@@ -2584,19 +2486,19 @@ class RDParser:
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#113# statement -> dec | input_stmt | output_stmt | if_cond
+    # CFG#108# statement -> dec | input_stmt | output_stmt | if_cond
     #                    |  flav_switch | pour_loop | whilehot_loop
     #                    |  tastetill_loop | intrpt_stmt | refill_stmt
     # Main statement router — 10 alternatives all disambiguated by the
     # first token.  Declaration-starting tokens (type keywords, ID, ORDER,
-    # ++, --, mug, new) route to parse_dec.
+    # ++, --, new) route to parse_dec.
     # ---------------------------------------------------------------
     def parse_statement(self):
         """Parse rule: statement -> dec | input | output | if | switch | loops | interrupt | refill_stmt"""
         t = self._current().type
         if t in {
             "CAFE", "BACKROOM", "BREWED", "BLEND", "BEAN", "DRIP", "CHURRO", "TEMP",
-            "ID", "ORDER", "INCREMENT", "DECREMENT", "MUG", "NEW"
+            "ID", "ORDER", "INCREMENT", "DECREMENT", "NEW"
         }:
             return self._node("statement", [self.parse_dec()])
         if t == "BATTER":
@@ -2619,13 +2521,13 @@ class RDParser:
             return self._node("statement", [self.parse_refill_stmt()])
         self._error({
             "CAFE", "BACKROOM", "BREWED", "BLEND", "BEAN", "DRIP", "CHURRO", "TEMP",
-            "ID", "ORDER", "INCREMENT", "DECREMENT", "MUG", "NEW",
+            "ID", "ORDER", "INCREMENT", "DECREMENT", "NEW",
             "BATTER", "GLAZE", "IFBREW", "FLAVOUR", "POUR", "WHILEHOT", "TASTE",
             "SNAP", "SKIP", "REFILL"
         })
 
     # ---------------------------------------------------------------
-    # CFG#114# stmt_tail -> statement* | λ
+    # CFG#109# stmt_tail -> statement* | λ
     # Zero or more additional statements after the first one in a block.
     # Loops while _is_start_statement() holds; used by if/while/loop bodies.
     # ---------------------------------------------------------------
@@ -2639,7 +2541,7 @@ class RDParser:
         return self._node("stmt_tail", children)
 
     # ---------------------------------------------------------------
-    # CFG#115# stmt_tail_until_snap -> (statement \ {snap})* | λ
+    # CFG#110# stmt_tail_until_snap -> (statement \ {snap})* | λ
     # Variant of stmt_tail used inside switch case bodies.  Stops when the
     # next token is SNAP (break) so the case terminator is not consumed
     # inside the statement loop.
@@ -2654,7 +2556,7 @@ class RDParser:
         return self._node("stmt_tail_until_snap", children)
     
     # ---------------------------------------------------------------
-    # CFG#116# refill_stmt -> REFILL refill_arg
+    # CFG#111# refill_stmt -> REFILL refill_arg
     # Early-return statement that can appear inside any control-flow block
     # (ifbrew, whilehot, pour, etc.).  Consumes REFILL then delegates to
     # refill_arg for the return value or 0.
@@ -2671,14 +2573,14 @@ class RDParser:
         ])
 
     # ========================================================================
-    # 20. INPUT/OUTPUT
-    # batter@ is the input keyword (scanf-like); glaze is the output keyword
+    # 19. INPUT/OUTPUT
+    # bter@ is the input keyword (scanf-like); glaze is the output keyword
     # (printf-like).  Both accept comma-separated variable targets/values.
     # input also accepts an optional prompt string: batter@(x)("Enter x: ").
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#117# input_stmt -> BATTER input_args input_val
+    # CFG#112# input_stmt -> BATTER input_args input_val
     # Read input into one or more variables.  input_args names the targets;
     # input_val is the optional prompt string in parentheses.
     # ---------------------------------------------------------------
@@ -2691,7 +2593,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#118# input_args -> input_args_unit input_args_unit_tail
+    # CFG#113# input_args -> input_args_unit input_args_unit_tail
     # One or more comma-separated input target variables.  The first is
     # mandatory (input_args_unit), the rest loop via input_args_unit_tail.
     # ---------------------------------------------------------------
@@ -2703,7 +2605,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#119# input_args_unit -> ORDER DOT_ACC ID input_order_tail
+    # CFG#114# input_args_unit -> ORDER DOT_ACC ID input_order_tail
     #                          |  ID input_id_tail
     # Single input target: ORDER-prefixed (instance field) or plain ID.
     # The tail handles optional array indexing or member access on the target.
@@ -2723,7 +2625,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#120# input_id_tail -> DOT_ACC ID input_dot_tail
+    # CFG#115# input_id_tail -> DOT_ACC ID input_dot_tail
     #                        |  OP_BRACKETS array_index CL_BRACKETS arr_call_tail
     #                        |  λ
     # After the ID in an input target: member access, array element, or
@@ -2748,7 +2650,7 @@ class RDParser:
         return self._node("input_id_tail", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#121# input_dot_tail -> DOT_ACC ID | λ
+    # CFG#116# input_dot_tail -> DOT_ACC ID | λ
     # Optional second-level member access after "ID.member" in an input
     # target: "ID.outer.inner" reads the inner field.
     # ---------------------------------------------------------------
@@ -2762,7 +2664,7 @@ class RDParser:
         return self._node("input_dot_tail", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#122# input_order_tail -> OP_BRACKETS array_index CL_BRACKETS arr_call_tail
+    # CFG#117# input_order_tail -> OP_BRACKETS array_index CL_BRACKETS arr_call_tail
     #                           |  DOT_ACC ID
     #                           |  λ
     # After "order.field" in an input target: array element, deeper member,
@@ -2787,7 +2689,7 @@ class RDParser:
         return self._node("input_order_tail", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#123# input_args_unit_tail -> (COMMA input_args_unit)* | λ
+    # CFG#118# input_args_unit_tail -> (COMMA input_args_unit)* | λ
     # Second and subsequent input targets after the first.  Loops while
     # COMMA is present; each additional target uses input_args_unit.
     # ---------------------------------------------------------------
@@ -2802,7 +2704,7 @@ class RDParser:
         return self._node("input_args_unit_tail", children)
 
     # ---------------------------------------------------------------
-    # CFG#124# input_val -> OP_PAREN BLENDLIT CL_PAREN | λ
+    # CFG#119# input_val -> OP_PAREN BLENDLIT CL_PAREN | λ
     # Optional prompt string shown to the user before reading input.
     # If OP_PAREN is not present, no prompt is displayed (λ).
     # ---------------------------------------------------------------
@@ -2817,7 +2719,7 @@ class RDParser:
         return self._node("input_val", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#125# output_stmt -> GLAZE OP_PAREN output_args CL_PAREN
+    # CFG#120# output_stmt -> GLAZE OP_PAREN output_args CL_PAREN
     # Print statement.  Arguments are inside parentheses; the argument
     # list may be empty (glaze() prints nothing) or contain values and
     # string literals concatenated with +.
@@ -2832,7 +2734,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#126# output_args -> BLENDLIT concat
+    # CFG#121# output_args -> BLENDLIT concat
     #                      |  expression concat
     #                      |  λ
     # The content of a glaze() call.  BLENDLIT is the separate branch for
@@ -2854,7 +2756,7 @@ class RDParser:
         return self._node("output_args", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#127# concat -> (PLUS blend_term)* | λ
+    # CFG#122# concat -> (PLUS blend_term)* | λ
     # String concatenation suffix in output_args.  Loops while PLUS is
     # present; each step appends another blend_term to the printed value.
     # ---------------------------------------------------------------
@@ -2869,7 +2771,7 @@ class RDParser:
         return self._node("concat", children)
 
     # ========================================================================
-    # 21. CONTROL FLOW (IF/SWITCH/LOOPS)
+    # 20. CONTROL FLOW (IF/SWITCH/LOOPS)
     # Three control-flow families:
     #   • if / elif / else  — ifbrew / elifroth / elspress
     #   • switch / case     — flavour / syrup / defoam
@@ -2879,7 +2781,7 @@ class RDParser:
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#128# if_cond -> IFBREW OP_PAREN expression CL_PAREN
+    # CFG#123# if_cond -> IFBREW OP_PAREN expression CL_PAREN
     #                     OP_BRACES statement stmt_tail CL_BRACES
     #                     if_cond_tail
     # Parses the "if" clause.  At least one statement is required inside
@@ -2900,7 +2802,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#129# if_cond_tail -> ELIFROTH OP_PAREN expression CL_PAREN
+    # CFG#124# if_cond_tail -> ELIFROTH OP_PAREN expression CL_PAREN
     #                          OP_BRACES statement stmt_tail CL_BRACES
     #                          if_cond_tail        (recursive: chains elif)
     #                       |  ELSPRESS OP_BRACES statement stmt_tail CL_BRACES
@@ -2934,7 +2836,7 @@ class RDParser:
         return self._node("if_cond_tail", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#130# flav_switch -> FLAVOUR OP_PAREN flav_lit CL_PAREN
+    # CFG#125# flav_switch -> FLAVOUR OP_PAREN flav_lit CL_PAREN
     #                         OP_BRACES syrup_switch CL_BRACES
     # Switch statement.  The match value (flav_lit) is limited to literals
     # and IDs — not arbitrary expressions — to keep the grammar LL(1).
@@ -2952,7 +2854,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#131# flav_lit -> BEANLIT | ID | CHURROLIT | HOT | COLD
+    # CFG#126# flav_lit -> BEANLIT | ID | CHURROLIT | HOT | COLD
     # The switch expression: an integer literal, identifier, char literal,
     # or boolean literal.  String literals (BLENDLIT) are not supported
     # as switch values.
@@ -2965,7 +2867,7 @@ class RDParser:
         self._error({"BEANLIT", "ID", "CHURROLIT", "HOT", "COLD"})
 
     # ---------------------------------------------------------------
-    # CFG#132# syrup_switch -> SYRUP case_lit COLON statement stmt_tail_until_snap
+    # CFG#127# syrup_switch -> SYRUP case_lit COLON statement stmt_tail_until_snap
     #                          SNAP defoam_stmt syrup_switch_tail
     # A single case clause.  The body must be followed by SNAP (break).
     # defoam_stmt parses the optional default (defoam:) clause; the
@@ -2985,7 +2887,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#133# syrup_switch_tail -> syrup_switch | λ
+    # CFG#128# syrup_switch_tail -> syrup_switch | λ
     # Chains additional case clauses.  If SYRUP is not the lookahead the
     # switch block ends (λ); otherwise parse another syrup_switch.
     # ---------------------------------------------------------------
@@ -2996,7 +2898,7 @@ class RDParser:
         return self._node("syrup_switch_tail", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#134# case_lit -> BEANLIT | CHURROLIT | HOT | COLD
+    # CFG#129# case_lit -> BEANLIT | CHURROLIT | HOT | COLD
     # The literal that a syrup (case) matches against.  Note: IDs are
     # excluded (case labels must be compile-time constants), unlike flav_lit.
     # ---------------------------------------------------------------
@@ -3008,7 +2910,7 @@ class RDParser:
         self._error({"BEANLIT", "CHURROLIT", "HOT", "COLD"})
 
     # ---------------------------------------------------------------
-    # CFG#135# defoam_stmt -> DEFOAM COLON statement stmt_tail_until_snap SNAP | λ
+    # CFG#130# defoam_stmt -> DEFOAM COLON statement stmt_tail_until_snap SNAP | λ
     # Optional default clause in a switch.  If DEFOAM is present, a body
     # and SNAP (break) are required.  λ means no default case.
     # ---------------------------------------------------------------
@@ -3025,7 +2927,7 @@ class RDParser:
         return self._node("defoam_stmt", [self._node("_empty")])
 
     # ---------------------------------------------------------------
-    # CFG#136# pour_condition -> expression  (with boolean content required)
+    # CFG#131# pour_condition -> expression  (with boolean content required)
     # Parses the loop condition permissively as an expression then validates
     # post-parse that the tree contains a relational/logical operator or
     # boolean literal.  This "parse wide, validate narrow" approach keeps
@@ -3051,7 +2953,7 @@ class RDParser:
         return expr
 
     # ---------------------------------------------------------------
-    # CFG#137# pour_loop -> POUR OP_PAREN pour_init SEMICOLON pour_condition SEMICOLON
+    # CFG#132# pour_loop -> POUR OP_PAREN pour_init SEMICOLON pour_condition SEMICOLON
     #                       update CL_PAREN OP_BRACES statement stmt_tail CL_BRACES
     # For-loop: three-part header (init ; cond ; update) plus a required
     # body.  The condition is validated to be boolean by parse_pour_condition.
@@ -3074,7 +2976,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#138# pour_init -> data_type ID EQUALS value var_dec_const_tail
+    # CFG#133# pour_init -> data_type ID EQUALS value var_dec_const_tail
     #                    |  ID EQUALS value var_dec_const_tail
     # Loop counter initialization.  DATA_TYPE branch declares a new variable;
     # ID branch reuses an existing one.  The trailing var_dec_const_tail
@@ -3101,7 +3003,7 @@ class RDParser:
         self._error(self.DATA_TYPE | {"ID"})
 
     # ---------------------------------------------------------------
-    # CFG#139# update -> update_unit update_tail
+    # CFG#134# update -> update_unit update_tail
     # The third clause of a pour header: one or more comma-separated
     # update expressions (assignment, increment, decrement).
     # ---------------------------------------------------------------
@@ -3113,7 +3015,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#140# update_tail -> (COMMA update_unit)* | λ
+    # CFG#135# update_tail -> (COMMA update_unit)* | λ
     # Additional update expressions after the first in a pour header.
     # Loops while COMMA is present.
     # ---------------------------------------------------------------
@@ -3128,7 +3030,7 @@ class RDParser:
         return self._node("update_tail", children)
 
     # ---------------------------------------------------------------
-    # CFG#141# update_unit -> ID update_id_tail
+    # CFG#136# update_unit -> ID update_id_tail
     #                      |  INCREMENT ID
     #                      |  DECREMENT ID
     # A single update expression: ID followed by an assign or postfix op,
@@ -3155,7 +3057,7 @@ class RDParser:
         self._error({"ID", "INCREMENT", "DECREMENT"})
 
     # ---------------------------------------------------------------
-    # CFG#142# update_id_tail -> assign_op update_val
+    # CFG#137# update_id_tail -> assign_op update_val
     #                         |  INCREMENT
     #                         |  DECREMENT
     # After an ID in an update clause: compound assignment (+=, -=, etc.),
@@ -3180,7 +3082,7 @@ class RDParser:
         })
 
     # ---------------------------------------------------------------
-    # CFG#143# assign_op -> EQUALS | EQUAL_PLUS | EQUAL_MINUS
+    # CFG#138# assign_op -> EQUALS | EQUAL_PLUS | EQUAL_MINUS
     #                    |  EQUAL_ASTERISK | EQUAL_DIVIDE
     # Matches one assignment operator.  Shared by update clauses and
     # the general id_dec_tail assignment branch.
@@ -3197,7 +3099,7 @@ class RDParser:
         })
 
     # ---------------------------------------------------------------
-    # CFG#144# update_val -> expression
+    # CFG#139# update_val -> expression
     # The RHS of a compound assignment in an update clause.  Any full
     # expression is valid (arithmetic, relational, function call, etc.).
     # ---------------------------------------------------------------
@@ -3206,7 +3108,7 @@ class RDParser:
         return self._node("update_val", [self.parse_expression()])
 
     # ---------------------------------------------------------------
-    # CFG#145# whilehot_loop -> WHILEHOT OP_PAREN expression CL_PAREN
+    # CFG#140# whilehot_loop -> WHILEHOT OP_PAREN expression CL_PAREN
     #                           OP_BRACES statement stmt_tail CL_BRACES
     # While loop: condition first, body second (pre-test).  The condition
     # is any full expression (no boolean-content enforcement unlike pour).
@@ -3225,7 +3127,7 @@ class RDParser:
         ])
 
     # ---------------------------------------------------------------
-    # CFG#146# tastetill_loop -> TASTE OP_BRACES statement stmt_tail CL_BRACES
+    # CFG#141# tastetill_loop -> TASTE OP_BRACES statement stmt_tail CL_BRACES
     #                            TILL COLON OP_PAREN expression CL_PAREN
     # Do-while loop: body executes first, then the condition is tested.
     # The condition appears AFTER the closing } — the reversed order vs.
@@ -3247,7 +3149,7 @@ class RDParser:
         ])
 
     # ========================================================================
-    # 22. INTERRUPT STATEMENTS
+    # 21. INTERRUPT STATEMENTS
     # snap = break, skip = continue.  Both are single-token statements
     # with no operands.  They may appear inside any loop body or switch
     # case (the grammar does not enforce loop-nesting context — that is
@@ -3255,7 +3157,7 @@ class RDParser:
     # ========================================================================
 
     # ---------------------------------------------------------------
-    # CFG#147# intrpt_stmt -> SNAP | SKIP
+    # CFG#142# intrpt_stmt -> SNAP | SKIP
     # Loop interrupt statement.  snap exits the nearest enclosing loop or
     # switch; skip skips the remainder of the current loop iteration.
     # ---------------------------------------------------------------
@@ -3362,7 +3264,7 @@ class Parser:
                 "cafe", "backroom", "brewed", "blend", "id", "[", "]", "=", ",", "+",
                 "blendlit", "order", ".", "(", ")", "beanlit", "driplit", "churrolit", "hot",
                 "cold", "++", "--", "bean", "drip", "churro", "temp", "&&", "||", "!",
-                "<", ">", "==", "!=", "<=", ">=", "-", "*", "/", "%", "***", "mug",
+                "<", ">", "==", "!=", "<=", ">=", "-", "*", "/", "%", "***",
                 "new", "recipe", "refill?", "0", "empty", "crema", "cup", "}", "batter@",
                 "glaze", "ifbrew", "{", "elifroth", "elspress", "flavour", "syrup", ":", "snap",
                 "defoam", "pour", ";", "+=", "-=", "*=", "/=", "whilehot", "taste", "till",

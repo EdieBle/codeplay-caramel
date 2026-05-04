@@ -46,7 +46,7 @@ TRANSITIONS_DFA = {
                                                 98: State('o', 99), 99: State('o', 100), 100: State('r', 101), 101: State('(', end = True, token_type="floor"),
     
 
-    # glaze, hot, ifbrew, mug, new, order
+    # glaze, hot, ifbrew, new, order
     102: State('g', 103), 103: State('l', 104), 104: State('a', 105), 105: State('z', 106), 106: State('e', 107), 107: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="glaze"),
     108: State('h', 109), 109: State('o', 110), 110: State('t', 111), 111: State(DELIM_VAL['temp_delim'], end = True, token_type="hot"),
     112: State('i', 113), 113: State('f', 114), 114: State('b', 115), 115: State('r', 116), 116: State('e', 117), 117: State('w', 118), 118: State(DELIM_VAL['spaceparen_delim'], end = True, token_type="ifbrew"),

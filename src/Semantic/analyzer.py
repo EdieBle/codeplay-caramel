@@ -39,7 +39,7 @@ class Symbol:
                  line=None, column=None, parameters=None, return_type=None, is_array=False):
         self.name = name
         self.kind = kind  # "variable", "function", "class", "struct"
-        self.dtype = dtype  # "bean", "drip", "churro", "temp", "blend", "mug", None
+        self.dtype = dtype  # "bean", "drip", "churro", "temp", "blend", None
         self.is_constant = is_constant
         self.is_array = is_array  # True if this is an array type
         self.scope_level = scope_level
@@ -119,7 +119,7 @@ class SemanticAnalyzer:
     """
     
     # Valid data types
-    VALID_TYPES = {"bean", "drip", "churro", "temp", "blend", "mug"}
+    VALID_TYPES = {"bean", "drip", "churro", "temp", "blend"}
     RESERVED_BUILTINS = {"sift", "ceil", "floor", "pow", "rand", "sqrt", "type"}
 
     # Type compatibility for assignments: target_type to set of compatible source types
@@ -537,27 +537,6 @@ class SemanticAnalyzer:
             self.symbol_table.pop_scope()
         else:
             self._visit_children(node) 
-
-    # Mug/Datatype/Undeclared checks
-    def _visit_mug_dec(self, node):
-        """Visit mug_dec: mug ID [var_list]"""
-        struct_name = self._extract_name_from_node(node, depth=2)
-        
-        if struct_name:
-            symbol = Symbol(
-                struct_name,
-                "struct",
-                scope_level=self.symbol_table.scope_level
-            )
-            
-            if not self.symbol_table.declare(struct_name, symbol):
-                self.errors.append(SemanticError(
-                    "E001",
-                    f"Redefinition of struct '{struct_name}'",
-                    line=getattr(node, 'line', None)
-                ))
-        
-        self._visit_children(node)
     
     def _visit_dtype_dec(self, node):
         dtype = self._extract_type_from_node(node)
@@ -1285,8 +1264,7 @@ class SemanticAnalyzer:
                     "DRIP": "drip",
                     "CHURRO": "churro",
                     "TEMP": "temp",
-                    "BLEND": "blend",
-                    "MUG": "mug"
+                    "BLEND": "blend"
                 }
                 if child.type in dtype_map:
                     return dtype_map[child.type]

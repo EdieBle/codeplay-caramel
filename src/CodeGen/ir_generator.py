@@ -91,7 +91,7 @@ class IRGenerator:
     # Map token types to CARAMEL types
     DTYPE_MAP = {
         "BEAN": "bean", "DRIP": "drip", "CHURRO": "churro",
-        "TEMP": "temp", "BLEND": "blend", "MUG": "mug",
+        "TEMP": "temp", "BLEND": "blend"
     }
 
     # Map token types to Python-friendly operator strings
@@ -2224,16 +2224,6 @@ class IRGenerator:
         self._visit_children_all(node)
 
     def _visit_crema_body_cont(self, node):
-        self._visit_children_all(node)
-
-    # ------------------------------------------------------------------
-    # Structs (mug)
-    # ------------------------------------------------------------------
-
-    def _visit_mug_dec(self, node):
-        id_tok = self._find_child_token(node, "ID")
-        if id_tok:
-            self._emit("DECLARE", dest=id_tok.value, type="mug")
         self._visit_children_all(node)
 
     # ------------------------------------------------------------------
