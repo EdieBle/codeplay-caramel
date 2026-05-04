@@ -402,17 +402,20 @@ class SemanticAnalyzer:
             # print(f"[RECIPE '{func_name}'] scope before visit_children: {list(self.symbol_table.scopes[-1].keys())}")
             self._visit_children(node)
 
-    # pre-defined functions   
+    """ pre-defined functions
+        _visit_<built-in funcs>_arg: This checks the type of arguments that are being passed to a built-in func.
+        They are called from visit_primary() when a keyword is spotted as the first child of a node. """
+    
     def _visit_sift_arg(self, node):
         """sift argument must be blend type or a recipe returning blend."""
         for child in node.children:
             if not self._is_parse_node(child):
                 continue
             inferred = self._infer_value_type(child)
-            if inferred is not None and inferred != "blend":
+            if inferred is not None and inferred != "blend":    # a churro data type can also used for sift
                 self._error(
                     "E_SIFT",
-                    f"'sift' requires a blend argument but got '{inferred}'",
+                    f"'sift' requires a blend argument but got '{inferred}'",   # Error if it is not a blend data type
                     child
                 )
 
@@ -422,7 +425,7 @@ class SemanticAnalyzer:
             if not self._is_parse_node(child): continue
             inferred = self._infer_value_type(child)
             if inferred is not None and inferred not in ("bean", "drip"):
-                self._error("E_BUILTIN", f"'sqrt' requires a numeric argument but got '{inferred}'", child)
+                self._error("E_BUILTIN", f"'sqrt' requires a numeric argument but got '{inferred}'", child) # Strictly numeric data types
 
     def _visit_ceil_arg(self, node):
         """ceil(expr) — arg must be bean or drip, returns bean."""
@@ -430,7 +433,7 @@ class SemanticAnalyzer:
             if not self._is_parse_node(child): continue
             inferred = self._infer_value_type(child)
             if inferred is not None and inferred not in ("bean", "drip"):
-                self._error("E_BUILTIN", f"'ceil' requires a numeric argument but got '{inferred}'", child)
+                self._error("E_BUILTIN", f"'ceil' requires a numeric argument but got '{inferred}'", child) # Strictly numeric data types
 
     def _visit_floor_arg(self, node):
         """floor(expr) — arg must be bean or drip, returns bean."""
@@ -438,7 +441,7 @@ class SemanticAnalyzer:
             if not self._is_parse_node(child): continue
             inferred = self._infer_value_type(child)
             if inferred is not None and inferred not in ("bean", "drip"):
-                self._error("E_BUILTIN", f"'floor' requires a numeric argument but got '{inferred}'", child)
+                self._error("E_BUILTIN", f"'floor' requires a numeric argument but got '{inferred}'", child) # Strictly numeric data types
 
     def _visit_pow_arg(self, node):
         """pow(base, exp) — both must be bean or drip, returns drip."""
@@ -446,7 +449,7 @@ class SemanticAnalyzer:
         for expr in exprs:
             inferred = self._infer_value_type(expr)
             if inferred is not None and inferred not in ("bean", "drip"):
-                self._error("E_BUILTIN", f"'pow' requires numeric arguments but got '{inferred}'", expr)
+                self._error("E_BUILTIN", f"'pow' requires numeric arguments but got '{inferred}'", expr)    # requires two numeric data types
 
     def _visit_rand_arg(self, node):
         """rand(a, b) — both must be bean or drip, returns bean or drip."""
@@ -454,7 +457,7 @@ class SemanticAnalyzer:
         for expr in exprs:
             inferred = self._infer_value_type(expr)
             if inferred is not None and inferred not in ("bean", "drip"):
-                self._error("E_BUILTIN", f"'rand' requires numeric arguments but got '{inferred}'", expr)
+                self._error("E_BUILTIN", f"'rand' requires numeric arguments but got '{inferred}'", expr)   # requires two numeric data types
 
     def _visit_type_arg(self, node):
         """type(expr) — accepts any type, returns blend."""
@@ -814,7 +817,16 @@ class SemanticAnalyzer:
     
     # Statements
     def _visit_pour_loop(self, node):
-        """Visit pour_loop: for loop"""
+        """ Visit pour_loop: for loop
+            push_scope() -> loop variable is put ot its corresponding loop 
+            body scope (meaning that it only applies within the loop body)
+            
+            prev_loop = self.in_loop -> supports nested loops
+            self.in_loop = True, allows snap/skip inside the loop body
+            _visit_children() -> walks loop body
+            self.in_loop = prev_loop (if w already inside in a loop, stay (True))
+            pop_scope() = loop variable goes out of scope
+        """
         self.symbol_table.push_scope()
         prev_loop = self.in_loop
         self.in_loop = True
@@ -830,7 +842,9 @@ class SemanticAnalyzer:
         self.symbol_table.pop_scope()
 
     def _visit_pour_init(self, node):
-        """Visit pour_init: bean m = 1"""
+        """ Visit pour_init: bean m = 1
+            This declares as its loop initialization variable as a symbol.
+        """
         # Extract the data type
         dtype = None
         var_name = None
@@ -854,7 +868,15 @@ class SemanticAnalyzer:
         self._visit_children(node)
     
     def _visit_whilehot_loop(self, node):
-        """Visit whilehot_loop: while loop"""
+        """ Visit whilehot_loop: whilehot loop
+            push_scope() -> loop variable is put ot its corresponding loop 
+            body scope (meaning that it only applies within the loop body)
+            prev_loop = self.in_loop -> supports nested loops
+            self.in_loop = True, allows snap/skip inside the loop body
+            _visit_children() -> walks loop body
+            self.in_loop = prev_loop (if w already inside in a loop, stay (True))
+            pop_scope() = loop variable goes out of scope
+        """
         self.symbol_table.push_scope()
         prev_loop = self.in_loop
         self.in_loop = True
@@ -865,7 +887,15 @@ class SemanticAnalyzer:
         self.symbol_table.pop_scope()
     
     def _visit_tastetill_loop(self, node):
-        """Visit tastetill_loop: do-while loop"""
+        """ Visit tastetill_loop: do-while loop
+            push_scope() -> loop variable is put ot its corresponding loop 
+            body scope (meaning that it only applies within the loop body)
+            prev_loop = self.in_loop -> supports nested loops
+            self.in_loop = True, allows snap/skip inside the loop body
+            _visit_children() -> walks loop body
+            self.in_loop = prev_loop (if w already inside in a loop, stay (True))
+            pop_scope() = loop variable goes out of scope
+        """
         self.symbol_table.push_scope()
         prev_loop = self.in_loop
         self.in_loop = True
@@ -876,7 +906,11 @@ class SemanticAnalyzer:
         self.symbol_table.pop_scope()
     
     def _visit_intrpt_stmt(self, node):
-        """Visit interrupt statement: snap/skip"""
+        """Visit interrupt statement: snap/skip
+        IF outside a loop, then it throw an error E006
+        in_loop: set True by _visit_pour/whilehot/tastetill_loop
+        and restores to its previous value on loop exit.
+        """
         if not self.in_loop:
             stmt_type = None
             if node.children:
@@ -930,7 +964,16 @@ class SemanticAnalyzer:
     
     # ID stuff
     def _visit_id_dec_stmt(self, node):
-        """Visit id_dec_stmt: ID = value"""
+        """ Visit id_dec_stmt: ID = value
+            lookup(var_name): if none is found -> it will throw E002 (Undeclared identifier)
+            
+            if symbol.is_constant = When you are trying to assign a brewed value, it will throw an error where
+            you cannot modify a constant identifier. 
+            
+            if symbol.dtype: only allows bean and drip for the increment and decrement
+            if symbol.is_array: check if array element matches with the array var data type. If not, then
+            it will throw an error "Cannot assign value to x because it is of bean type"
+            """
         var_name = None
         id_token = None
         for child in node.children:
