@@ -16,7 +16,7 @@ ATOMIC_VAL = {
     "spacenew_delim": [' ', '\t', '\n'],
 
     # escape sequence letters
-    "escapeseq_let": ['t', 'b', 'n', 'r', 'v', '\'', '\\', '"'], #'"' was here.
+    "escapeseq_let": ['t', 'n', '\'', '\\', '"'],
 
     # Operators
     "arithmetic_op": ['+', '-', '*', '/', '%'],
@@ -44,7 +44,7 @@ ATOMIC_VAL["safe_char"] = list(set(
     ATOMIC_VAL["space_delim"] +
     ATOMIC_VAL["whole"] +
     ATOMIC_VAL["sp_symbols"] +
-    ['a', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'o', 'p', 'q', 's', 'u', 'w', 'x', 'y', 'z'] +
+    ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'o', 'p', 'q', 'r', 's', 'u', 'v', 'w', 'x', 'y', 'z'] +
     ATOMIC_VAL["alpha_cap"]
 ))
 
@@ -72,7 +72,6 @@ DELIM_VAL = {
     "assignment_delim": list(set(space_delim + alpha_small + whole + ["'", '"', '-', '!', '(', '['])),
     "batter@_delim": list(set(alpha_small + space_delim)),
     "churro_delim": list(set(spacenew_delim + arithmetic_op + [',', ']', ')', ':',';'])),
-    # "clbrackets_delim": list(set(spacenew_delim + ['[', ']', ',', ')'])),
     "clparen_delim": list(set(spacenew_delim + [';', '[', ']', ',', ')', '{', '&', '|'] + arithmetic_op + relational_op)), # added semicolon
     "colon_delim": list(set(spacenew_delim + ['('])),
     "comma_delim": list(set(space_delim + alpha_small + whole + ['"', "'", '(','[', '-'])),
@@ -88,10 +87,12 @@ DELIM_VAL = {
     "spaceparen_delim": list(set(space_delim + ['('])),
     "string_delim": list(set(spacenew_delim + [')', ']', '+', ','])),
     "temp_delim": list(set(spacenew_delim + relational_op + [',', '&', '|', ':', ';', ')',']'])),
-    "unary_delim": list(set(spacenew_delim + alpha_small + [')'])) # + ['1','2','3','4','5','6','7','8','9'] (removed these for now cuz a unary being delimited by a num makes no sense 4:17am)
+    "unary_delim": list(set(spacenew_delim + alpha_small + [')']))
 }
 KEYWORDS_TABLE = {
     "KEYWORDS": [
-        "bean","drip","temp","blend","churro","ifbrew","elifroth","elspress","pour","whilehot","taste","till","snap","skip","flavour","syrup","brewed","defoam","cup","hot","cold","recipe","empty","crema","new","batter@","glaze","refill?","cafe","backroom","order", "ceil", "floor", "pow", "rand", "sift", "sqrt", "type"
+        "bean","drip","temp","blend","churro","ifbrew","elifroth","elspress","pour","whilehot","taste","till",
+        "snap","skip","flavour","syrup","brewed","defoam","cup","hot","cold","recipe","empty","crema","new",
+        "batter@","glaze","refill?","cafe","backroom","order", "ceil", "floor", "pow", "rand", "sift", "sqrt", "type"
     ]
 }
