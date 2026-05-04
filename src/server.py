@@ -34,7 +34,7 @@ Three layers prevent an infinite loop from hanging the server:
    ``_CaramelLoopTimeout``, which is caught and surfaced as a runtime error.
 
 3. **Session execution timeout** (``threading.Timer``):
-   The interactive execution thread is given a hard 30-second wall-clock
+   The interactive execution thread is given a hard 120-second wall-clock
    deadline.  If it has not completed by then the session is force-stopped
    and the user sees a clear timeout message.
 """
@@ -64,13 +64,13 @@ app = Flask(__name__)
 CORS(app)
 
 # -- Active execution sessions -----------------------------------------------
-sessions = {}          # session_id -> ExecutionSession
-SESSION_TTL = 600      # Seconds before a stale session is garbage-collected
+sessions = {}          # session_id -> ExecutionSession, this is where you store the active session
+SESSION_TTL = 600      # Seconds before a stale session is garbage-collected, 10 minutes max
 
-# Hard wall-clock limit (seconds) for a single interactive execution session.
+# Hard wall-clock limit worth 2 minutes (120 seconds) for an executed session
 # If the program has not finished within this window the session is force-killed
 # and the user sees an "Execution timed out" message.
-EXECUTION_TIMEOUT_SECONDS = 120
+EXECUTION_TIMEOUT_SECONDS = 120 
 
 
 class ExecutionSession:
@@ -123,7 +123,8 @@ class ExecutionSession:
 # ---------------------------------------------------------------------------
 
 def _cleanup_old_sessions():
-    """Remove sessions that have exceeded SESSION_TTL without completing."""
+    """Remove sessions that have exceeded SESSION_TTL without completing. 
+       This includes session that are left idle for 10 minutes. """
     now = time.time()
     stale = [sid for sid, s in sessions.items() if now - s.created_at > SESSION_TTL]
     for sid in stale:
@@ -132,8 +133,7 @@ def _cleanup_old_sessions():
 
 def _force_stop_session(session):
     """
-    Gracefully force-stop a running session.
-
+    Enforces force-stop a running session.
     - Sets the stop event so the execution thread can detect it.
     - Cancels any pending watchdog timer.
     - Puts a sentinel value into the input queue to unblock any blocked
@@ -155,7 +155,6 @@ def _force_stop_session(session):
 def _on_session_timeout(session):
     """
     Called by the watchdog timer when the session exceeds the time limit.
-
     Marks the session as errored and force-stops the thread.
     """
     if session.status not in ("completed", "error"):
@@ -205,13 +204,16 @@ def _run_session(session):
     # ------------------------------------------------------------------
     # Stage 1–7: Full compiler pipeline (with loop detection)
     # ------------------------------------------------------------------
-    result = validate_and_compile(code, mode=CompilationMode.INTERACTIVE)
+    """ Result is where we call to run all the 7 stages of the compiler"""
+    result = validate_and_compile(code, mode=CompilationMode.INTERACTIVE) 
 
+    # If the program encounters any errors, it will print for the errors and the session will be marked as completed
     if not result.success:
         session.errors = result.errors
         session.status = "completed"
         return
-
+    
+    # Code success run
     generated_code       = result.generated_code
     session.generated_code = generated_code
     # DEBUG: print generated code to server console
@@ -348,7 +350,6 @@ def run_analyzer():
 def run_execute():
     """
     Full compiler pipeline (synchronous, legacy endpoint).
-
     Uses ``validate_and_compile()`` with loop detection enabled.
     Kept for backward compatibility with older frontend code.
     """
