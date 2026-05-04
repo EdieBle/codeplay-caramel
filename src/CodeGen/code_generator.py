@@ -168,9 +168,16 @@ class StructuredCodeGenerator:
                      "while", "break", "continue", "pass", "import", "from",
                      "True", "False", "None", "and", "or", "not", "in", "is"):
             safe = f"_{safe}"
+
+        if str(name) in ('a', 'b'):
+            print(f"[PY_VAR] name={name!r} → returning {safe!r}")
         return safe
 
     def _py_val(self, val):
+        # if val == "b":
+        #     print(f"[PY_VAL b] val={val!r} → ...")
+        # else:
+        #     print(f"[PY_VAL] val={val!r} → ...")
         """Convert an IR value to a Python expression string."""
         if val is None:
             return "None"
@@ -213,6 +220,7 @@ class StructuredCodeGenerator:
         for instr in self.ir:
             if instr.op == "DECLARE" and instr.dest == var_name:
                 return instr.extra.get("type")
+            
         for instr in self.ir:
             if instr.dest != var_name:
                 continue
@@ -225,6 +233,8 @@ class StructuredCodeGenerator:
                 if binop in (">", "<", ">=", "<=", "==", "!=", "&&", "||"):
                     return "temp"
                 if binop in ("+", "-", "*", "/", "%"):
+                    if t1 == "churro" and t2 == "churro" and binop == "+":
+                        return "blend" 
                     if "churro" in (t1, t2) and "blend" not in (t1, t2):
                         return "bean"
                 if "blend" in (t1, t2):
@@ -674,6 +684,7 @@ class StructuredCodeGenerator:
                 for j in range(start + 1, cond_idx):
                     if j not in emitted_in_body and \
                     self.ir[j].op not in ("LABEL", "GOTO", "IF_FALSE", "IF_TRUE"):
+                        print(f"[RE-EMIT] j={j} op={self.ir[j].op} dest={self.ir[j].dest} arg1={self.ir[j].arg1!r} arg2={self.ir[j].arg2!r}")
                         self._gen_simple(self.ir[j], j)
 
         if not has_body:
@@ -984,16 +995,9 @@ class StructuredCodeGenerator:
                     (isinstance(instr.arg1, str) and len(instr.arg1) == 3
                     and instr.arg1[0] == "'" and instr.arg1[-1] == "'")
                 )
+
                 if not self._in_func:
                     self._emit(f'_order["{var_name}"] = {val}')
-                elif var_type == "bean" and is_churro_src:
-                    self._emit(f"{self._py_var(var_name)} = ord({val})")
-                elif var_type == "bean" and src_type != "blend":
-                    self._emit(f"{self._py_var(var_name)} = int({val})")
-                elif var_type == "blend" and src_type == "temp":
-                    self._emit(f"{self._py_var(var_name)} = ('hot' if {val} else 'cold')")
-                elif var_type == "drip" and src_type == "temp":
-                    self._emit(f"{self._py_var(var_name)} = float({val})")
                 elif var_type == "churro":
                     src_is_int = (
                         src_type == "bean" or
@@ -1011,6 +1015,14 @@ class StructuredCodeGenerator:
                         self._emit(f"{self._py_var(var_name)} = chr(int(math.floor({val})))")
                     else:
                         self._emit(f"{self._py_var(var_name)} = {val}")
+                elif var_type == "bean" and is_churro_src:
+                    self._emit(f"{self._py_var(var_name)} = ord({val})")
+                elif var_type == "bean" and src_type != "blend":
+                    self._emit(f"{self._py_var(var_name)} = int({val})")
+                elif var_type == "blend" and src_type == "temp":
+                    self._emit(f"{self._py_var(var_name)} = ('hot' if {val} else 'cold')")
+                elif var_type == "drip" and src_type == "temp":
+                    self._emit(f"{self._py_var(var_name)} = float({val})")
                 else:
                     self._emit(f"{self._py_var(var_name)} = {val}")
 
@@ -1038,16 +1050,19 @@ class StructuredCodeGenerator:
                 )
 
                 if is_churro(instr.arg1, t1) and is_churro(instr.arg2, t2) and binop == "+":
+                    # print(f"[BINOP PRE-CHURRO] dest={instr.dest} arg1={instr.arg1!r} arg2={instr.arg2!r} t1={t1} t2={t2}")
                     self._emit(f"{dest} = {a} + {b}")
                 elif binop == "&&":
                     self._emit(f"{dest} = _caramel_to_bool({a}) and _caramel_to_bool({b})")
                 elif binop == "||":
                     self._emit(f"{dest} = _caramel_to_bool({a}) or _caramel_to_bool({b})")
                 elif is_churro(instr.arg1, t1) or is_churro(instr.arg2, t2):
+                    # print(f"[BINOP PRE-CHURRO] dest={instr.dest} arg1={instr.arg1!r} arg2={instr.arg2!r} t1={t1} t2={t2}")
                     a = f"ord({a})" if is_churro(instr.arg1, t1) and not other_is_blend else a
                     b = f"ord({b})" if is_churro(instr.arg2, t2) and not other_is_blend_left else b
                     self._emit(f"{dest} = {a} {binop} {b}")
                 elif binop == "+" and "blend" in (t1, t2):
+                    # print(f"[BINOP PRE-CHURRO] dest={instr.dest} arg1={instr.arg1!r} arg2={instr.arg2!r} t1={t1} t2={t2}")
                     if t1 == "temp":
                         a = f"('hot' if {a} else 'cold')"
                     elif t1 != "blend":
@@ -1073,7 +1088,7 @@ class StructuredCodeGenerator:
 
             elif op == "PRINT":
                 args = instr.extra.get("args", [])
-                # print(f"[PRINT CODEGEN] raw args = {args!r}")
+                print(f"[PRINT CODEGEN] raw args = {args!r}")
                 if args:
                     py_args = ", ".join(self._py_val(a) for a in args)
                     self._emit(f"_caramel_print({py_args})")
@@ -1278,6 +1293,8 @@ class StructuredCodeGenerator:
                 if binop in (">", "<", ">=", "<=", "==", "!=", "&&", "||"):
                     return "temp"
                 if binop in ("+", "-", "*", "/", "%"):
+                    if t1 == "churro" and t2 == "churro" and binop == "+":
+                        return "blend"  
                     if "churro" in (t1, t2) and "blend" not in (t1, t2):
                         return "bean"
                 if "blend" in (t1, t2):

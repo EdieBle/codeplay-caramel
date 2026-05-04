@@ -984,8 +984,8 @@ class SemanticAnalyzer:
 
         if var_name:
             symbol = self.symbol_table.lookup(var_name)
-            print(f"[ID_DEC] dtype repr: {repr(symbol.dtype)} type: {type(symbol.dtype)}")
-            print(f"[ID_DEC_STMT] var={var_name} symbol={symbol} dtype={getattr(symbol,'dtype',None)} is_array={getattr(symbol,'is_array',None)}")
+            # print(f"[SEMANTIC DEBUG ID_DEC] dtype repr: {repr(symbol.dtype)} type: {type(symbol.dtype)}")
+            # print(f"[SEMANTIC DEBUG ID_DEC_STMT] var={var_name} symbol={symbol} dtype={getattr(symbol,'dtype',None)} is_array={getattr(symbol,'is_array',None)}")
             if not symbol:
                 self._error("E002", f"Undeclared identifier '{var_name}'", id_token)
                 self._visit_children(node)
@@ -1117,6 +1117,17 @@ class SemanticAnalyzer:
             rhs_type = self._infer_value_type(node)
 
             if rhs_type and rhs_type != self.current_var_type:
+                # Special case: bean target with churro expression
+                # churro operands in bean context = ASCII arithmetic, allow it
+                if self.current_var_type == "bean" and rhs_type in ("churro", "blend"):
+                    # Check if the blend came purely from churro operations
+                    # by re-inferring with bean context
+                    bean_inferred = self._infer_expression_type_with_target(node, "bean")
+                    print(f"[OPT_ASSIGN] rhs_type={rhs_type} bean_inferred={bean_inferred}")
+                    if bean_inferred == "bean":
+                        self._visit_children(node)
+                        return
+
                 # Check if it's a valid implicit cast per TYPE_COMPAT
                 if not self._is_type_compatible(self.current_var_type, rhs_type):
                     self._error(        # Throws an error if it is not within the implicit type casting scope.
@@ -1278,28 +1289,50 @@ class SemanticAnalyzer:
                         return symbol.dtype
         
         return None
-    
-    def _infer_expression_type(self, node):
-        """Infer type of expression (may have binary operators)."""
-        if not hasattr(node, 'children') or not node.children:
-            return None
         
+    def _infer_expression_type(self, node):
         collected = []
-        for child in node.children:
-            inferred = self._infer_value_type(child)
-            if inferred:
-                collected.append(inferred)
-
+        self._collect_operand_types(node, collected)
         if not collected:
             return None
 
-        # churro + churro → blend
-        if len(collected) >= 2 and all(t == "churro" for t in collected):
+        churro_count = sum(1 for t in collected if t == "churro")
+        has_numeric = any(t in ("bean", "drip") for t in collected)
+        has_blend = "blend" in collected
+
+        if churro_count >= 2 and not has_numeric:
+            # churro + churro with no numeric → blend (string concat)
             return "blend"
-        if "blend" in collected:
+        if has_blend:
+            return "blend"
+        if churro_count == 1 and has_numeric:
+            return "bean"
+        if churro_count >= 2 and has_numeric:
+            # churro + churro + numeric is ambiguous — treat as blend
             return "blend"
         return collected[0]
-    
+
+    def _collect_operand_types(self, node, result):
+        """Recursively collect all operand types in an expression."""
+        if not hasattr(node, 'children'):
+            return
+        for child in node.children:
+            if self._is_parse_node(child):
+                if child.name == "primary":
+                    t = self._infer_primary_type(child)
+                    if t:
+                        result.append(t)
+                    else:
+                        self._collect_operand_types(child, result)
+                else:
+                    # Always recurse so n0 short-circuit on arith_expr etc.
+                    self._collect_operand_types(child, result)
+            else:
+                if hasattr(child, 'type') and child.type == "ID":
+                    sym = self.symbol_table.lookup(child.value)
+                    if sym:
+                        result.append(sym.dtype)
+        
     def _infer_value_type_from_children(self, node):
         """Infer value type from children."""
         if not hasattr(node, 'children') or not node.children:
@@ -1356,6 +1389,18 @@ class SemanticAnalyzer:
     # HELPER METHODS
     # ========================================================================
     
+    def _infer_expression_type_with_target(self, node, target_type):
+        """Infer expression type knowing the assignment target type."""
+        collected = []
+        self._collect_operand_types(node, collected)  # recurse fully
+        print(f"[WITH_TARGET] target={target_type} collected={collected}")
+        
+        churro_count = sum(1 for t in collected if t == "churro")
+        
+        if target_type == "bean" and churro_count > 0:
+            return "bean"
+        return None
+
     def _extract_type_from_node(self, node):
         """Extract data type (bean, drip, etc.) from a node."""
         if not hasattr(node, 'children'):

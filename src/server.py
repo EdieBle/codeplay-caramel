@@ -217,9 +217,9 @@ def _run_session(session):
     generated_code       = result.generated_code
     session.generated_code = generated_code
     # DEBUG: print generated code to server console
-    print("=== DEBUG GENERATED CODE ===")
-    print(generated_code)
-    print("=== END DEBUG GENERATED CODE ===")
+    # print("=== DEBUG GENERATED CODE ===")
+    # print(generated_code)
+    # print("=== END DEBUG GENERATED CODE ===")
 
     # ------------------------------------------------------------------
     # Stage 8: Execute with interactive I/O
@@ -366,9 +366,18 @@ def run_execute():
         })
 
     try:
+        for i, instr in enumerate(result.optimized_ir):
+            if hasattr(instr, 'dest') and instr.dest == "b":
+                print(f"[POST-OPT IR] [{i}] op={instr.op} dest={instr.dest} arg1={instr.arg1!r}")
+            else:
+                print(f"[POST-OPT IR ELSE BLOCK] [{i}] op={instr.op} dest={instr.dest} arg1={instr.arg1!r}")
+
         codegen      = StructuredCodeGenerator(result.optimized_ir)
         exec_result  = codegen.execute(input_values=input_values)
     except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        print(f"[CODEGEN EXCEPTION] {exc}")
         return jsonify({
             "errors":         [{"type": "CODEGEN_ERROR", "message": f"Code generation failed: {exc}"}],
             "output":         "",

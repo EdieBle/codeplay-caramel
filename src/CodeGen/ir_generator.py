@@ -424,8 +424,7 @@ class IRGenerator:
                 break
 
         for child in children:
-            if self._is_node(child) and child.name in ("value", "assign_val",
-                                                        "expression", "blend_val"):
+            if self._is_node(child) and child.name in ("value", "assign_val", "expression", "blend_val"):
                 val = self._visit(child)
                 if val is not None:
                     if declare_dest is not None:
@@ -439,6 +438,7 @@ class IRGenerator:
                             val = True if val != 0 else False
                         self._emit("ASSIGN", dest=declare_dest, arg1=val)
                     return val
+                
             if self._is_token(child) and child.type in self.LITERAL_TYPES:
                 val = self._token_to_literal(child)
                 if declare_dest is not None:

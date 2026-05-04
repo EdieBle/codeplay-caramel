@@ -229,9 +229,22 @@ class IROptimizer:
             old_arg1 = instr.arg1
             if instr.arg1 in self._constants:
                 val = self._constants[instr.arg1]
-                # Don't propagate churro literals into non-ASSIGN instructions
-                if not (isinstance(val, str) and len(val) == 3 and val[0] == "'" and val[-1] == "'") \
-                or instr.op == "ASSIGN":
+                # if instr.arg1 == "i":
+                #     print(f"[OPT SUBST] substituting i → {val!r} in op={instr.op} dest={instr.dest}")
+
+                is_ir_churro = isinstance(val, str) and len(val) == 3 and val[0] == "'" and val[-1] == "'"
+                # Don't substitute churro into non-churro BINOP
+                if is_ir_churro and instr.op == "BINOP":
+                    dest_type = None
+                    for di in self.instructions:
+                        if di.op == "DECLARE" and di.dest == instr.dest:
+                            dest_type = di.extra.get("type")
+                            break
+                    if dest_type not in ("churro", None):
+                        pass  # skip substitution
+                    else:
+                        instr.arg1 = val
+                elif not is_ir_churro or instr.op == "ASSIGN":
                     instr.arg1 = val
             if instr.arg2 in self._constants:
                 val = self._constants[instr.arg2]
@@ -244,6 +257,7 @@ class IROptimizer:
 
             # Also substitute in extra args
             if "args" in instr.extra:
+                old_args = list(instr.extra["args"])
                 instr.extra["args"] = [
                     self._constants.get(a, a) if isinstance(a, str) and not (
                         isinstance(self._constants.get(a, a), str) and
@@ -253,30 +267,56 @@ class IROptimizer:
                     ) else a
                     for a in instr.extra["args"]
                 ]
+                if old_args != instr.extra["args"]:
+                    print(f"[ARGS SUBST] {old_args} → {instr.extra['args']}")
             
-            # In _pass_constant_propagation, when tracking assignments:
             if instr.op == "ASSIGN" and instr.dest:
                 if _is_constant(instr.arg1):
                     if isinstance(instr.arg1, bool):
-                        # Don't track bool constants — they get coerced to "hot"/"cold" for blend
+                        # Don't track bool constants — they get coerced to "hot"/"cold"
+                        # for blend variables, so propagating the raw bool would give
+                        # wrong type inference downstream
                         self._constants.pop(instr.dest, None)
-                    elif isinstance(instr.arg1, float):
-                        # Check if dest is bean — coerce float to int before storing
+                    elif isinstance(instr.arg1, (int, float)) and not isinstance(instr.arg1, bool):
+                        # For numeric literals, check the declared type of the destination
+                        # so we store the already-coerced value rather than the raw literal
                         dest_type = None
                         for di in self.instructions:
                             if di.op == "DECLARE" and di.dest == instr.dest:
                                 dest_type = di.extra.get("type")
                                 break
-                        if dest_type == "bean":
+                        if dest_type == "bean" and isinstance(instr.arg1, float):
+                            # drip literal assigned to bean → truncate to int
+                            # e.g. bean n = 4.0 → propagate 4 not 4.0
                             self._constants[instr.dest] = int(instr.arg1)
+                        elif dest_type == "churro":
+                            # numeric literal assigned to churro → convert to char
+                            # e.g. churro c = 96 → propagate '`' not 96
+                            # so downstream type() and print() see the actual char
+                            try:
+                                char = chr(int(instr.arg1))
+                                print(f"[CHURRO PROP] dest={instr.dest} arg1={instr.arg1!r} → storing '{char}'")
+                                self._constants[instr.dest] = f"'{char}'"
+                            except (ValueError, TypeError, OverflowError):
+                                self._constants.pop(instr.dest, None)
                         else:
                             self._constants[instr.dest] = instr.arg1
+                    elif dest_type == "bean":
+                        # If arg1 is a churro literal, store ord() value
+                        val = instr.arg1
+                        if isinstance(val, str) and len(val) == 3 and val[0] == "'" and val[-1] == "'":
+                            self._constants[instr.dest] = ord(val[1])
+                        elif isinstance(val, float):
+                            self._constants[instr.dest] = int(val)
+                        else:
+                            self._constants[instr.dest] = val
                     else:
                         self._constants[instr.dest] = instr.arg1
                 else:
                     self._constants.pop(instr.dest, None)
-                            
-            # INPUT invalidates the target's known value
+
+            # INPUT invalidates the target's known value since it comes from
+            # runtime user input and cannot be known at compile time
             if instr.op == "INPUT" and instr.dest:
                 self._constants.pop(instr.dest, None)
 
@@ -340,13 +380,13 @@ class IROptimizer:
 
             # x + 0 = x, 0 + x = x
             if op == "+":
-                if _safe_zero(b) and not _is_string_literal(a):
+                if _safe_zero(b) and not _is_string_literal(a) and not _is_churro_var(a, self.instructions):
                     instr.op = "ASSIGN"
                     instr.arg1 = a
                     instr.arg2 = None
                     instr.extra = {}
                     continue
-                if _safe_zero(a) and not _is_string_literal(b):
+                if _safe_zero(a) and not _is_string_literal(b) and not _is_churro_var(a, self.instructions):
                     instr.op = "ASSIGN"
                     instr.arg1 = b
                     instr.arg2 = None
@@ -437,4 +477,5 @@ def _is_one(val):
 def optimize_ir(instructions, passes=3):
     """Convenience function: optimize a list of IRInstruction objects."""
     opt = IROptimizer(instructions)
+    
     return opt.optimize(passes=passes)
