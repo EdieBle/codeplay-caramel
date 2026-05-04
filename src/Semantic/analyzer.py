@@ -1119,6 +1119,17 @@ class SemanticAnalyzer:
         if self.current_var_type:
             var_name = self._extract_var_name(node)
             if var_name:
+                # Check type compatibility before declaring
+                rhs_type = self._infer_value_type(node)
+                if rhs_type and rhs_type != self.current_var_type:
+                    if not self._is_type_compatible(self.current_var_type, rhs_type):
+                        self._error(
+                            "E003",
+                            f"Type mismatch: cannot assign '{rhs_type}' value to "
+                            f"'{self.current_var_type}' variable",
+                            node
+                        )
+                        
                 sym = Symbol(
                     var_name, "variable",
                     dtype=self.current_var_type,
