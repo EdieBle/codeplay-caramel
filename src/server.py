@@ -214,6 +214,10 @@ def _run_session(session):
 
     generated_code       = result.generated_code
     session.generated_code = generated_code
+    # DEBUG: print generated code to server console
+    print("=== DEBUG GENERATED CODE ===")
+    print(generated_code)
+    print("=== END DEBUG GENERATED CODE ===")
 
     # ------------------------------------------------------------------
     # Stage 8: Execute with interactive I/O

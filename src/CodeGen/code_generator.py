@@ -532,12 +532,16 @@ class StructuredCodeGenerator:
         if not is_loop_label:
             return None
 
-        # Find the LAST GOTO back to this label (the actual back-edge)
+        
+        # Find the LAST GOTO or IF_TRUE back to this label (back-edge)
         back_edge = None
+        is_do_while = False
         for j in range(label_idx + 1, min(label_idx + 2000, len(self.ir))):
             if self.ir[j].op == "GOTO" and self.ir[j].dest == start_label:
                 back_edge = j
-            # Stop at FUNC boundaries
+            elif self.ir[j].op == "IF_TRUE" and self.ir[j].dest == start_label:
+                back_edge = j
+                is_do_while = True
             if self.ir[j].op in ("FUNC_BEGIN", "FUNC_END"):
                 break
 
@@ -548,49 +552,59 @@ class StructuredCodeGenerator:
         return None
 
     def _gen_while_loop(self, start, end):
-        # Find the IF_FALSE condition
+        start_label_name = self.ir[start].dest
+        is_do_while = "DOWHILE_START" in start_label_name
+
         cond_idx = None
         cond_val = None
-        for j in range(start + 1, end):
-            if self.ir[j].op == "IF_FALSE":
-                cond_idx = j
-                cond_val = self._py_val(self.ir[j].arg1)
-                break
-
-        # Find the back-GOTO (GOTO that points back to our start label)
-        start_label_name = self.ir[start].dest
         back_goto_idx = None
-        for j in range(start + 1, end + 1):
-            if j < len(self.ir) and self.ir[j].op == "GOTO" and self.ir[j].dest == start_label_name:
-                back_goto_idx = j 
 
-        # Emit condition computation before the while header
-        if cond_idx:
+        if is_do_while:
+            # Do-while: back-edge is IF_TRUE pointing back to start
+            for j in range(start + 1, end + 1):
+                if j < len(self.ir) and self.ir[j].op == "IF_TRUE" and self.ir[j].dest == start_label_name:
+                    cond_idx = j
+                    cond_val = self._py_val(self.ir[j].arg1)
+                    back_goto_idx = j
+                    break
+        else:
+            # Normal while/pour: condition is IF_FALSE near start
+            for j in range(start + 1, end):
+                if self.ir[j].op == "IF_FALSE":
+                    cond_idx = j
+                    cond_val = self._py_val(self.ir[j].arg1)
+                    break
+            # Back-edge is GOTO pointing back to start
+            for j in range(start + 1, end + 1):
+                if j < len(self.ir) and self.ir[j].op == "GOTO" and self.ir[j].dest == start_label_name:
+                    back_goto_idx = j
+
+        # Emit condition BINOPs before while header (normal while only)
+        if not is_do_while and cond_idx:
             for j in range(start + 1, cond_idx):
                 if self.ir[j].op not in ("LABEL", "GOTO", "IF_FALSE", "IF_TRUE"):
                     self._gen_simple(self.ir[j], j)
 
-        if cond_val:
+        # Emit while header
+        if is_do_while:
+            self._emit("while True:")
+        elif cond_val:
             self._emit(f"while _caramel_to_bool({cond_val}):")
         else:
             self._emit("while True:")
 
         self._push()
 
-        # --- Runtime infinite-loop guard ----------------------------------------
-        # Emit a unique loop-ID string derived from the IR position so that
-        # nested loops each get their own independent counter.  The guard
-        # raises _CaramelLoopTimeout after _CARAMEL_MAX_ITERATIONS iterations.
         loop_guard_id = f"loop_{start}"
         self._emit(f"_caramel_check_loop({loop_guard_id!r})")
-        # -----------------------------------------------------------------------
 
-        # Body runs from after IF_FALSE up to (but not including) the back-GOTO
-        body_start = (cond_idx + 1) if cond_idx else start + 1
+        # Body bounds
+        body_start = start + 1 if is_do_while else ((cond_idx + 1) if cond_idx else start + 1)
         body_end = back_goto_idx if back_goto_idx is not None else end
 
         has_body = False
         bi = body_start
+        emitted_in_body = set() # check line 665
         while bi < body_end and bi < len(self.ir):
             instr_i = self.ir[bi]
 
@@ -626,23 +640,50 @@ class StructuredCodeGenerator:
                 continue
 
             self._gen_simple(instr_i, bi)
+            emitted_in_body.add(bi)
             has_body = True
             bi += 1
+
+        # Do-while: emit condition check at bottom of loop
+        if is_do_while:
+            if cond_val:
+                # Walk backwards from cond_idx to find only condition-related BINOPs
+                cond_deps = {cond_val}
+                for j in range(cond_idx - 1, start, -1):
+                    instr_j = self.ir[j]
+                    if instr_j.op in ("BINOP", "UNARYOP", "ARR_LOAD"):
+                        dest = self._py_val(instr_j.dest)
+                        if dest in cond_deps:
+                            a = self._py_val(instr_j.arg1)
+                            b = self._py_val(getattr(instr_j, 'arg2', None)) if instr_j.arg2 is not None else None
+                            cond_deps.add(a)
+                            if b: cond_deps.add(b)
+                for j in range(start + 1, cond_idx):
+                    instr_j = self.ir[j]
+                    if instr_j.op in ("BINOP", "UNARYOP", "ARR_LOAD"):
+                        dest = self._py_val(instr_j.dest)
+                        if dest in cond_deps and j not in emitted_in_body: # NOTE: more-or-less to stop the loop from making duplicate instructions when it could be more efficient
+                            self._gen_simple(instr_j, j)
+
+                self._emit(f"if _caramel_to_bool({cond_val}): break")
+            else:
+                self._emit("break  # do-while: no condition found")
+        else:
+            # Normal while: re-emit condition computation at end of body
+            if cond_idx:
+                for j in range(start + 1, cond_idx):
+                    if j not in emitted_in_body and \
+                    self.ir[j].op not in ("LABEL", "GOTO", "IF_FALSE", "IF_TRUE"):
+                        self._gen_simple(self.ir[j], j)
 
         if not has_body:
             self._emit("pass")
 
-        # Re-emit condition computation at end of body so while sees fresh _t
-        if cond_idx:
-            for j in range(start + 1, cond_idx):
-                if self.ir[j].op not in ("LABEL", "GOTO", "IF_FALSE", "IF_TRUE"):
-                    self._gen_simple(self.ir[j], j)
-
         self._pop()
-        # Reset the loop counter once the loop exits normally (not via exception)
         self._emit(f"_caramel_reset_loop({loop_guard_id!r})")
         return end + 1
     
+
     def _gen_if_block(self, start, boundary, is_elif=False):
         print(f"[GEN_IF] called start={start} boundary={boundary} is_elif={is_elif}")
         """Generate an if/else block from IR pattern."""
@@ -953,6 +994,8 @@ class StructuredCodeGenerator:
                     self._emit(f"{self._py_var(var_name)} = ('hot' if {val} else 'cold')")
                 elif var_type == "drip" and src_type == "temp":
                     self._emit(f"{self._py_var(var_name)} = float({val})")
+                elif var_type == "churro" and src_type == "bean":
+                    self._emit(f"{self._py_var(var_name)} = chr({val})")
                 else:
                     self._emit(f"{self._py_var(var_name)} = {val}")
 
@@ -1249,15 +1292,21 @@ class StructuredCodeGenerator:
 
     def _is_global_var(self, name):
         """Check if variable was declared outside any function in IR."""
+        has_global = False
+        has_local = False
         in_func = False
         for instr in self.ir:
             if instr.op == "FUNC_BEGIN":
                 in_func = True
             elif instr.op == "FUNC_END":
                 in_func = False
-            elif not in_func and instr.op in ("DECLARE", "ARR_DECLARE") and instr.dest == name:
-                return True
-        return False
+            elif instr.op in ("DECLARE", "ARR_DECLARE") and instr.dest == name:
+                if not in_func:
+                    has_global = True
+                else:
+                    has_local = True
+        # Only treat as global if declared globally but NOT also declared locally
+        return has_global and not has_local
 
 
     # ------------------------------------------------------------------
