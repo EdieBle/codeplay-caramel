@@ -113,6 +113,12 @@ class SymbolTable:
                 scope[name] = symbol
                 return True
         return False
+    
+    def lookup_global(self, name):
+        """Look up a symbol only in the global (outermost) scope."""
+        if self.scopes:
+            return self.scopes[0].get(name)
+        return None
 
 class SemanticAnalyzer:
     """
@@ -848,12 +854,20 @@ class SemanticAnalyzer:
         # Extract the data type
         dtype = None
         var_name = None
+        has_data_type = False
         
         for child in node.children:
             if self._is_parse_node(child) and child.name == "data_type":
                 dtype = self._extract_type_from_node(child)
+                has_data_type = True
             elif not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
                 var_name = child.value
+
+        # If no data_type — this is an assignment to existing variable
+        if not has_data_type and var_name:
+            symbol = self.symbol_table.lookup(var_name)
+            if symbol and symbol.is_constant:
+                self._error("E005", f"Cannot modify constant identifier '{var_name}'", node)
         
         if dtype and var_name:
             print(f"[_visit_pour_init] DECLARING '{var_name}' as {dtype}")
@@ -940,12 +954,15 @@ class SemanticAnalyzer:
                 self._check_input_args(child)
 
     def _check_input_args(self, node):
-        """Recursively check all input target IDs are declared."""
+        """Recursively check all input target IDs are declared and not constant."""
         for child in node.children:
             if not self._is_parse_node(child):
                 if hasattr(child, 'type') and child.type == "ID":
-                    if not self.symbol_table.lookup(child.value):
+                    symbol = self.symbol_table.lookup(child.value)
+                    if not symbol:
                         self._error("E002", f"Undeclared identifier '{child.value}'", child)
+                    elif symbol.is_constant:
+                        self._error("E005", f"Cannot modify constant identifier '{child.value}'", child)
             else:
                 if child.name not in ("_empty", "input_val"):
                     self._check_input_args(child)
@@ -981,11 +998,17 @@ class SemanticAnalyzer:
                 var_name = child.value
                 id_token = child
                 break
+        # print(f"[SEMANTIC DEBUG ID_DEC_STMT CHECK] var={var_name} is_constant={getattr(symbol,'is_constant',None)}")
 
         if var_name:
+            # print(f"[ID_DEC_STMT ENTRY] var={var_name}")
             symbol = self.symbol_table.lookup(var_name)
             # print(f"[SEMANTIC DEBUG ID_DEC] dtype repr: {repr(symbol.dtype)} type: {type(symbol.dtype)}")
             # print(f"[SEMANTIC DEBUG ID_DEC_STMT] var={var_name} symbol={symbol} dtype={getattr(symbol,'dtype',None)} is_array={getattr(symbol,'is_array',None)}")
+            
+            lookup_name = var_name[6:] if var_name.startswith("order.") else var_name
+            symbol = self.symbol_table.lookup(lookup_name)
+
             if not symbol:
                 self._error("E002", f"Undeclared identifier '{var_name}'", id_token)
                 self._visit_children(node)
@@ -1023,6 +1046,7 @@ class SemanticAnalyzer:
                                             )
 
         self._visit_children(node)    
+   
     def _visit_update_id(self, node):
         """Visit update_id: ID assignment"""
         var_name = self._extract_name_from_node(node, depth=0)
@@ -1076,9 +1100,35 @@ class SemanticAnalyzer:
 
     def _visit_var_dec_const_init(self, node):
         """Visit variable declaration with initialization"""
+        id_tok = self._find_child_token(node, "ID")
+        if id_tok:
+            var_name = id_tok.value
+            dtype = self._var_types.get(var_name)
+            if not dtype:
+                dtype = self._extract_dtype(node)
+            if dtype:
+                self._var_types[var_name] = dtype
+
+        # Only emit if we haven't already emitted for this var at current scope
+        # The type=None emit at [000] happens because dtype_brewed_body visits
+        # this before _visit_dtype_dec registers the type — skip if dtype is None
+        if dtype is not None:
+            self._emit("DECLARE", dest=var_name, type=dtype, constant=True)
+        elif self._current_func is None:
+            # Global scope brewed with no dtype — still emit
+            self._emit("DECLARE", dest=var_name, type=dtype, constant=True)
+        # else: skip — will be handled by _visit_dtype_dec
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name in ("value", "assign_val",
+                                                         "expression", "opt_assign"):
+                val = self._visit(child)
+                if val is not None:
+                    self._emit("ASSIGN", dest=var_name, arg1=val)
+                return
+            
         if self.current_var_type:
             var_name = self._extract_var_name(node)
-            print(f"[CONST INIT DEBUG] var={var_name} dtype={self.current_var_type} is_constant=True")
+            # print(f"[SEMANTIC CONST INIT DEBUG] var={var_name} dtype={self.current_var_type} is_constant=True")
 
             if var_name:
                 symbol = Symbol(
@@ -1101,9 +1151,9 @@ class SemanticAnalyzer:
                     # Check initialization type
                     self._check_assignment_type(var_name, symbol, node)
         
-        print(f"[CONST INIT DEBUG] children: {[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in node.children]}")
+        # print(f"[SEMANTIC CONST INIT DEBUG] children: {[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in node.children]}")
         self._visit_children(node)
-        print(f"[CONST INIT DEBUG] done visiting children")
+        # print(f"[SEMANTIC CONST INIT DEBUG] done visiting children")
     
     def _visit_opt_assign(self, node):
         """ _visit_opt_assign -> checks type of initialization value if it is valid to the implicit conversions
@@ -1166,12 +1216,11 @@ class SemanticAnalyzer:
     
     def _visit_dtype_brewed_body(self, node):
         """Visit data type brewed (constant) body"""
-        dtype = self._extract_type_from_node(node)
-        if dtype:
-            self.current_var_type = dtype
-        
-        self._visit_children(node)
-        self.current_var_type = None
+        dtype = self._extract_dtype(node)
+        id_tok = self._find_child_token(node, "ID")
+        if id_tok and dtype:
+            self._var_types[id_tok.value] = dtype
+        self._visit_children_all(node)
     
     def _visit_blend_id_tail(self, node):
         """Visit blend variable declaration"""
@@ -1221,9 +1270,26 @@ class SemanticAnalyzer:
         return count
 
     def _visit_order_dec_stmt(self, node):
-        """Visit order declaration"""
+        """Visit order declaration also checks if target is brewed constant."""
+        # Extract the field name after order.
+        field_name = None
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                field_name = child.value
+                break
+        
+        if field_name:
+            # order. always accesses global scope, look there specifically
+            symbol = self.symbol_table.lookup_global(field_name)
+            if symbol and symbol.is_constant:
+                self._error(
+                    "E005",
+                    f"Cannot modify constant identifier '{field_name}'",
+                    node
+                )
+            
         self._visit_children(node)
-    
+
     # TYPE CHECKING METHODS
     def _infer_type_from_literal(self, token_type):
         """Infer CARAMEL type from token type."""

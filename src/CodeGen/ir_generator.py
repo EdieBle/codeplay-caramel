@@ -176,6 +176,11 @@ class IRGenerator:
 
     def _emit(self, op, **kwargs):
         instr = IRInstruction(op, **kwargs)
+        # DEBUG
+        # if op == "DECLARE" and kwargs.get("constant") and kwargs.get("type") is None:
+        #     import traceback
+        #     print(f"[DECLARE type=None constant=True] dest={kwargs.get('dest')}")
+        #     traceback.print_stack(limit=6)
         self.instructions.append(instr)
         return instr
 
