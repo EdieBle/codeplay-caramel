@@ -5,7 +5,8 @@ from lark.lexer import Token
 class Token(Token):
     def __repr__(self):
         return f"Token({self.type!r}, {self.value!r}, line={self.line}, column={self.column})"
-
+    
+# These are the dictionaries used to translate internal token type to be used by our parser
 OPERATOR_MAP = {
     "==": "EQ_EQUALS",
     "!=": "NOT_EQUAL",
@@ -44,6 +45,7 @@ OPERATOR_MAP = {
     ";": "SEMICOLON",
 }
 
+# These are the dictionaries used to translate internal token type to be used by our parser
 KEYWORD_MAP = {
     "BACKROOM": "BACKROOM",
     "BATTER@": "BATTER",
@@ -91,16 +93,15 @@ KEYWORD_MAP = {
 }
 
 def tokenize(code):
-    # code += '$' # for appending an eof haha
-    tokens = []
-    pos = 0
-    line = 1
-    column = 1
+    # code += '$'   # for appending an eof
+    tokens = []     # token list
+    pos = 0         # current position in the source string
+    line = 1        # current line number
+    column = 1      # current code number
 
     # Unique identifier tracking
-    identifier_map = {} # tried to use a list instead of map but it kept blowing up at 
-                        # >100 identifiers (had noticeable slowness) so dictionaries it is!
-    identifier_counter = 1
+    identifier_map = {}     # A dictionary used to store the key + value of ids (ex: "x" : "IDENTIFIER1") 
+    identifier_counter = 1  
 
     # helps build a token object and add it to the tokens list.
     def push(token_type, lexeme, start_col, message=None):
@@ -108,7 +109,7 @@ def tokenize(code):
 
         if token_type == "IDENTIFIER":
             if lexeme not in identifier_map:
-                identifier_map[lexeme] = f"IDENTIFIER{identifier_counter}"
+                identifier_map[lexeme] = f"IDENTIFIER{identifier_counter}"  # Adds the identifier lexeme to the dictionary of ids and adds +1 to the counter
                 identifier_counter += 1
 
             token_type = identifier_map[lexeme]
@@ -131,21 +132,21 @@ def tokenize(code):
         # ----------------------------------------------------------
         # SIMPLE CHECKS
         # ----------------------------------------------------------
-        if ch == (" "):
+        if ch == (" "): # Whitespace can be read as a token in our lexer
            # debug  print(f"\n=== [SPACE] space detected at pos={pos}, col={column}, char='{ch}', tokenizing... ===") #debug
             push("whitespace", '⎵', column)
             pos += 1
             column += 1
             continue
 
-        if ch == ("\t"):
+        if ch == ("\t"): # Tab can be reas as a token in our lexer
            # debug  print(f"\n=== [TAB] tab detected at pos={pos}, col={column}, char='{ch}', tokenizing... ===") #debug
             push("tab", '⎵⎵⎵⎵', column)
             pos += 1
             column += 4
             continue
 
-        if ord(ch) > 127:
+        if ord(ch) > 127: # ASCII support, can only support to code > 127 (Emoji and other special chars are not allowed)
             push("ERROR", ch, column, f"Unknown character '{ch}'. Only ASCII characters are supported.")
             pos += 1
             column += 1
@@ -154,10 +155,19 @@ def tokenize(code):
         # ----------------------------------------------------------
         # DFA CRAWLING STARTS
         # ----------------------------------------------------------
+        """
+        How this works:
+            1. Look up TRANSITIONS_DFA[curr_state].branches
+            2. Find the transition condition that matches characters
+            3. Move to next_state
+            4. IF next_state is an accepting state -> update last_accept
+            5. If no transition matches → DFA is stuck -> use last_accept to emit what we have
+        """
+        
         start_col = column
-        curr_state = 0
+        curr_state = 0  # start state
         buffer = "" # container for our characters to get appended to before they get removed if either it throws an error or a proper token.
-        last_accept = None
+        last_accept = None  # last (state, col, pos, lexeme) where DFA was in accepting state (backtracking)
         start_pos = pos  # <-- needed for ALL error + fallback
 
         while pos < len(code):
@@ -174,9 +184,21 @@ def tokenize(code):
             next_ch_la_1 = code[pos + 1] if pos + 1 < len(code) else None
             next_ch_la_2 = code[pos + 2] if pos + 2 < len(code) else None
 
-            # MINUS INTEGER (223 IS MINUS INITIAL STATE)
+            # MINUS INTEGER
+            """ 
+                In this section, I am going to explain to you how does the MINUS (-) backtracking works:
+                We have the following conditions that determine if it is considered a negative num or enforces binary minus
+                Condition 1: Forces binary minus 
+                Detect minus sign -> Check if previous is digit, ID, or ) -> Check if next token is a digit or ID -> binary minus
+                Example: x - 5 (These are three different tokens: ID1, -, beanlit)
+                
+                Condition 2: Read as negative numeric value
+                Detect minus -> Check if previous is digit -> Check if next is digit -> bundle together as BEANLIT
+                Example: =6
+            """
+            
             can_go_to_212 = 212 in branches and ch == '-'
-            IGNORED = {"whitespace", "newline", "tab"}
+            IGNORED = {"whitespace", "newline", "tab"} # Ignores whitespace, newline, and tab
             def last_significant_token(tokens):
                 for tok in reversed(tokens):
                     if tok["type"] not in IGNORED:
@@ -188,7 +210,7 @@ def tokenize(code):
                 # debug print(f"\n\n\n can go to 212 and next character digit? {can_go_to_223}\n\n\n")
 
                 if (prev and (prev["type"] == "beanlit" or prev["type"] == "id" or prev["type"] == ")") and next_ch_la_1 is not None and next_ch_la_1.isdigit()):
-                    # Force binary minus
+                    # Forces binary minus
                     push("-", "-", start_col)
                     pos += 1
                     column += 1
@@ -208,20 +230,21 @@ def tokenize(code):
                     break
 
 
-            # Integer initial state: 272
-            # Check if '0' can move us to state 273, this is for the bean and drip literal leading zero stuff
+            # Integer initial state: 268
+            # Check if '0' can move us to state 268, this is for the bean and drip literal leading zero stuff
             can_go_to_268 = any(
                 nxt for nxt in branches
                 if 0 in TRANSITIONS_DFA and '0' in TRANSITIONS_DFA[nxt].chars and nxt == 268
             )
 
             # Driplit initial state
-            # Check if any current DFA branch can move us to state 292 (the '.' state)
+            # Check if any current DFA branch can move us to state 288 (the '.' state)
             can_go_to_288 = any(
                 nxt == 288 and '.' in TRANSITIONS_DFA[nxt].chars
                 for nxt in branches
             )
 
+            # Go to state 288 for the driplit
             if can_go_to_288:
                 look = pos
                 while look < len(code):
@@ -231,7 +254,8 @@ def tokenize(code):
                     #     print(c)
 
                     look += 1
-
+                    
+            # Leading zeroes are ignored
             if ch == '0' and can_go_to_268:
                 lookahead = pos + 1
                 # first_non_zero_found = False
@@ -255,14 +279,13 @@ def tokenize(code):
                         break
                 ch = code[pos]  # update current char for DFA processing
 
-
             # DEBUG IMPORTANT print(f"[INNER] Possible branches from state {curr_state}: {branches}") # debug
-
             handled = None
+            
             # Newline
             for nxt in branches:
                 node = TRANSITIONS_DFA[nxt]
-                if (curr_state == 0 and nxt == 267 and ch == "\n"): # check might be unnecessary for ch but might as well just to make sure amirite
+                if (curr_state == 0 and nxt == 267 and ch == "\n"): # check might be unnecessary for ch but might as well just to make sure
                     # debug print("\033[92m[NEWLINE]\033[0m Consuming newline")
                     push(node.token_type, "\n", column)
 
@@ -288,7 +311,7 @@ def tokenize(code):
                     next_state = None
                     
                     break
-                    # close braces
+                # Close braces
                 elif curr_state == 0 and nxt == 258 and ch == "}": 
                     push(node.token_type, "}", column)
 
@@ -459,7 +482,7 @@ def tokenize(code):
                         break
                     # Driplit
                     # =============================================
-                    # ERROR: entered 270 ('.') but next char not digit
+                    # ERROR: entered 288 ('.') but next char not digit
                     # =============================================
                     if nxt == 288:      # DOT state
                        # debug  print("[NUM] ENTERED DOT STATE 299")
@@ -568,11 +591,11 @@ def tokenize(code):
                     pos = final_pos
                     column += (final_pos - fallback_pos)
                     continue
- 
+
             if lexeme is None and err_type == "EXCEED_LENGTH_ERR" : 
                 # Consume the entire invalid run starting from the original token start (start_pos)
                 error_pos = start_pos+15 # why +15? because its the start position +15 character and this only triggers if it exceeds length
-               
+
                 while error_pos < pos:
                     error_pos += 1
                 error_lex = code[start_pos:error_pos] # range function that start from the start_position then records until the token can be made
@@ -612,9 +635,9 @@ def tokenize(code):
 
             if lexeme is None and err_type == "ID_ERR" : 
                 # Consume the entire invalid run starting from the original token start (start_pos)
-               # debug print(final_pos)
+                # debug print(final_pos)
                 error_pos = final_pos # this SHOULD fix the infinite recursion problem with capital letters considering it would fall under run_identifier_handle
-               # debug  print("start of id error")
+                # debug  print("start of id error")
                 while error_pos < pos:
                     error_pos += 1
                 
@@ -677,7 +700,6 @@ def tokenize(code):
             # debug     print("\033[91m[ERROR]\033[0m fallback failed")
 
                 # Consume the entire invalid run starting from the original token start (start_pos)
-                
                 error_pos = final_pos+1  # place this here, same issue as ID_ERR with the loop stuff
 
             # debug     print(start_pos)
@@ -698,7 +720,6 @@ def tokenize(code):
 
                 # loop will continue from the whitespace (or EOF)
                 continue
-           
 
         #=================================================================
         # VALID TOKEN FROM MAIN DFA (only happens if everything goes well.)
@@ -720,10 +741,10 @@ def tokenize(code):
 
     return tokens
 
-
-_NEG_ZERO_BEAN_RE = __import__("re").compile(r"^-0+$")
-_NEG_ZERO_DRIP_RE = __import__("re").compile(r"^-0+\.0+$")
-_TEN_DIGIT_RUN_RE = __import__("re").compile(r"-?\d{10}")
+# Edge Cases
+_NEG_ZERO_BEAN_RE = __import__("re").compile(r"^-0+$")      # -0 handling no such thing
+_NEG_ZERO_DRIP_RE = __import__("re").compile(r"^-0+\.0+$")  # Max 10 whole num places
+_TEN_DIGIT_RUN_RE = __import__("re").compile(r"-?\d{10}")   # Max 10 decimal places
 
 
 def _count_digits(s):
@@ -785,20 +806,23 @@ def _validate_numeric_tokens(tokens):
                     tok["message"] = "Integer 'bean' literal exceeds 10-digit limit"
 
     return tokens
-
+# Converts token dicts into token objects that will be passed to the parser
 def tokens_to_lark(tokens):
     lark_tokens = []
     last_token_type = None # just use this to check if the token is a refill, can be used for other toke types 
     last_token_was_newline = False
 
     for t in tokens:
+        # These get ignored in the parser, meaning it cannot be read in the parser
         if t["type"] == "whitespace" or t["type"] == "tab" or t["type"] == "sl_comment" or t["type"] == "ml_comment" or t["type"] == "newline":
             continue
         
         typeOfTok = t["type"].upper()
-        stripNumTok = ''.join(ch for ch in typeOfTok if not ch.isdigit())   # Filter out non-letter characters, use the mapped identifier at the beginning of this program for semantic. Only exists due to the lexer outputting IDENTIFIER# where # is a number
+        # Filter out non-letter characters, use the mapped identifier at the beginning of this program for semantic. 
+        # Only exists due to the lexer outputting IDENTIFIER# where # is a number
+        stripNumTok = ''.join(ch for ch in typeOfTok if not ch.isdigit())   
 
-        
+        # refill? 0 is different from refill? (value)
         if last_token_type == "REFILL" and stripNumTok == "BEANLIT" and t["lexeme"] == "0":
             stripNumTok = "ZERO"
         elif typeOfTok in KEYWORD_MAP:
@@ -834,6 +858,7 @@ def tokens_to_lark(tokens):
 
     return lark_tokens
 
+# Function that the parser and pipeline_validator calls
 def token_final_out(code):
-    lexified = tokenize(code)
-    return tokens_to_lark(lexified)
+    lexified = tokenize(code)           # Raw DFA tokens
+    return tokens_to_lark(lexified)     # Cleaned tokens for parser
