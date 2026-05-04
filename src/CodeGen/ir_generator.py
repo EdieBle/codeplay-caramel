@@ -372,7 +372,8 @@ class IRGenerator:
         if has_brackets:
             arr_size = None
             col_size = None
-            init_vals = []
+            pre_collect_count = len(self.instructions)
+            init_vals = self._collect_arr_init_values(child)
             for child in children:
                 if self._is_node(child) and child.name == "arr_size_val":
                     for c2 in self._get_children(child):
@@ -395,16 +396,16 @@ class IRGenerator:
                                     col_size = "***"
                                 elif self._is_token(sc) and sc.type == "ID":
                                     col_size = sc.value
-
-            for instr in reversed(self.instructions):
+                                    
+            for instr in reversed(self.instructions[:pre_collect_count]):
                 if instr.op == "DECLARE":
                     instr.op = "ARR_DECLARE"
-                    if col_size is not None:
-                        instr.extra["dims"] = [arr_size, col_size]
-                    else:
-                        instr.extra["dims"] = [arr_size] if arr_size else []
+                    instr.extra["dims"] = [arr_size] if arr_size else []
                     if init_vals:
                         instr.extra["init"] = init_vals
+                    # Move this instruction to end (after the CALL instructions)
+                    self.instructions.remove(instr)
+                    self.instructions.append(instr)
                     break
         else:
             self._visit_children_all(node)

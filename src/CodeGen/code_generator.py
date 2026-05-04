@@ -32,7 +32,7 @@ class StructuredCodeGenerator:
       - DECLARE + ASSIGN + LABEL + IF_FALSE...GOTO + LABEL → for loops
     """
 
-        # CARAMEL type → Python default value
+        # CARAMEL type - Python default value
     DEFAULT_VALUES = {
         "bean": "0",
         "drip": "0.0",
@@ -41,7 +41,7 @@ class StructuredCodeGenerator:
         "blend": '""',
     }
 
-    # CARAMEL type → Python type coercion
+    # CARAMEL type - Python type coercion
     TYPE_COERCE = {
         "bean": "int",
         "drip": "float",
@@ -994,8 +994,23 @@ class StructuredCodeGenerator:
                     self._emit(f"{self._py_var(var_name)} = ('hot' if {val} else 'cold')")
                 elif var_type == "drip" and src_type == "temp":
                     self._emit(f"{self._py_var(var_name)} = float({val})")
-                elif var_type == "churro" and src_type == "bean":
-                    self._emit(f"{self._py_var(var_name)} = chr({val})")
+                elif var_type == "churro":
+                    src_is_int = (
+                        src_type == "bean" or
+                        isinstance(instr.arg1, int) or
+                        (isinstance(instr.arg1, str) and instr.arg1.lstrip('-').isdigit())
+                    )
+                    src_is_float = (
+                        src_type == "drip" or
+                        isinstance(instr.arg1, float) or
+                        (isinstance(instr.arg1, str) and '.' in instr.arg1 and instr.arg1.replace('.','',1).lstrip('-').isdigit())
+                    )
+                    if src_is_int:
+                        self._emit(f"{self._py_var(var_name)} = chr(int({val}))")
+                    elif src_is_float:
+                        self._emit(f"{self._py_var(var_name)} = chr(int(math.floor({val})))")
+                    else:
+                        self._emit(f"{self._py_var(var_name)} = {val}")
                 else:
                     self._emit(f"{self._py_var(var_name)} = {val}")
 
@@ -1132,6 +1147,16 @@ class StructuredCodeGenerator:
                 else:
                     var = name
 
+                def _fmt_init(vals):
+                    """Format init values as a Python list literal without repr quoting temps."""
+                    items = []
+                    for v in vals:
+                        cv = self._clean_init_val(v)
+                        if isinstance(cv, str) and (cv.startswith('_t') or cv.isidentifier()):
+                            items.append(cv)  # temp var or identifier — unquoted
+                        else:
+                            items.append(repr(cv))  # literal — quoted
+                    return "[" + ", ".join(items) + "]"
 
                 if len(dims) == 2:
                     r, c = dims[0], dims[1]
@@ -1151,18 +1176,20 @@ class StructuredCodeGenerator:
                     d = dims[0]
                     if d == "***":
                         if init_vals:
-                            self._emit(f"{var} = {[self._clean_init_val(v) for v in init_vals]}")
+                            self._emit(f"{var} = {_fmt_init(init_vals)}")
                         else:
                             self._emit(f"{var} = []")
                     elif init_vals:
                         if isinstance(d, int) and len(init_vals) < d:
-                            padded = [self._clean_init_val(v) for v in init_vals] + [default] * (d - len(init_vals))
-                            self._emit(f"{var} = {padded}")
+                            cleaned = [self._clean_init_val(v) for v in init_vals]
+                            padded_strs = [repr(x) if not (isinstance(x, str) and (x.startswith('_t') or x.isidentifier())) else x for x in cleaned]
+                            padded_strs += [str(default)] * (d - len(init_vals))
+                            self._emit(f"{var} = [{', '.join(padded_strs)}]")
                         elif not isinstance(d, int):
-                            self._emit(f"{var} = {[self._clean_init_val(v) for v in init_vals]}")
+                            self._emit(f"{var} = {_fmt_init(init_vals)}")
                             self._emit(f"while len({var}) < {d}: {var}.append({default})")
                         else:
-                            self._emit(f"{var} = {[self._clean_init_val(v) for v in init_vals]}")
+                            self._emit(f"{var} = {_fmt_init(init_vals)}")
                     else:
                         self._emit(f"{var} = [{default}] * {d}")
                 else:
@@ -1280,10 +1307,12 @@ class StructuredCodeGenerator:
     def _clean_init_val(self, v):
         """Strip surrounding IR quotes from string literals for array init."""
         if isinstance(v, str):
+            if v.startswith('_t'):  # ← add this — temp vars should be unquoted
+                return v
             if len(v) >= 2 and v[0] == '"' and v[-1] == '"':
-                return v[1:-1]  # blend literal → raw string content
+                return v[1:-1] # blend lit to raw string
             if len(v) == 3 and v[0] == "'" and v[-1] == "'":
-                return v[1]     # churro literal → single char
+                return v[1] # churro lit to single char
         return v
 
     def _get_default_for(self, var_name):
