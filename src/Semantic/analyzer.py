@@ -5,14 +5,16 @@ Based on semantic rules from the CARAMEL specification document.
 This module implements semantic analysis completely separate from the parser,
 analyzing the AST for semantic correctness after successful parsing.
 
-Type Compatibility Rules: refer to rule 11 tinatamad pa aq
 """
 from src.Lexer.lexer import token_final_out
 from src.Parser.parser import Parser
 # import traceback
 
 class SemanticError:
-    """Represents a semantic error in the code."""
+    """ Represents a semantic error in the code.
+        Given the __init__ where it throws errors
+        The to_dict converts it so that it can send to the frontend
+    """
     
     def __init__(self, code, message, line=None, column=None, severity="error"):
         self.code = code  # Error code (e.g., "E001" for redefinition)
@@ -33,16 +35,21 @@ class SemanticError:
         }
 
 class Symbol:
-    """Represents a symbol (variable, function, class) in the program."""
+    """ Represents a symbol (an entry) in the symbol table.
+        kind = represents a symbol whether it a variable, function, or class in the program
+        is_constant = if it is true, then it is brewed (constant)
+        is_array = if it is true, then it is an array type
+        is_initialized = only set true for function parameters
+        """
     
     def __init__(self, name, kind, dtype=None, is_constant=False, scope_level=0, 
                  line=None, column=None, parameters=None, return_type=None, is_array=False):
         self.name = name
-        self.kind = kind  # "variable", "function", "class", "struct"
+        self.kind = kind  # "variable", "function", "class"
         self.dtype = dtype  # "bean", "drip", "churro", "temp", "blend", None
-        self.is_constant = is_constant
+        self.is_constant = is_constant # True if declared with brewed
         self.is_array = is_array  # True if this is an array type
-        self.scope_level = scope_level
+        self.scope_level = scope_level # determines whether it is within the global or local body scope
         self.line = line
         self.column = column
         self.parameters = parameters or []  # List of (name, type) tuples for functions
@@ -50,20 +57,29 @@ class Symbol:
         self.is_initialized = False
 
 class SymbolTable:
-    """Manages symbol scopes and symbol tracking."""
+    """ Manages symbol scopes and symbol tracking. This can be implemented via: 
+        Each scope level has its own dictionary. Everytime we enter a statement block (e.g., conditionals and looping statements),
+        it creates a new dictionary. When it is left, it will be popped and all variables declared inside go out of scope.
+        
+        Example:
+        scopes[0] = {global variables, functions, classes}
+        scopes[1] = {cup(), local variables}
+        scopes[2] = {looping initialization variables i and j}
+        scopes[3] = {nested ifbrew block variables}
+    """
     
     def __init__(self):
-        self.scopes = [{}]  # Stack of scope dictionaries
-        self.scope_level = 0
-        self.errors = []
+        self.scopes = [{}]      # Stack of scope dictionaries where the scope level is stored
+        self.scope_level = 0    # Start at scope level 0
+        self.errors = []        # Capture for any errors if there are any
     
     def push_scope(self):
-        """Enter a new scope."""
-        self.scopes.append({})
-        self.scope_level += 1
+        """Called on entering a new scope."""
+        self.scopes.append({})  # Appends the scopes level array 
+        self.scope_level += 1   # Scopes array size + 1
     
     def pop_scope(self):
-        """Exit current scope."""
+        """Called on exiting the current scope."""
         if len(self.scopes) > 1:
             self.scopes.pop()
             self.scope_level -= 1
@@ -79,18 +95,19 @@ class SymbolTable:
         return True
 
     def lookup(self, name):
-        """Look up a symbol in current and parent scopes."""
+        """ Look up a symbol in current and parent scopes.
+            Walks from innermost to global, enables variable shadowing. """
         for scope in reversed(self.scopes):
             if name in scope:
                 return scope[name]
         return None
     
     def lookup_current(self, name):
-        """Look up a symbol in current scope only."""
+        """Look up a symbol in current scope only. This is used to detect for any redeclaration of a variable."""
         return self.scopes[-1].get(name)
     
     def update_symbol(self, name, symbol):
-        """Update an existing symbol."""
+        """Walks all scopes to find and update an existing symbol."""
         for scope in reversed(self.scopes):
             if name in scope:
                 scope[name] = symbol
@@ -120,17 +137,19 @@ class SemanticAnalyzer:
     
     # Valid data types
     VALID_TYPES = {"bean", "drip", "churro", "temp", "blend"}
+    # Built-in functions
     RESERVED_BUILTINS = {"sift", "ceil", "floor", "pow", "rand", "sqrt", "type"}
 
     # Type compatibility for assignments: target_type to set of compatible source types
     # STRICT: bean != drip without explicit cast
     TYPE_COMPAT = {
-        "bean":   {"bean", "drip", "temp", "churro"},  # bean can go into drip, temp, churro
-        "drip":   {"drip", "bean", "temp"},             # drip can go into bean, temp
-        "churro": {"churro", "bean", "drip", "temp", "blend"},  # churro accepts string literals (blend)
-        "temp":   {"temp", "bean", "drip"},             # temp can go into bean, drip
-        "blend":  {"blend", "churro"},                  # blend only into blend, also churro maybe?
+        "bean":   {"bean", "drip", "temp", "churro"},           # bean can go into drip, temp, churro
+        "drip":   {"drip", "bean", "temp"},                     # drip can go into bean, temp
+        "churro": {"churro", "bean", "drip", "temp", "blend"},  # churro accepts string literals (blend) / can go into bean, drip, temp, blend
+        "temp":   {"temp", "bean", "drip"},                     # temp can go into bean, drip
+        "blend":  {"blend", "churro"},                          # blend only into blend, also churro maybe?
     }
+    
     # Binary operator result types: (left_type, right_type) -> result_type
     BINARY_RESULT_TYPES = {
         # Arithmetic operators (bean and drip only, but must match)
@@ -148,6 +167,16 @@ class SemanticAnalyzer:
         ("blend", "drip"): "drip",
     }
     
+    """ __init__ state:
+        symbol_table = scope stack, starts with the global scope 
+        current_function = name of the function being analyzed (None at global level)
+        current_class = name of the class being analyzed (None if not in class)
+        in_loop = true if it is inside pour/whiltehot/taste-till, validation for snap/skip
+        main_function_count = counts bean cup() declarations, strictly only one main function must exist
+        current_var_type = set during dtype_dec to know what type to assign to each ID they find
+    """
+    
+    
     def __init__(self, ast):
         self.ast = ast
         self.symbol_table = SymbolTable()
@@ -161,11 +190,14 @@ class SemanticAnalyzer:
     
     def analyze(self, ast=None):
         """
-        Main entry point for semantic analysis.
+        def analyze() - Main entry point for semantic analysis.
         
         Args:
             ast: The abstract syntax tree from the parser
-            
+        
+        _visit(ast):
+            recursively walks every ParseNode, After walking the ast, it will check E007 (no cup) and E008 (multiple cups)
+
         Returns:
             List of SemanticError objects converted to dictionaries
         """
@@ -178,7 +210,7 @@ class SemanticAnalyzer:
         try:
             self._visit(self.ast)
             
-            # Final checks
+            # Final checks - This is where E007 is being checked
             if not self.has_main:
                 self.errors.append(SemanticError(
                     "E007",
@@ -186,6 +218,7 @@ class SemanticAnalyzer:
                     severity="error"
                 ))
             
+            # Final checks - This is where E008 is being checked
             if self.main_function_count > 1:
                 self.errors.append(SemanticError(
                     "E008",
@@ -193,6 +226,7 @@ class SemanticAnalyzer:
                     severity="error"
                 ))
         
+        # This is where it prevents the semantic analyzer from crashing out. It blocks the compilation entirely as errors are printed.
         except Exception as e:
             # Silently skip analysis errors
             print(f"[SEMANTIC ANALYSIS CRASH] {e}")
@@ -280,11 +314,11 @@ class SemanticAnalyzer:
     def _visit_main_def(self, node):
         """Visit main_def: bean cup() { body }"""
         self.main_function_count += 1
-        self.has_main = True
+        self.has_main = True    # Checks if a cup() is found
         
-        self.symbol_table.push_scope()
+        self.symbol_table.push_scope() # local scope within cup() is established
         prev_function = self.current_function
-        self.current_function = "cup"
+        self.current_function = "cup"   # current function is "cup"
         
         self._visit_children(node)
         
@@ -295,7 +329,17 @@ class SemanticAnalyzer:
         # print(f"[SEMANTIC MAIN BODY DEBUG] children: {[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in node.children]}")
         self._visit_children(node)
     
-    # Functions
+    """"Functions: _visit_recipe_def
+        How does it work?
+        1. Extract function name from ID token 
+        2. Check name if it isn't a reserved built-in or throw E_RES_FUNC error
+        3. Extract return type from recipe_ret_type
+        4. Declare symbol(kind = "function", return_Type = "...") in CURRENT scope
+        5. push_scope will enter the function's own scope
+        6. Register each parameter as a symbol with is_intialized = True
+        7. visit body (Recursive walk)
+        8. pop_scope() -> all locals and params go out of scope
+    """
     def _visit_recipe_def(self, node):
         """Visit recipe_def: recipe return_type ID (params) { body refill }"""
         # debug
@@ -310,7 +354,7 @@ class SemanticAnalyzer:
 
         if func_name:
             if func_name in self.RESERVED_BUILTINS:
-                self._error("E_RES_FUNC", f"{func_name} is a reserved built-in and cannot be used as a function name", f"{func_name}")
+                self._error("E_RES_FUNC", f"{func_name} is a reserved built-in and cannot be used as a function name", f"{func_name}")  # Throws an error if it is a built-in and is a function name
             symbol = Symbol(
                 func_name,
                 "function",
@@ -458,7 +502,10 @@ class SemanticAnalyzer:
         return None
     
     def _visit_empty_def(self, node):
-        """Visit empty_def: empty ID (params) { body refill }"""
+        """ Visit empty_def: empty ID (params) { body refill }
+            Similarly how it is to functions.
+            dtype = None, return_type = "void", kind = "function" is_initialized = true
+            """
         func_name = None
         for child in node.children:
             if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
@@ -538,6 +585,17 @@ class SemanticAnalyzer:
         else:
             self._visit_children(node) 
     
+    """ _visit_dtype_dec -> handles all typed variable declarations. This has the following passes:
+    Pass 1: If brewed appears anywhere in children before finding the ID -> set is_constant = True
+    Pass 2: If ID is found, declare symbol in symbol table. It also does the following for arrays:
+        - also detects array size [size] or [***] and it will proceed to go to bounds checking
+        - array size = [***] -> no bounds chcecking
+        - array size = N -> initializer must not exceed [size]
+        
+    Pass 3: Shadowing check - checks if it has the same name in the local scope. 
+    """
+    
+    
     def _visit_dtype_dec(self, node):
         dtype = self._extract_type_from_node(node)
 
@@ -586,17 +644,17 @@ class SemanticAnalyzer:
                                 elif sc.type == "FLEX_ASTERISK":
                                     arr_size = "***"
                                 elif sc.type == "ID":
-                                    sym = self.symbol_table.lookup(sc.value)
+                                    sym = self.symbol_table.lookup(sc.value) # lookup if the id is in the symbol table
                                     if sym is None:
                                         self._error(
                                             "E_ARR_SIZE",
-                                            f"Undeclared identifier '{sc.value}' used as array size",
+                                            f"Undeclared identifier '{sc.value}' used as array size", # Throws an error if the variable used inside the array size is undeclared
                                             sc
                                         )
                                     elif sym.dtype not in ("bean",):
                                         self._error(
                                             "E_ARR_SIZE",
-                                            f"Array size must be a whole number (bean), got '{sym.dtype}' for '{sc.value}'",
+                                            f"Array size must be a whole number (bean), got '{sym.dtype}' for '{sc.value}'", # If the array size is non-beanlit (driplit), it will throw an error.
                                             sc
                                         )
                                     else:
@@ -660,14 +718,14 @@ class SemanticAnalyzer:
                         print(not is_2d and arr_init_count > arr_size)
                         if not is_2d and arr_init_count > arr_size: 
                             # print(f"[SEMANTIC ARR_DEBUG] arr_size={arr_size} arr_init_count={arr_init_count} is_array={is_array} is_2d={is_2d}")
-                            self._error(
+                            self._error(        # Throws an error if it has array size of 2 then array elements has 3, semantic error
                                 "E_ARR",
                                 f"Array '{id_token.value}' declared with size {arr_size} "
                                 f"but initialized with {arr_init_count} element(s)",
                                 arr_size_token or id_token
                             )
 
-
+        # Pass 3 - shadowing check where it checks if the same name exists in the local scope, emit E001 error message: variable shadowing not allowed in blocks
         if id_token:
             # Only block shadowing within the same function, global scope which is in scope[0] will is always be allowed to be shadowed
             outer = None
@@ -946,7 +1004,11 @@ class SemanticAnalyzer:
         
         self._visit_children(node)
     
-    # Variables declarations
+    """ Variables declarations: _visit_var_dec_init
+        Declares one variable in a list
+        Relies on self.current_var_type set by the parent _visit_dtype_dec()
+    """
+    
     def _visit_var_dec_init(self, node):
         """Visit var_dec_init: ID opt_assign in a comma-separated list"""
         # Extract the ID from this node
@@ -965,7 +1027,7 @@ class SemanticAnalyzer:
                 line=getattr(child, 'line', None) if child else None
             )
             if not self.symbol_table.declare(var_name, sym):
-                self._error("E001", f"Redefinition of identifier '{var_name}'", child)
+                self._error("E001", f"Redefinition of identifier '{var_name}'", child) # Emits E001 if identifier is already declared in the same scope
         
         self._visit_children(node)
 
@@ -987,7 +1049,7 @@ class SemanticAnalyzer:
                 )
                 
                 if not self.symbol_table.declare(var_name, symbol):
-                    self.errors.append(SemanticError(
+                    self.errors.append(SemanticError(           # Emits E001 if identifier is already declared in the same scope
                         "E001",
                         f"Redefinition of identifier '{var_name}'",
                         line=getattr(node, 'line', None)
@@ -1001,6 +1063,11 @@ class SemanticAnalyzer:
         print(f"[CONST INIT DEBUG] done visiting children")
     
     def _visit_opt_assign(self, node):
+        """ _visit_opt_assign -> checks type of initialization value if it is valid to the implicit conversions
+            Example: bean x = 3.14 -> RHS is "drip", target is "bean"
+            TYPE_COMPAT["bean"] has "drip" = implicit type casting of drip to bean is allowed.
+        """
+        
         # Only check if we're inside a declaration (current_var_type is set)
         if self.current_var_type:
             # Infer the type of the RHS value
@@ -1009,7 +1076,7 @@ class SemanticAnalyzer:
             if rhs_type and rhs_type != self.current_var_type:
                 # Check if it's a valid implicit cast per TYPE_COMPAT
                 if not self._is_type_compatible(self.current_var_type, rhs_type):
-                    self._error(
+                    self._error(        # Throws an error if it is not within the implicit type casting scope.
                         "E003",
                         f"Type mismatch: cannot assign '{rhs_type}' value to "
                         f"'{self.current_var_type}' variable",
