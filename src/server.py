@@ -269,6 +269,16 @@ def _run_session(session):
 
         session.status       = "running"
         session.input_prompt = ""
+        
+        watchdog = threading.Timer(
+        EXECUTION_TIMEOUT_SECONDS,
+        _on_session_timeout,
+        args=(session,),
+        )
+        watchdog.daemon = True
+        session._timeout_timer = watchdog
+        watchdog.start()
+        
         return value
 
     def mock_print(*args, **kwargs):
