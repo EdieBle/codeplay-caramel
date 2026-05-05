@@ -388,7 +388,7 @@ class SemanticAnalyzer:
             # print(f"[RECIPE '{func_name}'] all children: {[c.name if hasattr(c, 'name') else f'TOKEN:{c.type}' for c in node.children]}")
             for child in node.children:
                 if self._is_parse_node(child) and child.name == "parameter":
-                    print(f"[RECIPE '{func_name}'] parameter node children: {[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in child.children]}")
+                    # print(f"[RECIPE '{func_name}'] SYNTAX DEBUG  parameter node children: {[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in child.children]}")
                     for param_name, param_type in self._extract_parameters(child):
                         param_symbol = Symbol(
                             param_name,
@@ -607,6 +607,18 @@ class SemanticAnalyzer:
     def _visit_crema_body_cont(self, node):
         access = "public"
 
+        # Before anything, check that an access modifier exists
+        has_modifier = any(
+            not self._is_parse_node(child) and hasattr(child, 'type')
+            and child.type in ("CAFE", "BACKROOM")
+            for child in node.children
+        )
+        if not has_modifier and self.current_class is not None:
+            self._error("E_ACCESS",
+                "Class members must have an access modifier ('cafe' or 'backroom')",
+                node)
+            return
+
         # First pass: get access modifier
         for child in node.children:
             if not self._is_parse_node(child) and hasattr(child, 'type'):
@@ -737,7 +749,7 @@ class SemanticAnalyzer:
         is_constant = False
         for child in node.children:
             if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "BREWED":
-                print(f"[DEBUG] brewed spotted")
+                # print(f"[SYNTAX DEBUG] brewed spotted")
                 is_constant = True
                 break
             if self._is_parse_node(child) and child.name in ("dtype_brewed_body", "acc_brewed_body"):
@@ -908,22 +920,30 @@ class SemanticAnalyzer:
 
     def _visit_primary(self, node):
         """Visit primary: check for undeclared variables and built-in calls."""
+
+        var_name = None
         for child in node.children:
             if self._is_parse_node(child):
                 continue
             if not hasattr(child, 'type'):
                 continue
+
             if child.type == "ID":
                 var_name = child.value
                 if var_name and not self.symbol_table.lookup(var_name):
-                    self._error("E002", f"Undeclared identifier '{var_name}'", child)
+                    # allow bare sibling method calls inside a class method
+                    if self.current_class and self._current_class_sym and \
+                        var_name in self._current_class_sym.fields:
+                        # self._current_class_sym.fields[var_name].get("kind") == "method"
+                        pass  # valid sibling method call
+                    else:
+                        self._error("E002", f"Undeclared identifier '{var_name}'", child)
                 else:
                     # Check for member access in primary_id_tail
                     for sibling in node.children:
                         if self._is_parse_node(sibling) and sibling.name == "primary_id_tail":
                             for tc in sibling.children:
                                 if not self._is_parse_node(tc) and hasattr(tc, 'type') and tc.type == "DOT_ACC":
-                                    # Find the member name (ID after DOT_ACC)
                                     children_list = list(sibling.children)
                                     for i, sc in enumerate(children_list):
                                         if not self._is_parse_node(sc) and hasattr(sc, 'type') and sc.type == "DOT_ACC":
@@ -1002,7 +1022,7 @@ class SemanticAnalyzer:
                 self._error("E005", f"Cannot modify constant identifier '{var_name}'", node)
         
         if dtype and var_name:
-            print(f"[_visit_pour_init] DECLARING '{var_name}' as {dtype}")
+            # print(f"[SYNTAX DEBUG] _visit_pour_init] DECLARING '{var_name}' as {dtype}")
             sym = Symbol(
                 var_name, "variable",
                 dtype=dtype,
@@ -1274,7 +1294,7 @@ class SemanticAnalyzer:
                 break
         
         if var_name and self.current_var_type:
-            print(f"[_visit_var_dec_init] DECLARING '{var_name}' as {self.current_var_type}")
+            # print(f"[SYNTAX DEBUG _visit_var_dec_init] DECLARING '{var_name}' as {self.current_var_type}")
             sym = Symbol(
                 var_name, "variable",
                 dtype=self.current_var_type,
@@ -1330,7 +1350,7 @@ class SemanticAnalyzer:
                     # Check if the blend came purely from churro operations
                     # by re-inferring with bean context
                     bean_inferred = self._infer_expression_type_with_target(node, "bean")
-                    print(f"[OPT_ASSIGN] rhs_type={rhs_type} bean_inferred={bean_inferred}")
+                    # print(f"[SYNTAX DEBUG OPT_ASSIGN] rhs_type={rhs_type} bean_inferred={bean_inferred}")
                     if bean_inferred == "bean":
                         self._visit_children(node)
                         return
@@ -1628,6 +1648,10 @@ class SemanticAnalyzer:
     
     def _check_member_access(self, obj_name, member_name, token):
         sym = self.symbol_table.lookup(obj_name)
+        field_info = class_sym.fields.get(member_name)
+        if field_info:
+            return field_info.get("type")
+        
         if sym and sym.kind == "variable" and sym.dtype:
             class_sym = self.symbol_table.lookup(sym.dtype)
             if class_sym and class_sym.kind == "class":
@@ -1644,7 +1668,7 @@ class SemanticAnalyzer:
         """Infer expression type knowing the assignment target type."""
         collected = []
         self._collect_operand_types(node, collected)  # recurse fully
-        print(f"[WITH_TARGET] target={target_type} collected={collected}")
+        # print(f"[SYNTAX DEBUG WITH_TARGET] target={target_type} collected={collected}")
         
         churro_count = sum(1 for t in collected if t == "churro")
         

@@ -131,6 +131,7 @@ class IRGenerator:
         self._current_class = None        # track current class being defined
         self._current_field_access = "public"
         self._class_fields = {}           # class_name -> list of field dicts
+        self._class_field_names = set()
         
         # handles the cases for shadowing variables in parent to child stuff in for/while and if/elsif/else cases
         self._scope_depth = 0               
@@ -1425,7 +1426,14 @@ class IRGenerator:
             for a in args:
                 self._emit("PARAM", arg1=a)
             t = self._new_temp()
-            self._emit("CALL", dest=t, arg1=var_name, arg_count=len(args))
+            # sibling method call inside a class method
+            if self._class_field_names and var_name in self._class_field_names \
+                and self._current_class is None:
+
+                self._emit("METHOD_CALL", dest=t, arg1="__self__",
+                        arg2=var_name, arg_count=len(args))
+            else:
+                self._emit("CALL", dest=t, arg1=var_name, arg_count=len(args))
             return t
 
         # Array access: OP_BRACKETS index CL_BRACKETS now with 2d support! hopefully.
@@ -2561,15 +2569,33 @@ class IRGenerator:
         id_tok = self._find_child_token(node, "ID")
         method_name = id_tok.value if id_tok else "_anon_method"
         
-        class_name = self._current_class  # save NOW before touching anything
+        class_name = self._current_class  # save before touching anything
         mangled = f"class_{class_name}__{method_name}"
 
-        self._emit("FUNC_BEGIN", dest=mangled, method_of=class_name)  # emit before clearing
+        self._emit("FUNC_BEGIN", dest=mangled, method_of=class_name)
         
+        # register method name in _class_fields so siblings can find it
+        if class_name not in self._class_fields:
+            self._class_fields[class_name] = []
+        if not any(f["name"] == method_name for f in self._class_fields[class_name]):
+            self._class_fields[class_name].append({
+                "name": method_name, "kind": "method"
+            })
+
         prev_class = self._current_class
-        self._current_class = None   # now safe to clear for body
         prev_func = self._current_func
         self._current_func = mangled
+
+        # populate field+method names so bare calls inside body resolve correctly
+        self._class_field_names = set(
+            f["name"] for f in self._class_fields.get(prev_class, [])
+        )
+        # also include method names registered in _class_fields
+        for entry in self._class_fields.get(prev_class, []):
+            if isinstance(entry, dict) and "name" in entry:
+                self._class_field_names.add(entry["name"])
+
+        self._current_class = None  # clear so body locals don't register as fields
 
         for child in self._get_children(node):
             if self._is_node(child) and child.name == "parameter":
@@ -2581,7 +2607,8 @@ class IRGenerator:
                 self._visit_refill_final(child)
 
         self._current_func = prev_func
-        self._current_class = prev_class  # restore to "point", not None
+        self._current_class = prev_class  # restore class context for next method
+        self._class_field_names = set()   # reset so non-method code isn't affected
         self._emit("FUNC_END", dest=mangled)
 
     def _collect_function_args(self, node):

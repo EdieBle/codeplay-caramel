@@ -1373,13 +1373,17 @@ class StructuredCodeGenerator:
                 self._emit(f"{dest} = {obj}.{member}")
 
             elif op == "MEMBER_SET":
-                obj = self._py_var(instr.dest)
+                obj_raw = instr.dest
+                if getattr(self, '_current_class_name', None) and obj_raw == self._current_class_name:
+                    obj = "self"
+                else:
+                    obj = self._py_var(obj_raw)
                 member = instr.arg1
                 val = self._py_val(instr.arg2)
                 self._emit(f"{obj}.{member} = {val}")
                 
             elif op == "METHOD_CALL":
-                obj = self._py_var(instr.arg1)
+                obj = "self" if instr.arg1 == "__self__" else self._py_var(instr.arg1)
                 method = instr.arg2
                 arg_count = instr.extra.get("arg_count", 0)
                 py_args = []
