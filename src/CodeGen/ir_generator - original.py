@@ -2,32 +2,17 @@
 Intermediate Representation (IR) Generator for CARAMEL Language
 
 Translates the AST (ParseNode tree) from the parser into a linear sequence of
-Three-Address Code (TAC) instructions. Each instruction is an IRInstruction object
-with an op field and operand fields.
-
-PIPELINE POSITION:
-  Parser → [AST] → IRGenerator → [IR list] → Optimizer → CodeGenerator
-
-HOW IT WORKS:
-  1. IRGenerator.generate() calls _visit(ast) which dispatches to _visit_<nodename>()
-     for every node in the AST tree.
-  2. Each visitor either:
-     a) Emits one or more IR instructions via _emit()
-     b) Returns a value (variable name or temp) to its parent visitor
-     c) Both
-  3. Expressions are evaluated bottom-up: leaf nodes return literals/var names,
-     operators emit BINOP and return a temp variable name.
-  4. Statements (assignments, calls, loops) emit side-effect instructions and
-     return nothing.
+Three-Address Code (TAC) instructions. Each instruction is a dictionary with an
+'op' field and operand fields.
 
 IR Instruction Format:
-    IRInstruction(op, dest, arg1, arg2, **extra)
-
-    op    — the operation name (string)
-    dest  — destination variable, label name, or function name
-    arg1  — first operand (variable name, literal value, or label)
-    arg2  — second operand (optional)
-    extra — dict of additional named fields (type, binop, param, etc.)
+    {
+        "op": <operation>,
+        "dest": <destination variable or label>,
+        "arg1": <first operand>,
+        "arg2": <second operand>,          # optional
+        "type": <CARAMEL type>,            # optional, for declarations
+    }
 
 Operations:
     DECLARE     - variable declaration          (dest=var, type=dtype)
@@ -36,75 +21,40 @@ Operations:
     UNARYOP     - unary operation               (dest=temp, arg1, unaryop=op)
     LABEL       - label marker                  (dest=label_name)
     GOTO        - unconditional jump            (dest=label)
-    IF_FALSE    - conditional jump if false     (arg1=cond, dest=label)
-    IF_TRUE     - conditional jump if true      (arg1=cond, dest=label)
-    CALL        - function call                 (dest=temp, arg1=func_name, arg_count=n)
-    METHOD_CALL - object method call            (dest=temp, arg1=obj, arg2=method, arg_count=n)
-    PARAM       - push parameter before CALL    (arg1=value)
-    RETURN      - return from function          (arg1=value, return_type=dtype)
-    FUNC_BEGIN  - function entry point          (dest=func_name, [method_of=class])
-    FUNC_END    - function exit point           (dest=func_name)
-    PRINT       - glaze() output                (args=[val, val, ...])
-    INPUT       - batter@ input                 (dest=var, prompt=str)
-    ARR_DECLARE - array declaration             (dest=var, type=dtype, dims=[size])
-    ARR_STORE   - array element write           (dest=arr, arg1=index, arg2=value)
-    ARR_LOAD    - array element read            (dest=temp, arg1=arr, arg2=index)
+    IF_FALSE    - conditional jump              (arg1=cond, dest=label)
+    IF_TRUE     - conditional jump on true      (arg1=cond, dest=label)
+    CALL        - function call                 (dest=temp, arg1=func_name, args=[...])
+    PARAM       - push parameter                (arg1=value)
+    RETURN      - return from function          (arg1=value)
+    FUNC_BEGIN  - function entry                (dest=func_name)
+    FUNC_END    - function exit                 (dest=func_name)
+    PRINT       - output statement              (args=[...])
+    INPUT       - input statement               (dest=var)
+    ARR_DECLARE - array declaration             (dest=var, type=dtype, dims=[...])
+    ARR_STORE   - array store                   (dest=arr, arg1=index, arg2=value)
+    ARR_LOAD    - array load                    (dest=temp, arg1=arr, arg2=index)
+    NOP         - no operation (placeholder)
     CONCAT      - string concatenation          (dest=temp, arg1, arg2)
     CAST        - type conversion               (dest=temp, arg1=source, type=target)
-    MEMBER_ACC  - object field read             (dest=temp, arg1=obj, arg2=field)
-    MEMBER_SET  - object field write            (dest=obj, arg1=field, arg2=value)
-    CLASS_DEF   - class definition start        (dest=class_name)
-    CLASS_FIELD - class field declaration       (dest=field, type=dtype, class_name=name)
-    CLASS_END   - class definition end          (dest=class_name)
-    NOP         - no operation placeholder
+    MEMBER_ACC  - member access                 (dest=temp, arg1=obj, arg2=member)
 """
 
 import traceback
 
 class IRInstruction:
-    """
-    A single three-address code (TAC) instruction in the Caramel IR.
-
-    Slots (for memory efficiency):
-      op    — operation name string (e.g. 'ASSIGN', 'BINOP', 'IF_FALSE')
-      dest  — destination: variable name, temp name (_t1), label, or function name
-      arg1  — first operand: variable, literal value, or label name
-      arg2  — second operand (optional, used by BINOP, MEMBER_SET, ARR_STORE, etc.)
-      extra — dict of additional keyword fields passed at construction time
-              Common extra keys by op:
-                DECLARE:    type (str), param (bool), constant (bool)
-                BINOP:      binop (operator string: '+', '==', '&&', etc.)
-                UNARYOP:    unaryop ('-' or '!')
-                ARR_DECLARE: dims (list), init (list of values)
-                ARR_LOAD:   is_2d (bool)
-                CALL:       arg_count (int), use_float (bool for rand)
-                METHOD_CALL: arg_count (int), method_of (class name)
-                FUNC_BEGIN: method_of (class name, if this is a method)
-                RETURN:     return_type (Caramel dtype string)
-                INPUT:      array_elem_type (dtype), prompt (str)
-                CLASS_FIELD: type, access, class_name, init, array_size
-                PRINT:      args (list of values)
-    """
+    """Represents a single IR instruction."""
 
     __slots__ = ("op", "dest", "arg1", "arg2", "extra")
 
     def __init__(self, op, dest=None, arg1=None, arg2=None, **extra):
-        """
-        Create an IR instruction.
-        All keyword arguments beyond op/dest/arg1/arg2 are stored in self.extra.
-        Example: IRInstruction('BINOP', dest='_t1', arg1='x', arg2=3, binop='+')
-        """
         self.op = op
         self.dest = dest
         self.arg1 = arg1
         self.arg2 = arg2
         self.extra = extra
+        
 
     def to_dict(self):
-        """
-        Serialize to a plain dict for JSON output / debugging.
-        Only includes fields that are not None, plus all extra kwargs.
-        """
         d = {"op": self.op}
         if self.dest is not None:
             d["dest"] = self.dest
@@ -116,7 +66,6 @@ class IRInstruction:
         return d
 
     def __repr__(self):
-        """Human-readable string, used in DEBUG IRGEN LIST output: IR(op, dest=..., arg1=..., ...)"""
         parts = [self.op]
         if self.dest is not None:
             parts.append(f"dest={self.dest}")
@@ -171,73 +120,24 @@ class IRGenerator:
     }
 
     def __init__(self, ast):
-        """
-        Initialize the IR generator with the root AST node.
-
-        State variables — what they track and why:
-
-        self.ast               — root ParseNode from the parser; starting point for _visit()
-        self.instructions      — the output: flat list of IRInstruction objects built
-                                  incrementally as _visit() walks the AST
-        self._temp_count       — monotonic counter for generating unique temp variable names
-                                  (_t1, _t2, ...). Temps hold intermediate expression results.
-        self._label_count      — monotonic counter for generating unique control-flow labels
-                                  (WHILE_START_1, IF_END_2, etc.)
-        self._var_types        — maps variable name → Caramel type string ('bean', 'drip', etc.)
-                                  Set when DECLARE is emitted, read during assignment coercion
-                                  to decide if a value needs to be converted (e.g. bool→int)
-        self._current_func     — name of the function currently being compiled, or None at
-                                  global scope. Used by refill? to know its context.
-        self._loop_stack       — stack of (continue_label, break_label) tuples, one entry
-                                  per active loop. Pushed by pour/whilehot, popped when the
-                                  loop ends. Lets 'skip' (continue) and 'snap' (break) find
-                                  their target label without searching the IR.
-        self._current_return_type — Caramel dtype of the current function's return type,
-                                  or None for void. Attached to RETURN instructions so the
-                                  codegen can coerce the return value.
-        self._current_class    — name of the class currently being defined (set inside
-                                  _visit_crema_def, cleared after). Tells _visit_crema_acc_body
-                                  and _visit_acc_mod_dec that we're in class context.
-        self._current_field_access — 'public' or 'private', set when CAFE/BACKROOM token
-                                  is seen in _visit_crema_body_cont. Used as access level
-                                  for the next field/method emitted.
-        self._class_fields     — dict: class_name → list of field/method dicts.
-                                  Each dict has 'name', 'type', 'access', optional 'kind'.
-                                  Built during class definition. Used by _visit_crema_method
-                                  to populate _class_field_names for sibling method resolution.
-        self._class_field_names — set of field/method names for the class currently being
-                                  visited inside a method body. Set at method entry, cleared
-                                  at method exit. Lets bare 'increment()' inside a method
-                                  emit METHOD_CALL instead of CALL.
-        self._scope_depth      — integer depth of nested pour loops. Incremented on pour
-                                  entry, decremented on exit. Used to generate unique
-                                  scoped variable names to avoid shadowing bugs.
-        self._shadow_map       — dict: original_var_name → scoped_var_name.
-                                  When a pour loop declares a variable that already exists
-                                  in an outer scope, the inner variable is renamed to
-                                  '_s{depth}_{name}' and the mapping is stored here so
-                                  all references inside the loop use the scoped name.
-        self._shadow_stack     — stack of _shadow_map snapshots, one per active pour loop.
-                                  On loop exit, the previous shadow_map is restored from
-                                  this stack, undoing the inner scope's renames.
-        self._errors           — list of error messages (currently unused, errors are raised
-                                  or printed directly)
-        """
         self.ast = ast
         self.instructions = []
         self._temp_count = 0
         self._label_count = 0
-        self._var_types = {}
-        self._current_func = None
-        self._loop_stack = []
+        self._var_types = {}          # var_name -> caramel_type
+        self._current_func = None     # track current function scope
+        self._loop_stack = []         # stack of (continue_label, break_label)
         self._current_return_type = None
-        self._current_class = None
+        self._current_class = None        # track current class being defined
         self._current_field_access = "public"
-        self._class_fields = {}
+        self._class_fields = {}           # class_name -> list of field dicts
         self._class_field_names = set()
-        self._scope_depth = 0
-        self._shadow_map = {}
-        self._shadow_stack = []
+        
+        # handles the cases for shadowing variables in parent to child stuff in for/while and if/elsif/else cases
+        self._scope_depth = 0               
+        self._shadow_map = {}                
+        self._shadow_stack = [] 
+        
         self._errors = []
 
     # ------------------------------------------------------------------
@@ -245,12 +145,7 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def generate(self):
-        """
-        Entry point. Walk the AST and return the complete IR instruction list.
-        Calls _visit(self.ast) which recursively dispatches to all _visit_<name> methods.
-        The DEBUG IRGEN LIST output is printed here for development visibility.
-        Returns: list of IRInstruction, or empty string on fatal crash.
-        """
+        """Generate IR from the AST. Returns list of IRInstruction objects."""
         
         try:
             if not self.ast:
@@ -285,12 +180,6 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _emit(self, op, **kwargs):
-        """
-        Create an IRInstruction and append it to self.instructions.
-        This is the only way instructions are added — all _visit_* methods call this.
-        Returns the created instruction (occasionally used to retroactively modify it,
-        e.g. upgrading DECLARE→ARR_DECLARE in _visit_dtype_id_tail).
-        """
         instr = IRInstruction(op, **kwargs)
         # DEBUG
         # if op == "DECLARE" and kwargs.get("constant") and kwargs.get("type") is None:
@@ -300,96 +189,44 @@ class IRGenerator:
         self.instructions.append(instr)
         return instr
 
-
     def _new_temp(self):
-        """
-        Generate a new unique temporary variable name: _t1, _t2, _t3, ...
-        Temps hold intermediate expression results that don't correspond to
-        any user-declared variable. They're consumed by the next instruction
-        and never declared — the codegen treats them as local Python variables.
-        """
         self._temp_count += 1
         return f"_t{self._temp_count}"
 
-
     def _new_label(self, hint="L"):
-        """
-        Generate a new unique label name: hint_N (e.g. WHILE_START_1, IF_END_2).
-        Labels mark positions in the IR for control flow (GOTO, IF_FALSE targets).
-        The hint makes the generated IR more readable in debug output.
-        """
         self._label_count += 1
         return f"{hint}_{self._label_count}"
 
-
     def _is_node(self, obj):
-        """
-        Returns True if obj is a ParseNode (has both .name and .children attributes).
-        ParseNodes are the internal nodes of the AST (rules like 'expression', 'primary').
-        Used throughout to distinguish AST nodes from leaf tokens.
-        """
         return hasattr(obj, "name") and hasattr(obj, "children")
 
-
     def _is_token(self, obj):
-        """
-        Returns True if obj is a Token (has .type but NOT .children).
-        Tokens are the leaf nodes of the AST (identifiers, literals, keywords).
-        Example: ID token has .type='ID' and .value='myVar'.
-        """
         return not self._is_node(obj) and hasattr(obj, "type")
 
-
     def _get_children(self, node):
-        """
-        Safely return node.children, or [] if the node has no children attribute.
-        Always use this instead of node.children directly to avoid AttributeError
-        on token nodes that may accidentally be passed as nodes.
-        """
         return node.children if hasattr(node, "children") else []
 
-
     def _find_child_node(self, node, name):
-        """
-        Return the first direct child ParseNode whose .name matches.
-        Non-recursive — only searches immediate children.
-        Returns None if not found.
-        """
+        """Find first child ParseNode with given name."""
         for c in self._get_children(node):
             if self._is_node(c) and c.name == name:
                 return c
         return None
 
-
     def _find_child_token(self, node, token_type):
-        """
-        Return the first direct child Token whose .type matches.
-        Non-recursive — use _find_child_token_deep() for full tree search.
-        Returns None if not found.
-        """
+        """Find first child token with given type."""
         for c in self._get_children(node):
             if self._is_token(c) and c.type == token_type:
                 return c
         return None
 
-
     def _find_all_child_tokens(self, node, token_type):
-        """
-        Return a list of all direct child Tokens with the given type.
-        Example use: _visit_object_def uses this to extract both 'point' and 'p'
-        from 'new point = p' since both are ID tokens.
-        """
+        """Find all child tokens with given type."""
         return [c for c in self._get_children(node)
                 if self._is_token(c) and c.type == token_type]
 
-
     def _extract_dtype(self, node):
-        """
-        Recursively search a node tree for a Caramel type token and return its string.
-        Looks for a 'data_type' node first (the grammar wraps type keywords in this),
-        then falls back to any token in DTYPE_MAP.
-        Returns: 'bean', 'drip', 'churro', 'temp', 'blend', or None.
-        """
+        """Extract CARAMEL data type string from a node tree."""
         if not self._is_node(node):
             if self._is_token(node) and node.type in self.DTYPE_MAP:
                 return self.DTYPE_MAP[node.type]
@@ -404,46 +241,8 @@ class IRGenerator:
                 return result
         return None
 
-
     def _token_to_literal(self, tok):
-        """
-        Convert a literal Token to its Python IR value.
-        The IR stores values as Python native types wherever possible:
-          BEANLIT   → int        (used directly in BINOP arithmetic)
-          DRIPLIT   → float
-          HOT/COLD  → True/False
-          CHURROLIT → str with quotes e.g. "'a'"  (quotes kept so codegen can detect churro)
-          BLENDLIT  → str with quotes e.g. '"hello"' (quotes kept for same reason)
-        """
-        if tok.type == "BEANLIT":
-            return int(tok.value)
-        if tok.type == "DRIPLIT":
-            return float(tok.value)
-        if tok.type == "CHURROLIT":
-            return tok.value  # includes quotes e.g. 'a'
-        if tok.type == "HOT":
-            return True
-        if tok.type == "COLD":
-            return False
-        if tok.type == "BLENDLIT":
-            return tok.value  # includes quotes e.g. "hello"
-        return tok.value
-
-    # ------------------------------------------------------------------
-    # AST Visitor Dispatch
-    # ------------------------------------------------------------------
-
-
-    def _token_to_literal(self, tok):
-        """
-        Convert a literal Token to its Python IR value.
-        The IR stores values as Python native types wherever possible:
-          BEANLIT   → int        (used directly in BINOP arithmetic)
-          DRIPLIT   → float
-          HOT/COLD  → True/False
-          CHURROLIT → str with quotes e.g. "'a'"  (quotes kept so codegen can detect churro)
-          BLENDLIT  → str with quotes e.g. '"hello"' (quotes kept for same reason)
-        """
+        """Convert a literal token to its IR value representation."""
         if tok.type == "BEANLIT":
             return int(tok.value)
         if tok.type == "DRIPLIT":
@@ -463,25 +262,7 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit(self, node):
-        """
-        Central dispatch method — the engine of the IR generator.
-
-        For each AST node, tries to call self._visit_{node.name}(node).
-        If no specific visitor exists, falls back to visiting all children
-        and returning the last non-None result.
-
-        Special cases:
-          - Non-node objects (tokens) → return None immediately
-          - _empty productions → return None (no-op nodes from the parser)
-
-        Return value convention:
-          - Expression visitors (primary, arith_expr, etc.) return a value:
-            either a literal (int/float/bool/str) or a temp variable name string.
-          - Statement visitors (id_dec_stmt, output_stmt, etc.) return None;
-            they produce IR as a side effect via _emit().
-          - The return value propagates upward until consumed by a parent that
-            calls _emit() with it as an operand.
-        """
+        """Dispatch to a _visit_<name> method or walk children."""
         if self._is_node(node) and self._current_class:
             print(f"[VISIT IN CLASS] node={node.name}")
         if not self._is_node(node):
@@ -513,32 +294,18 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_start(self, node):
-        """Root of the AST. Just walks all children to start the traversal."""
         self._visit_children_all(node)
-
 
     def _visit_program(self, node):
-        """Program node — contains global_def and main_def. Walks all children."""
         self._visit_children_all(node)
-
 
     def _visit_global_def(self, node):
-        """Global definition scope — contains function defs, class defs, global vars."""
         self._visit_children_all(node)
-
 
     def _visit_global_dec(self, node):
-        """Individual global declaration — routes to the appropriate def visitor."""
         self._visit_children_all(node)
 
-
     def _visit_children_all(self, node):
-        """
-        Visit all children of a node without returning anything.
-        Used by pass-through nodes that don't need special handling.
-        Different from _visit() fallback — this explicitly iterates all children
-        even when a _visit_<name> method exists and would normally handle it.
-        """
         for child in self._get_children(node):
             self._visit(child)
 
@@ -546,30 +313,17 @@ class IRGenerator:
     # Main Function
     # ------------------------------------------------------------------
 
-
     def _visit_main_def(self, node):
-        """
-        Generate IR for the main function cup().
-        Emits FUNC_BEGIN 'cup', visits the body, then FUNC_END 'cup'.
-        Sets _current_func='cup' while visiting so refill? knows its context.
-        """
         self._emit("FUNC_BEGIN", dest="cup")
         self._current_func = "cup"
         self._visit_children_all(node)
         self._current_func = None
         self._emit("FUNC_END", dest="cup")
 
-
     def _visit_main_body(self, node):
-        """Pass-through — visits all statement children inside cup()."""
         self._visit_children_all(node)
 
-
     def _visit_refill_main(self, node):
-        """
-        Handle 'refill? 0' at the end of cup().
-        Always emits RETURN arg1=0 (main always returns integer 0).
-        """
         # refill? 0  in main
         self._emit("RETURN", arg1=0)
 
@@ -578,24 +332,9 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_dec(self, node):
-        """Pass-through dispatch node for all declaration types."""
         self._visit_children_all(node)
 
-
     def _visit_acc_mod_dec(self, node):
-        """
-        Handle declarations inside a class body (cafe/backroom qualified).
-        Two paths:
-          1. Inside a class (_current_class is set):
-             - Detects CAFE/BACKROOM token to set access level
-             - Extracts dtype and field name
-             - Emits CLASS_FIELD and registers in _class_fields
-             - Returns early without emitting a regular DECLARE
-          2. Outside a class: pass-through to children (normal declaration)
-        This visitor is reached when a declaration has an access modifier token
-        as a sibling — i.e. it's inside a crema body but the grammar routes it
-        through acc_mod_dec rather than crema_acc_body directly.
-        """
         # If inside a class, collect field info
         # print(f"[IRGEN DEBUG ACC_MOD_DEC] _current_class={self._current_class}")
         
@@ -622,9 +361,7 @@ class IRGenerator:
         self._visit_children_all(node)
 
     def _visit_acc_mod_dec_body(self, node):
-        """Pass-through for the body content of an access-modified declaration."""
         self._visit_children_all(node)
-
 
     def _visit_dtype_dec(self, node):
         """Handle typed declaration: data_type ID tail"""
@@ -652,7 +389,6 @@ class IRGenerator:
         if dtype:
             # Recursively find ID token in children
             def find_id(n):
-                """Recursively search for the first ID token in a subtree."""
                 for c in self._get_children(n):
                     if self._is_token(c) and c.type == "ID":
                         return c
@@ -666,17 +402,12 @@ class IRGenerator:
                 self._var_types[id_tok.value] = dtype
         self._visit_children_all(node)
 
-
     def _visit_acc_brewed_body(self, node):
-        """Handle 'brewed' (constant) declarations with access modifiers. Pass-through."""
         dtype = self._extract_dtype(node)
         self._visit_children_all(node)
 
-
     def _visit_acc_dtype_tail(self, node):
-        """Tail of an access-modified declaration — contains the actual variable init. Pass-through."""
         self._visit_children_all(node)
-
 
     def _visit_dtype_id_tail(self, node):
         """Handle dtype ID tail: opt_assign, array decl, etc."""
@@ -804,9 +535,7 @@ class IRGenerator:
         self._visit_children_all(node)
 
     def _visit_var_dec_const_tail(self, node):
-        """Tail of a constant variable declaration (after the ID). Pass-through."""
         self._visit_children_all(node)
-
 
     def _visit_var_dec_tail(self, node):
         """Handle additional variable declarations after comma."""
@@ -841,9 +570,7 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_blend_id_tail(self, node):
-        """Tail after a blend (string) variable name — handles array access or concat. Pass-through."""
         self._visit_children_all(node)
-
 
     def _visit_blend_val(self, node):
         """Handle string value with possible concatenation."""
@@ -875,14 +602,6 @@ class IRGenerator:
         return result
 
     def _visit_blend_term(self, node):
-        """
-        Evaluate a single term in a string concatenation expression.
-        A blend_term can be: ID, BLENDLIT, BEANLIT, DRIPLIT, CHURROLIT, HOT, COLD,
-        an ORDER (global) reference, or a parenthesized expression.
-        Returns the value (literal or variable name) for this term.
-        If the ID has a tail (array access, function call, member access),
-        delegates to _visit_blend_term_id_tail().
-        """
         children = self._get_children(node)
         for i, child in enumerate(children):
             if self._is_token(child) and child.type == "ID":
@@ -942,25 +661,7 @@ class IRGenerator:
                 
         return None
 
-
     def _visit_blend_term_id_tail(self, var_name, tail_node):
-        """
-        Process the tail after an ID inside a string concatenation context (blend_term).
-        This is the blend-specific version of _visit_primary_id_tail — same logic but
-        called from _visit_blend_term instead of _visit_primary.
-
-        Handles:
-          arr[idx]      → emits ARR_LOAD, returns temp
-          arr[row][col] → emits two ARR_LOADs, returns temp
-          func(args)    → emits PARAMs + CALL, returns temp
-          obj.member    → emits MEMBER_ACC, returns temp
-          obj.method()  → emits PARAMs + METHOD_CALL, returns temp
-          (empty)       → returns var_name unchanged
-
-        Parameters:
-          var_name  — the variable name whose tail is being processed
-          tail_node — the blend_term_id_tail ParseNode
-        """
         #"""Process blend_term ID tail: array access or function call in string concat context."""
         children = self._get_children(tail_node)
         if not children:
@@ -1030,12 +731,7 @@ class IRGenerator:
         # Default: just return the variable name
         return var_name
 
-
     def _visit_blend_val_tail(self, node):
-        """
-        Collect additional blend_term values from the tail of a string concat.
-        Returns a list of values to be appended to the running concat in _visit_blend_val.
-        """
         parts = []
         for child in self._get_children(node):
             if self._is_node(child) and child.name == "blend_term":
@@ -1049,15 +745,9 @@ class IRGenerator:
         return parts
 
     def _visit_blend_assign(self, node):
-        """Pass-through for blend (string) assignment statements."""
         self._visit_children_all(node)
 
-
     def _visit_blend_const_init(self, node):
-        """
-        Handle 'brewed blend name = value' constant string declaration.
-        Emits: DECLARE dest=name type=blend constant=True, then ASSIGN dest=name arg1=value.
-        """
         id_tok = self._find_child_token(node, "ID")
         if id_tok:
             var_name = id_tok.value
@@ -1072,30 +762,14 @@ class IRGenerator:
             self._visit_children_all(node)
 
     def _visit_blend_const_init_tail(self, node):
-        """Tail for comma-separated constant blend declarations. Pass-through."""
         self._visit_children_all(node)
 
     # ------------------------------------------------------------------
     # ID-Led Statements (assignments, calls, etc.)
     # ------------------------------------------------------------------
 
-
     def _visit_id_dec_stmt(self, node):
-        """
-        Handle any statement that starts with an identifier.
-        This is the most common statement type — dispatches based on what follows:
-          ID = value         → ASSIGN via _visit_id_dec_tail (EQUALS branch)
-          ID += value        → BINOP + ASSIGN (compound assignment)
-          ID++               → BINOP + ASSIGN (increment)
-          ID[idx] = value    → ARR_STORE
-          ID[r][c] = value   → ARR_LOAD + ARR_STORE (2D)
-          ID.member = value  → MEMBER_SET
-          ID.method(args)    → PARAMs + METHOD_CALL
-          ID(args)           → PARAMs + CALL (or METHOD_CALL if sibling method)
-
-        Applies _shadow_map lookup so loop-scoped variables use their renamed version.
-        Delegates to _visit_id_dec_tail() for the actual IR emission.
-        """
+        """Handle ID-led statement: ID = value, ID++, ID.member, ID(...), etc."""
         id_tok = self._find_child_token(node, "ID")
         if not id_tok:
             self._visit_children_all(node)
@@ -1325,14 +999,7 @@ class IRGenerator:
         self._visit_children_all(node)
 
     def _visit_order_dec_tail(self, node):
-        """
-        Fallback tail handler for order.field statements.
-        The real work is done by _visit_order_dec_tail_with_context() which
-        receives the field name from the parent. This is only reached if
-        the parent routing fails — pass-through.
-        """
         self._visit_children_all(node)
-
 
     def _visit_order_dec_tail_with_context(self, node, arr_name):
         """Handle order.field[index] = value or order.field = value."""
@@ -1385,15 +1052,6 @@ class IRGenerator:
         return left
 
     def _visit_logic_tail(self, left, node):
-        """
-        Process && / || operations in the logic_expr_tail.
-        Takes the already-evaluated left operand and chains BINOP instructions
-        for each logic_op + operand pair found in the tail.
-        Returns the final temp holding the combined boolean result.
-        Parameters:
-          left — temp var or value from the left side of the expression
-          node — the logic_expr_tail ParseNode
-        """
         children = self._get_children(node)
         i = 0
         while i < len(children):
@@ -1413,14 +1071,8 @@ class IRGenerator:
         return left
 
     def _visit_logic_expr_tail(self, node):
-        """
-        No-op stub — logic_expr_tail is consumed by _visit_logic_tail() which
-        receives it as a direct argument from _visit_expression(). This method
-        exists only to prevent the default _visit() fallback from processing it.
-        """
         # Handled by _visit_logic_tail from parent
         return None
-
 
     def _visit_not_factor(self, node):
         """Handle NOT factor: ! expression or just rel_expr."""
@@ -1461,14 +1113,6 @@ class IRGenerator:
         return left
 
     def _visit_rel_tail(self, left, node):
-        """
-        Process relational operators (>, <, >=, <=, ==, !=) in rel_expr_tail.
-        Same pattern as _visit_logic_tail — chains BINOP instructions.
-        Parameters:
-          left — already-evaluated left operand
-          node — rel_expr_tail ParseNode
-        Returns the final temp holding the boolean comparison result.
-        """
         children = self._get_children(node)
         i = 0
         while i < len(children):
@@ -1486,16 +1130,13 @@ class IRGenerator:
         return left
 
     def _visit_rel_expr_tail(self, node):
-        """No-op stub — consumed by _visit_rel_tail() called from _visit_rel_expr()."""
         return None
 
     def _extract_rel_op(self, node):
-        """Extract the operator string from a rel_op node using BINOP_MAP. Defaults to '=='."""
         for child in self._get_children(node):
             if self._is_token(child) and child.type in self.BINOP_MAP:
                 return self.BINOP_MAP[child.type]
         return "=="
-
 
     def _visit_arith_expr(self, node):
         """Handle arithmetic expression: unary_expr arith_expr_tail"""
@@ -1568,11 +1209,9 @@ class IRGenerator:
         return result
 
     def _visit_arith_expr_tail(self, node):
-        """No-op stub — consumed by _visit_arith_tail() called from _visit_arith_expr()."""
         return None
 
     def _extract_arith_op(self, node):
-        """Extract operator string from arithm_op node using BINOP_MAP. Defaults to '+'."""
         for child in self._get_children(node):
             if self._is_token(child) and child.type in self.BINOP_MAP:
                 return self.BINOP_MAP[child.type]
@@ -1618,11 +1257,6 @@ class IRGenerator:
         return None
 
     def _visit_neg_operand(self, node):
-        """
-        Handle the operand of a unary minus expression.
-        Visits the first node child or returns an ID token's value directly.
-        Called by _visit_unary_expr after detecting a MINUS token.
-        """
         for child in self._get_children(node):
             if self._is_node(child):
                 return self._visit(child)
@@ -1866,21 +1500,10 @@ class IRGenerator:
         return var_name
 
     def _visit_primary_dot_tail(self, node):
-        """
-        No-op stub — primary_dot_tail is consumed inline by _visit_primary_id_tail()
-        which checks for OP_PAREN inside it to detect method calls.
-        If this is reached via default dispatch, pass-through.
-        """
         self._visit_children_all(node)
-
 
     def _visit_primary_order_tail(self, node):
-        """
-        No-op stub — primary_order_tail is consumed by _visit_primary_order_tail_with_context()
-        which is called directly from _visit_primary() with the field name in context.
-        """
         self._visit_children_all(node)
-
 
     def _visit_primary_order_tail_with_context(self, node, var_name):
         """Handle order.field[index] array access in expressions."""
@@ -1914,30 +1537,19 @@ class IRGenerator:
         return None
 
     def _visit_assign_val(self, node):
-        """Alias for _visit_value — handles the right-hand side of an assignment."""
         return self._visit_value(node)
 
-
     def _visit_assign_value(self, node):
-        """Alias for _visit_value — alternate grammar node name for assignment RHS."""
         return self._visit_value(node)
 
     # ------------------------------------------------------------------
     # Statements
     # ------------------------------------------------------------------
 
-
     def _visit_statement(self, node):
-        """Top-level statement container — pass-through to the actual statement node."""
         self._visit_children_all(node)
 
-
     def _visit_stmt_tail(self, node):
-        """
-        Statement tail — the continuation of a block body (recursive list structure).
-        In the grammar, bodies are right-recursive: stmt_tail → statement stmt_tail.
-        Pass-through visits all children including the next stmt_tail.
-        """
         # debug
         # for child in self._get_children(node):
         #     print(f"  [STMT_TAIL child] name={getattr(child, 'name', None)}, type={getattr(child, 'type', None)}")
@@ -1946,19 +1558,12 @@ class IRGenerator:
         #             print(f"    [STMT_TAIL grandchild] name={getattr(gc, 'name', None)}, type={getattr(gc, 'type', None)}")
         self._visit_children_all(node)
 
-
     def _visit_stmt_tail_until_snap(self, node):
-        """
-        Statement tail inside a flavour (switch) case body.
-        Like stmt_tail but stops at 'snap' (break). Pass-through — snap is handled
-        by _visit_intrpt_stmt which emits GOTO to the switch end label.
-        """
         self._visit_children_all(node)
 
     # ------------------------------------------------------------------
     # Output (glaze)
     # ------------------------------------------------------------------
-
 
     def _visit_output_stmt(self, node):
         """Handle glaze(args) - output statement."""
@@ -2017,20 +1622,6 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_input_stmt(self, node):
-        """
-        Generate IR for 'batter@' (input) statements.
-        Two paths based on the target:
-          1. Array target (batter@arr[idx](prompt)):
-             - Emits INPUT to a temp, then ARR_STORE to the array element
-          2. Regular variable targets (batter@x, batter@obj.field, batter@order.x):
-             - Calls _collect_input_targets() to find all target variable names
-             - Emits one INPUT instruction per target
-
-        The INPUT instruction carries:
-          dest   — variable name to store into (or temp for array path)
-          prompt — optional string prompt shown to user
-          array_elem_type — dtype of the array element (for typed input validation)
-        """
         # Extract optional prompt from input_val node
         prompt = None
         for child in self._get_children(node):
@@ -2052,22 +1643,11 @@ class IRGenerator:
                 self._emit("INPUT", dest=target, prompt=prompt)
 
     def _find_array_input_target(self, node):
-        """
-        Detect if a batter@ statement targets an array element (e.g. batter@arr[i](prompt)).
-        Recursively scans the node tree for OP_BRACKETS + array_index to determine
-        if the input target is an array element rather than a plain variable.
-        Returns: (arr_name, idx) if array target found, else (None, None).
-        Local vars:
-          ids          — list of ID token values found while walking
-          has_brackets — True if OP_BRACKETS was found (indicates array access)
-          idx          — the evaluated index expression
-        """
         ids = []
         has_brackets = False
         idx = None
 
         def walk(n):
-            """Recursively walk node tree collecting IDs, bracket presence, and index."""
             nonlocal has_brackets, idx
             for child in self._get_children(n):
                 if self._is_token(child) and child.type == "ID":
@@ -2086,7 +1666,6 @@ class IRGenerator:
             return ids[0], idx if idx is not None else 0
         return None, None
     
-
     def _collect_input_targets(self, node):
         """ Collects where the input is going to from the batter@ statement and disambiguates between crema, order, and local."""
         targets = []
@@ -2127,96 +1706,26 @@ class IRGenerator:
         return targets
         
     def _visit_input_args(self, node):
-        """Pass-through for the argument list of a batter@ statement."""
         self._visit_children_all(node)
 
-
     def _visit_input_args_unit(self, node):
-        """Pass-through for a single argument unit in batter@ (one variable target)."""
         self._visit_children_all(node)
 
     # ------------------------------------------------------------------
     # Control Flow: If / Else If / Else
     # ------------------------------------------------------------------
 
-
     def _visit_if_cond(self, node):
         """
-        Entry point for if/elifroth/elspress chains.
-        Creates a shared end_label then delegates to _generate_if_chain().
-        Emits: LABEL end_label after the full chain to mark where all branches converge.
+        Generate IR for if/else-if/else chain.
+
+        ifbrew (cond) { body } elifroth (cond) { body } elspress { body }
         """
         end_label = self._new_label("IF_END")
         self._generate_if_chain(node, end_label)
         self._emit("LABEL", dest=end_label)
 
-
     def _generate_if_chain(self, node, end_label):
-        """
-        Recursively generate IR for one if/elifroth branch of a conditional chain.
-
-        Pattern emitted:
-          [condition BINOPs]
-          IF_FALSE cond → else_label
-          [if-body statements]
-          GOTO end_label
-          LABEL else_label
-          [else/elifroth body via _visit_if_cond_tail]
-
-        Parameters:
-          node      — the if_cond ParseNode (or elifroth node for recursion)
-          end_label — shared label where ALL branches (if/elifroth/else) jump on completion
-
-        Local vars:
-          cond_node     — the expression node for the condition (stored, not visited yet)
-          body_children — list of statement nodes in the if-body
-          tail_node     — the if_cond_tail node (contains elifroth/elspress chain)
-          else_label    — new label where this branch jumps if condition is false
-
-        Important: cond_node is visited AFTER prior GOTO is emitted — this avoids
-        the condition BINOPs appearing before the jump in the wrong branch.
-        """
-        children = self._get_children(node)
-
-        cond_node = None
-        body_children = []
-        tail_node = None
-        in_body = False
-
-        for child in children:
-            if self._is_node(child) and child.name == "expression" and cond_node is None:
-                cond_node = child          # ← store node, don't visit yet
-            elif self._is_token(child) and child.type == "OP_BRACES":
-                in_body = True
-            elif self._is_token(child) and child.type == "CL_BRACES":
-                in_body = False
-            elif self._is_node(child) and child.name == "if_cond_tail":
-                tail_node = child
-            elif in_body or (self._is_node(child) and child.name in
-                            ("statement", "stmt_tail")):
-                body_children.append(child)
-
-        else_label = self._new_label("ELSE")
-        if cond_node is not None:
-            cond = self._visit(cond_node)  # ← evaluate HERE, after prior GOTO is emitted
-            self._emit("IF_FALSE", arg1=cond, dest=else_label)
-
-        for bc in body_children:
-            self._visit(bc)
-
-        self._emit("GOTO", dest=end_label)
-        self._emit("LABEL", dest=else_label)
-
-        if tail_node:
-            self._visit_if_cond_tail(tail_node, end_label)
-            
-
-    def _generate_if_chain(self, node, end_label):
-        """
-        Generate IR for one if/elifroth branch. Called by _visit_if_cond and recursively
-        by _visit_if_cond_tail for each elifroth. Emits IF_FALSE → body → GOTO end_label
-        → LABEL else_label, then routes the tail to _visit_if_cond_tail.
-        """
         children = self._get_children(node)
 
         cond_node = None
@@ -2252,16 +1761,6 @@ class IRGenerator:
             self._visit_if_cond_tail(tail_node, end_label)
             
     def _visit_if_cond_tail(self, node, end_label):
-        """
-        Handle the tail of an if statement — elifroth or elspress.
-        Three cases:
-          empty       → nothing to emit
-          ELIFROTH    → recurse into _generate_if_chain() (another if branch)
-          ELSPRESS    → visit the else body statements directly
-        Parameters:
-          node      — the if_cond_tail ParseNode
-          end_label — passed through so all branches jump to the same end
-        """
         children = self._get_children(node)
         if not children:
             return
@@ -2295,7 +1794,6 @@ class IRGenerator:
     # Control Flow: Switch (flavour)
     # ------------------------------------------------------------------
 
-
     def _visit_flav_switch(self, node):
         """Generate IR for switch statement."""
         end_label = self._new_label("SWITCH_END")
@@ -2315,18 +1813,12 @@ class IRGenerator:
         self._emit("LABEL", dest=end_label)
 
     def _visit_flav_lit(self, node):
-        """
-        Extract the switch expression value from a flavour(expr) statement.
-        Returns the variable name (for ID) or literal value (for literals).
-        Used by _visit_flav_switch to get the value being switched on.
-        """
         for child in self._get_children(node):
             if self._is_token(child):
                 if child.type == "ID":
                     return child.value
                 return self._token_to_literal(child)
         return None
-
 
     def _visit_syrup_switch(self, node, switch_val, end_label):
         """Generate IR for each case."""
@@ -2371,16 +1863,10 @@ class IRGenerator:
                     self._visit_syrup_switch(child, switch_val, end_label)
 
     def _visit_case_lit(self, node):
-        """
-        Extract the case value from a 'syrup N:' case declaration.
-        Returns the literal value for this case (int, float, char, etc.).
-        Used by _visit_syrup_switch to know what value triggers this branch.
-        """
         for child in self._get_children(node):
             if self._is_token(child):
                 return self._token_to_literal(child)
         return None
-
 
     def _visit_defoam_stmt(self, node, end_label):
         """Generate IR for default case."""
@@ -2492,12 +1978,7 @@ class IRGenerator:
                     break
 
     def _visit_update(self, node):
-        """
-        Process the update clause of a pour loop (the third part: i++, i+=1, etc.).
-        Pass-through — routes to _visit_update_unit for each update expression.
-        """
         self._visit_children_all(node)
-
 
     def _visit_update_unit(self, node):
         """Handle update unit: ID++ / ID-- / ++ID / --ID / ID op= val"""
@@ -2613,25 +2094,17 @@ class IRGenerator:
                 return
 
     def _extract_assign_op(self, node):
-        """
-        Extract the operator string from an assign_op node using ASSIGN_OP_MAP.
-        Returns '=', '+', '-', '*', or '/' for the corresponding assignment operators.
-        Defaults to '=' if no known token is found.
-        """
         for child in self._get_children(node):
             if self._is_token(child) and child.type in self.ASSIGN_OP_MAP:
                 return self.ASSIGN_OP_MAP[child.type]
         return "="
 
-
     def _visit_update_tail(self, node):
-        """Pass-through for additional update expressions after a comma in the update clause."""
         self._visit_children_all(node)
 
     # ------------------------------------------------------------------
     # Control Flow: Whilehot Loop (while)
     # ------------------------------------------------------------------
-
 
     def _visit_whilehot_loop(self, node):
         """Generate IR for: whilehot (cond) { body }"""
@@ -2736,17 +2209,7 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_recipe_def(self, node):
-        """
-        Generate IR for a named returning function (recipe returntype name(params) [...]).
-        Emits: FUNC_BEGIN → params (DECLARE param=True) → body → FUNC_END.
-        Sets _current_func and _current_return_type while visiting the body so
-        refill? knows both the function name and the expected return type for coercion.
-        Local vars:
-          func_name          — function name from ID token
-          dtype              — return type from recipe_ret_type child node
-          prev_func          — saved _current_func to restore after
-          prev_return_type   — saved _current_return_type to restore after
-        """
+        """Generate IR for function definition."""
         id_tok = self._find_child_token(node, "ID")
         func_name = id_tok.value if id_tok else "_anon"
 
@@ -2777,17 +2240,10 @@ class IRGenerator:
         self._current_return_type = prev_return_type
         self._emit("FUNC_END", dest=func_name)
 
-
     def _visit_recipe_body(self, node):
-        """Pass-through — visits all statement children in the function body."""
         self._visit_children_all(node)
 
-
     def _visit_recipe_ret_type(self, node):
-        """
-        No-op — the return type node is read by _visit_recipe_def() via _extract_dtype()
-        before visiting children. This stub prevents default _visit() fallback.
-        """
         return None  # type info only, not executable
 
     # ------------------------------------------------------------------
@@ -2795,12 +2251,6 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_empty_def(self, node):
-        """
-        Generate IR for a void function (empty returntype name(params) [...]).
-        Same structure as _visit_recipe_def but always emits RETURN arg1=None at the end
-        since void functions have no explicit return value.
-        Emits: FUNC_BEGIN → params → body → RETURN None → FUNC_END.
-        """
         id_tok = self._find_child_token(node, "ID")
         func_name = id_tok.value if id_tok else "_anon_void"
 
@@ -2828,15 +2278,12 @@ class IRGenerator:
         self._emit("FUNC_END", dest=func_name)
         # print(f"[DEBUG] emitted FUNC_END for {func_name}, total instrs={len(self.instructions)}")  # debug, pls check if the optimizer is messing with it again
 
-
     def _visit_empty_body(self, node):
-        """Pass-through — visits all statement children in the void function body."""
         self._visit_children_all(node)
 
     # ------------------------------------------------------------------
     # Parameters
     # ------------------------------------------------------------------
-
 
     def _visit_parameter(self, node):
         """Process function parameters and emit DECLARE for each."""
@@ -2909,11 +2356,6 @@ class IRGenerator:
         self._emit("RETURN", arg1=val, return_type=self._current_return_type)
 
     def _visit_refill_arg(self, node):
-        """
-        Extract the return value from a refill? argument node.
-        Tries in order: refill_content node → any non-paren node child → literal token.
-        Returns 0 as fallback (refill? with no explicit value in main).
-        """
         for child in self._get_children(node):
             if self._is_node(child) and child.name == "refill_content":
                 return self._visit(child)
@@ -2925,12 +2367,7 @@ class IRGenerator:
                 return int(child.value)
         return 0
 
-
     def _visit_refill_content(self, node):
-        """
-        Evaluate the expression inside refill?(expr).
-        Returns the literal value or visits the expression node to get a temp/var name.
-        """
         for child in self._get_children(node):
             if self._is_token(child) and child.type in self.LITERAL_TYPES:
                 return self._token_to_literal(child)
@@ -2942,16 +2379,9 @@ class IRGenerator:
     # Classes (crema)
     # ------------------------------------------------------------------
 
-
     def _visit_crema_def(self, node):
-        """
-        Generate IR for a class definition (crema classname [...]).
-        Sets _current_class to the class name so field/method visitors know they're
-        inside a class context. Emits CLASS_DEF at the start and CLASS_END at the end.
-        Also initializes _class_fields[class_name] = [] to track all fields/methods.
-        The class body (fields and methods) is emitted between CLASS_DEF and CLASS_END
-        via _visit_children_all → _visit_crema_body → _visit_crema_body_cont.
-        """
+        """Generate IR for class definition.
+        Emits CLASS_DEF with fields, then individual FIELD_DECL instructions."""
         id_tok = self._find_child_token(node, "ID")
         class_name = id_tok.value if id_tok else "_anon_class"
         self._current_class = class_name
@@ -2962,21 +2392,10 @@ class IRGenerator:
         self._emit("CLASS_END", dest=class_name)
         self._current_class = None
 
-
     def _visit_crema_body(self, node):
-        """Pass-through — visits all crema_body_cont children (fields and methods)."""
         self._visit_children_all(node)
 
-
     def _visit_crema_body_cont(self, node):
-        """
-        Process one member declaration inside a class body.
-        First pass: reads CAFE/BACKROOM token to set _current_field_access.
-        Second pass: delegates the crema_acc_body child to _visit_crema_acc_body()
-        which handles both field declarations and method definitions.
-        Does NOT call _visit_children_all() — only processes crema_acc_body nodes
-        to avoid re-visiting field initializers as regular statements.
-        """
         for child in self._get_children(node):
             if self._is_token(child) and child.type == "CAFE":
                 self._current_field_access = "public"
@@ -3059,15 +2478,6 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_object_def(self, node):
-        """
-        Generate IR for 'new ClassName = objName' (class instantiation).
-        Extracts the two ID tokens: class name and instance variable name.
-        Emits:
-          DECLARE dest=objName type=ClassName  (so codegen knows the type)
-          CALL    dest=objName arg1=new_ClassName arg_count=0
-        The CALL to 'new_ClassName' is resolved by the codegen to '_func_new_ClassName()'
-        which returns a fresh Python instance of _Caramel_ClassName.
-        """
         ids = self._find_all_child_tokens(node, "ID")
         if len(ids) >= 2:
             class_name = ids[0].value
@@ -3081,15 +2491,9 @@ class IRGenerator:
     # Arrays
     # ------------------------------------------------------------------
 
-
     def _visit_arr_dec_dim(self, node):
-        """
-        No-op stub — array dimension info is consumed upstream by _visit_dtype_id_tail()
-        which reads arr_size_val and arr_dec_dim before they're visited by default dispatch.
-        """
         # Handled by _visit_dtype_id_tail
         pass
-
 
     def _collect_arr_init_values(self, node):
         """Collect initial values from arr_dec_dim."""
@@ -3138,21 +2542,10 @@ class IRGenerator:
         return rows
 
     def _visit_arr_cont_1d(self, node):
-        """
-        No-op stub — 1D array content is collected by _collect_arr_init_values_1d()
-        which reads the arr_elem children directly. Default dispatch here would
-        re-process them unnecessarily.
-        """
         self._visit_children_all(node)
-
 
     def _visit_arr_cont_2d(self, node):
-        """
-        No-op stub — 2D array content is collected by _collect_arr_init_values_2d()
-        which reads rows from opt_arr_elems children directly.
-        """
         self._visit_children_all(node)
-
 
     def _visit_arr_elem(self, node):
         """Extract a single array element value."""
@@ -3194,28 +2587,6 @@ class IRGenerator:
         return None
 
     def _visit_crema_method(self, node):
-        """
-        Generate IR for a method defined inside a crema class.
-        Called by _visit_crema_acc_body when it detects a RECIPE/EMPTY token.
-
-        Key steps:
-        1. Extracts method name and saves class_name before clearing _current_class
-        2. Mangles the name: 'describe' in class 'point' → 'class_point__describe'
-        3. Registers the method in _class_fields so sibling methods can find it
-        4. Populates _class_field_names with all fields/methods of this class
-           so bare references like 'increment()' inside the body emit METHOD_CALL
-        5. Clears _current_class=None during body visit so local variable declarations
-           don't accidentally get registered as class fields
-        6. Restores _current_class and clears _class_field_names after body
-
-        Emits: FUNC_BEGIN (with method_of=class_name) → params → body → FUNC_END
-
-        Local vars:
-          class_name  — saved _current_class (e.g. 'counter')
-          mangled     — namespaced function name (e.g. 'class_counter__increment')
-          prev_class  — same as class_name, used to restore _current_class
-          prev_func   — saved _current_func to restore after method body
-        """
         id_tok = self._find_child_token(node, "ID")
         method_name = id_tok.value if id_tok else "_anon_method"
         
@@ -3261,7 +2632,6 @@ class IRGenerator:
         self._class_field_names = set()   # reset so non-method code isn't affected
         self._emit("FUNC_END", dest=mangled)
 
-
     def _collect_function_args(self, node):
         """Collect evaluated arguments from function call nodes."""
         args = []
@@ -3275,11 +2645,6 @@ class IRGenerator:
         return args
 
     def _visit_function_args_node(self, node):
-        """
-        Evaluate a single function_args node (one argument in a call).
-        Returns the value: BLENDLIT string → raw string, expression → visits and returns result.
-        Called by _collect_function_args() for each argument in a function call.
-        """
         for child in self._get_children(node):
             if self._is_token(child) and child.type == "BLENDLIT":
                 return child.value
@@ -3288,7 +2653,6 @@ class IRGenerator:
             if self._is_node(child) and child.name != "_empty":
                 return self._visit(child)
         return None
-
 
     def _extract_array_index_expr(self, node):
         """Extract array index by evaluating expressions (supports variables and arithmetic)."""
@@ -3306,17 +2670,6 @@ class IRGenerator:
         return 0
 
     def _extract_array_index(self, node):
-        """
-        Extract a simple array index from a node containing an array_index child.
-        Handles: BEANLIT (constant), ID (variable), expression (evaluated).
-        Also handles bare BEANLIT tokens as direct children.
-        Returns 0 if no index found.
-
-        Difference from _extract_array_index_expr():
-          This version is used in blend/string concat contexts where the parent node
-          structure may be slightly different. _extract_array_index_expr() is used
-          in statement contexts (assignment, id_dec_tail).
-        """
         for child in self._get_children(node):
             if self._is_node(child) and child.name == "array_index":
                 for c2 in self._get_children(child):
@@ -3379,9 +2732,4 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_data_type(self, node):
-        """
-        No-op stub — data_type nodes are read by _extract_dtype() before visiting,
-        not by dispatching. If this is reached via default _visit(), return None
-        to prevent the type keyword from being interpreted as a value.
-        """
         return None
