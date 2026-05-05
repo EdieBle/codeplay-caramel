@@ -658,7 +658,8 @@ class SemanticAnalyzer:
             if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
                 func_name = child.value
                 break
-
+        
+        print(f"[DEBUG crema_method] registering {func_name}, current fields: {list(self._current_class_sym.fields.keys()) if self._current_class_sym else 'None'}")
         return_type = self._extract_return_type(node)
 
         if func_name and self._current_class_sym is not None:
@@ -920,7 +921,7 @@ class SemanticAnalyzer:
 
     def _visit_primary(self, node):
         """Visit primary: check for undeclared variables and built-in calls."""
-
+        
         var_name = None
         for child in node.children:
             if self._is_parse_node(child):
@@ -971,6 +972,9 @@ class SemanticAnalyzer:
             elif child.type == "TYPE":
                 self._visit_type_arg(node)
                 return
+            
+        if self.current_class and self._current_class_sym:
+            print(f"[DEBUG primary] checking {var_name} in fields: {list(self._current_class_sym.fields.keys())}")
         self._visit_children(node)
     
     # Statements
@@ -1207,6 +1211,12 @@ class SemanticAnalyzer:
             symbol = self.symbol_table.lookup(lookup_name)
 
             if not symbol:
+                # allow bare sibling method calls inside a class method
+                if self.current_class and self._current_class_sym and \
+                var_name in self._current_class_sym.fields and \
+                self._current_class_sym.fields[var_name].get("kind") == "method":
+                    self._visit_children(node)
+                    return
                 self._error("E002", f"Undeclared identifier '{var_name}'", id_token)
                 self._visit_children(node)
                 return
@@ -1528,25 +1538,25 @@ class SemanticAnalyzer:
         """Infer type of primary expression."""
         if not hasattr(node, 'children') or not node.children:
             return None
-        
+
+        id_token = next(
+            (c for c in node.children
+            if not self._is_parse_node(c) and hasattr(c, 'type') and c.type == "ID"),
+            None
+        )
+
+        if id_token:
+            symbol = self.symbol_table.lookup(id_token.value)
+            if symbol:
+                member_type = self._infer_member_type(node, id_token.value)
+                return member_type if member_type else symbol.dtype
+
         for child in node.children:
-            if not self._is_parse_node(child):
-                if hasattr(child, 'type'):
-                    if child.type == "ID":
-                        # Look up variable type
-                        symbol = self.symbol_table.lookup(child.value)
-                        if symbol:
-                            return symbol.dtype
-                    return self._infer_type_from_literal(child.type)
-            elif child.name == "ID":
-                var_name = self._extract_token_value(child)
-                if var_name:
-                    symbol = self.symbol_table.lookup(var_name)
-                    if symbol:
-                        return symbol.dtype
-        
+            if not self._is_parse_node(child) and hasattr(child, 'type'):
+                return self._infer_type_from_literal(child.type)
+
         return None
-        
+
     def _infer_expression_type(self, node):
         collected = []
         self._collect_operand_types(node, collected)
@@ -1646,23 +1656,48 @@ class SemanticAnalyzer:
     # HELPER METHODS
     # ========================================================================
     
+    def _infer_member_type(self, primary_node, obj_name):
+        """If primary has a .member access, return the member's type. Else None."""
+        for child in primary_node.children:
+            if not self._is_parse_node(child) or child.name != "primary_id_tail":
+                continue
+            children = list(child.children)
+            for i, c in enumerate(children):
+                if not self._is_parse_node(c) and hasattr(c, 'type') and c.type == "DOT_ACC":
+                    if i + 1 < len(children):
+                        mem = children[i + 1]
+                        if hasattr(mem, 'type') and mem.type == "ID":
+                            result = self._check_member_access(obj_name, mem.value, mem)
+                            print(f"[DEBUG _infer_member_type] obj={obj_name} member={mem.value} → {result}")
+                            return result
+        return None
+        
+
     def _check_member_access(self, obj_name, member_name, token):
         sym = self.symbol_table.lookup(obj_name)
+        
+        print(f"[DEBUG _check_member_access] obj={obj_name} sym={sym} dtype={getattr(sym,'dtype',None)}")
+        
+        if not sym or sym.kind != "variable" or not sym.dtype:
+            return None
+
+        class_sym = self.symbol_table.lookup(sym.dtype)
+        print(f"[DEBUG _check_member_access] class_sym={class_sym} fields={getattr(class_sym,'fields',None)}")
+        if not class_sym or class_sym.kind != "class":
+            return None
+
         field_info = class_sym.fields.get(member_name)
         if field_info:
+            if field_info.get("access") == "private":
+                if self.current_class != sym.dtype:
+                    self._error(
+                        "E_ACCESS",
+                        f"Cannot access private member '{member_name}' of class '{sym.dtype}'",
+                        token
+                    )
             return field_info.get("type")
-        
-        if sym and sym.kind == "variable" and sym.dtype:
-            class_sym = self.symbol_table.lookup(sym.dtype)
-            if class_sym and class_sym.kind == "class":
-                field = class_sym.fields.get(member_name)
-                if field and field["access"] == "private":
-                    if self.current_class != sym.dtype:
-                        self._error(
-                            "E_ACCESS",
-                            f"Cannot access private member '{member_name}' of class '{sym.dtype}'",
-                            token
-                        )
+
+        return None
     
     def _infer_expression_type_with_target(self, node, target_type):
         """Infer expression type knowing the assignment target type."""
@@ -1788,7 +1823,8 @@ class SemanticAnalyzer:
         """Extract return type from a recipe node."""
         if not hasattr(node, 'children'):
             return None
-        
+
+        # standard recipe_ret_type wrapper
         for child in node.children:
             if self._is_parse_node(child) and child.name == "recipe_ret_type":
                 if child.children:
@@ -1799,7 +1835,19 @@ class SemanticAnalyzer:
                             return name
                     elif hasattr(first, 'type') and first.type == "BLEND":
                         return "blend"
-        
+
+        # crema method: data_type is a direct child
+        for child in node.children:
+            if self._is_parse_node(child) and child.name == "data_type":
+                if child.children:
+                    first = child.children[0]
+                    if hasattr(first, 'type'):
+                        type_map = {
+                            "BEAN": "bean", "DRIP": "drip", "BLEND": "blend",
+                            "TEMP": "temp", "CHURRO": "churro"
+                        }
+                        return type_map.get(first.type)
+
         return None
     
     def _find_token_location(self, node, _depth=0):

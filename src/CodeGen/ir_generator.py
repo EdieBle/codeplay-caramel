@@ -919,12 +919,17 @@ class IRGenerator:
          
         # Function call: (args)
         if (self._is_node(first) and first.name == "OP_PAREN") or \
-           (self._is_token(first) and first.type == "OP_PAREN"):
+        (self._is_token(first) and first.type == "OP_PAREN"):
             args = self._collect_function_args(tail_node)
             for a in args:
                 self._emit("PARAM", arg1=a)
             t = self._new_temp()
-            self._emit("CALL", dest=t, arg1=var_name, arg_count=len(args))
+            if self._class_field_names and var_name in self._class_field_names \
+                    and self._current_class is None:
+                self._emit("METHOD_CALL", dest=t, arg1="__self__",
+                        arg2=var_name, arg_count=len(args))
+            else:
+                self._emit("CALL", dest=t, arg1=var_name, arg_count=len(args))
             return
 
         # Dot access: obj.member = value (MEMBER_SET)
@@ -1435,6 +1440,8 @@ class IRGenerator:
             else:
                 self._emit("CALL", dest=t, arg1=var_name, arg_count=len(args))
             return t
+
+        print(f"[IRGEN DEBUG OP_PAREN] var={var_name} _class_field_names={self._class_field_names} _current_class={self._current_class}")
 
         # Array access: OP_BRACKETS index CL_BRACKETS now with 2d support! hopefully.
         if (self._is_node(first) and first.name == "OP_BRACKETS") or \
