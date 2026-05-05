@@ -1,0 +1,843 @@
+~~ ============================================================
+~~ GLOBAL DECLARATIONS
+~~ ============================================================
+~~ MP50 - Matrix
+bean a[9] = [0,0,0,0,0,0,0,0,0]
+bean b[9] = [0,0,0,0,0,0,0,0,0]
+bean r[9] = [0,0,0,0,0,0,0,0,0]
+bean rows = 3
+bean cols = 3
+
+~~ MP51 - Student Record
+blend student_name[***]
+bean student_number[***]
+blend student_course[***]
+
+~~ MP53 - Jeepney
+bean seatarr[22]
+~~ ============================================================
+~~ MP50 - MATRIX OPERATIONS
+~~ ============================================================
+empty inputa() [
+    bean i = 0
+    whilehot(i < rows) {
+        bean j = 0
+        whilehot(j < cols) {
+            bean index = (i * cols) + j
+            glaze("A[" + i + "][" + j + "]: ")
+            batter@ a[index]
+            j++
+        }
+        i++
+    }
+    refill?
+]
+empty inputb() [
+    bean i = 0
+    whilehot(i < rows) {
+        bean j = 0
+        whilehot(j < cols) {
+            bean index = (i * cols) + j
+            glaze("B[" + i + "][" + j + "]: ")
+            batter@ b[index]
+            j++
+        }
+        i++
+    }
+    refill?
+]
+
+empty displaya() [
+    bean i = 0
+    whilehot(i < rows) {
+        bean j = 0
+        whilehot(j < cols) {
+            bean index = (i * cols) + j
+            glaze(a[index] + " ")
+            j++
+        }
+        glaze("\n")
+        i++
+    }
+    refill?
+]
+
+empty displayb() [
+    bean i = 0
+    whilehot(i < rows) {
+        bean j = 0
+        whilehot(j < cols) {
+            bean index = (i * cols) + j
+            glaze(b[index] + " ")
+            j++
+        }
+        glaze("\n")
+        i++
+    }
+    refill?
+]
+
+empty displayr() [
+    bean i = 0
+    whilehot(i < rows) {
+        bean j = 0
+        whilehot(j < cols) {
+            bean index = (i * cols) + j
+            glaze(r[index] + " ")
+            j++
+        }
+        glaze("\n")
+        i++
+    }
+    refill?
+]
+
+empty addmatrix() [
+    inputa()
+    inputb()
+    bean i = 0
+    whilehot(i < rows * cols) {
+        r[i] = a[i] + b[i]
+        i++
+    }
+    glaze("Result:\n")
+    displayr()
+    refill?
+]
+
+empty subtractmatrix() [
+    inputa()
+    inputb()
+    bean i = 0
+    whilehot(i < rows * cols) {
+        r[i] = a[i] - b[i]
+        i++
+    }
+    glaze("Result:\n")
+    displayr()
+    refill?
+]
+
+empty multiplymatrix() [
+    inputa()
+    inputb()
+    bean i = 0
+    whilehot(i < rows) {
+        bean j = 0
+        whilehot(j < cols) {
+            bean sum = 0
+            bean k = 0
+            whilehot(k < cols) {
+                bean ia = (i * cols) + k
+                bean ib = (k * cols) + j
+                sum = sum + (a[ia] * b[ib])
+                k++
+            }
+            bean ir = (i * cols) + j
+            r[ir] = sum
+            j++
+        }
+        i++
+    }
+    glaze("Result:\n")
+    displayr()
+    refill?
+]
+
+empty transposematrix() [
+    inputa()
+    bean i = 0
+    whilehot(i < rows) {
+        bean j = 0
+        whilehot(j < cols) {
+            bean ia = (i * cols) + j
+            bean ir = (j * rows) + i
+            r[ir] = a[ia]
+            j++
+        }
+        i++
+    }
+    glaze("Transpose:\n")
+    displayr()
+    refill?
+]
+
+empty run_matrix() [
+    bean choice = 0
+    bean running = 1
+    whilehot(running == 1) {
+        glaze("\n=== MP50: Caramel Matrix Menu ===\n")
+        glaze("[1] Matrix Addition\n")
+        glaze("[2] Matrix Subtraction\n")
+        glaze("[3] Matrix Multiplication\n")
+        glaze("[4] Matrix Transpose\n")
+        glaze("[5] Back to Main Menu\n")
+        batter@choice("Choice: ")
+        flavour(choice) {
+            syrup 1:
+                addmatrix()
+            snap
+            syrup 2:
+                subtractmatrix()
+            snap
+            syrup 3:
+                multiplymatrix()
+            snap
+            syrup 4:
+                transposematrix()
+            snap
+            syrup 5:
+                running = 0
+            snap
+            defoam:
+                glaze("Invalid choice.\n")
+            snap
+        }
+    }
+    refill?
+]
+
+~~ ============================================================
+~~ MP51 - STUDENT RECORD
+~~ ============================================================
+empty change_studrec() [
+    bean record_count = 0
+    blend inputname = ""
+    bean inputnumber = 0
+    blend inputcourse = ""
+    temp is_found = cold
+    bean edit_choice = 0
+    bean del_choice = 0
+    bean choice = 0
+    temp run_program = hot
+    glaze("====================== Student Record Menu ======================\n\n")
+    whilehot(run_program == hot) {
+        glaze("Menu:\n")
+        glaze("[1] Add a Record\n")
+        glaze("[2] Display All Records\n")
+        glaze("[3] Display Record (Individual)\n")
+        glaze("[4] Edit Student Record\n")
+        glaze("[5] Delete Student Records\n")
+        glaze("[6] Back to Main Menu\n")
+        batter@choice("Action: ")
+
+        flavour(choice) {
+            syrup 1:
+                temp is_valid_num = cold
+                temp is_duplicate = cold
+                glaze("Adding a Record...\n\n")
+                batter@inputname("Enter student name: ")
+                whilehot(is_valid_num == cold) {
+                    batter@inputnumber("Enter student number: ")
+                    ifbrew(inputnumber > 0) {
+                        is_duplicate = cold
+                        pour(bean i = 0; i < record_count; i++) {
+                            ifbrew(student_number[i] == inputnumber) {
+                                is_duplicate = hot
+                            }
+                        }
+                        ifbrew(is_duplicate == hot) {
+                            glaze("Error! Student number already exists.\n\n")
+                        } elspress {
+                            is_valid_num = hot
+                        }
+                    } elspress {
+                        glaze("Error! Please enter a positive student number.\n\n")
+                    }
+                }
+                batter@inputcourse("Enter course: ")
+                student_name[record_count] = inputname
+                student_number[record_count] = inputnumber
+                student_course[record_count] = inputcourse
+                record_count = record_count + 1
+                glaze("\nRecord added successfully!\n\n")
+            snap
+
+            syrup 2:
+                glaze("Displaying All Records...\n\n")
+                ifbrew(record_count == 0) {
+                    glaze("No records found.\n\n")
+                } elspress {
+                    glaze("===================== All Student Records =====================\n\n")
+                    glaze("---------------------------------------------------------------\n")
+                    glaze("Record#\t\tName\t\tStudent Number\t\tCourse\n")
+                    glaze("---------------------------------------------------------------\n")
+                    pour(bean i = 0; i < record_count; i++) {
+                        glaze((i+1) + "\t\t" + student_name[i] + "\t\t" + student_number[i] + "\t\t" + student_course[i] + "\n\n")
+                    }
+                }
+            snap
+
+            syrup 3:
+                glaze("Searching a Record...\n\n")
+                ifbrew(record_count == 0) {
+                    glaze("No records found.\n\n")
+                } elspress {
+                    is_found = cold
+                    batter@inputnumber("Enter student number to search: ")
+                    pour(bean i = 0; i < record_count; i++) {
+                        ifbrew(student_number[i] == inputnumber) {
+                            is_found = hot
+                            glaze("=======================  Search Records  =======================\n\n")
+                            glaze("---------------------------------------------------------------\n")
+                            glaze("Record#\t\tName\t\tStudent Number\t\tCourse\n")
+                            glaze("---------------------------------------------------------------\n")
+                            glaze((i+1) + "\t\t" + student_name[i] + "\t\t" + student_number[i] + "\t\t" + student_course[i] + "\n\n")
+                        }
+                    }
+                    ifbrew(is_found == cold) {
+                        glaze("Error! Student number not found.\n\n")
+                    }
+                }
+            snap
+
+            syrup 4:
+                glaze("Editing Records...\n\n")
+                ifbrew(record_count == 0) {
+                    glaze("No records found.\n\n")
+                } elspress {
+                    is_found = cold
+                    batter@inputnumber("Enter student number to edit: ")
+                    pour(bean i = 0; i < record_count; i++) {
+                        ifbrew(student_number[i] == inputnumber) {
+                            is_found = hot
+                            glaze("======================= Current Record ========================\n\n")
+                            glaze("---------------------------------------------------------------\n")
+                            glaze("Record#\t\tName\t\tStudent Number\t\tCourse\n")
+                            glaze("---------------------------------------------------------------\n")
+                            glaze((i+1) + "\t\t" + student_name[i] + "\t\t" + student_number[i] + "\t\t" + student_course[i] + "\n\n")
+                            glaze("Select Information to Edit:\n")
+                            glaze("[1] Edit Student Name\n")
+                            glaze("[2] Edit Student Course\n")
+                            batter@edit_choice("Action: ")
+                            ifbrew(edit_choice == 1) {
+                                batter@inputname("Enter new student name: ")
+                                student_name[i] = inputname
+                            } elifroth(edit_choice == 2) {
+                                batter@inputcourse("Enter new course: ")
+                                student_course[i] = inputcourse
+                            } elspress {
+                                glaze("Error! Please choose a valid action.\n")
+                            }
+                            glaze("\nRecord updated successfully!\n\n")
+                        }
+                    }
+                    ifbrew(is_found == cold) {
+                        glaze("Error! Student number not found.\n\n")
+                    }
+                }
+            snap
+
+            syrup 5:
+                glaze("Deleting Records...\n\n")
+                ifbrew(record_count == 0) {
+                    glaze("No records found.\n\n")
+                } elspress {
+                    glaze("[1] Delete One Record\n")
+                    glaze("[2] Delete All Records\n")
+                    batter@del_choice("Action: ")
+                    ifbrew(del_choice == 1) {
+                        is_found = cold
+                        batter@inputnumber("Enter student number to delete: ")
+                        pour(bean i = 0; i < record_count; i++) {
+                            ifbrew(student_number[i] == inputnumber) {
+                                is_found = hot
+                                pour(bean j = i; j < record_count - 1 ;j++) {
+                                    student_name[j] = student_name[j + 1]
+                                    student_number[j] = student_number[j + 1]
+                                    student_course[j] = student_course[j + 1]
+                                }
+                                record_count = record_count - 1
+                            }
+                        }
+                        ifbrew(is_found == hot) {
+                            glaze("\nRecord deleted successfully!\n\n")
+                        } elspress {
+                            glaze("Error! Student number not found.\n\n")
+                        }
+                    } elifroth(del_choice == 2) {
+                        record_count = 0
+                        glaze("\nAll records deleted successfully!\n\n")
+                    } elspress {
+                        glaze("Error! Please choose a valid action.\n\n")
+                    }
+                }
+            snap
+
+            syrup 6:
+                glaze("Returning to Main Menu...\n\n")
+                run_program = cold
+            snap
+
+            defoam:
+                glaze("Error! Please choose a valid action.\n\n")
+            snap
+        }
+    }
+    refill?
+]
+
+~~ ============================================================
+~~ MP52 - BANKING TRANSACTION
+~~ ============================================================
+empty run_banking() [
+    bean cl_num, sel_cl, t_count, t_done, exited, choice, valid
+    bean d_day, d_month, d_year, d_midx
+    bean cl_accnum[***]
+    bean balance[***]
+    bean cl_tdone[***]
+    bean cl_dep[***]
+    bean cl_wdr[***]
+    bean t_type[***]
+    bean t_amt[***]
+    bean t_day[***]
+    bean t_month[***]
+    bean t_year[***]
+    bean dim[***]
+    blend cl_name[***]
+    churro cont
+
+    dim[0] = 31
+    dim[1] = 28
+    dim[2] = 31
+    dim[3] = 30
+    dim[4] = 31
+    dim[5] = 30
+    dim[6] = 31
+    dim[7] = 31
+    dim[8] = 30
+    dim[9] = 31
+    dim[10] = 30
+    dim[11] = 31
+
+    glaze("================================================\n")
+    glaze("\tBANKING TRANSACTION SYSTEM\n")
+    glaze("================================================\n")
+    glaze("\tTRANSACTION DATE\n")
+    glaze("------------------------------------------------\n")
+    batter@ d_month("\tEnter Month (1-12): ")
+    batter@ d_day("\tEnter Day   (DD): ")
+    batter@ d_year("\tEnter Year  (YY): ")
+    glaze("------------------------------------------------\n")
+    batter@ cl_num("\tEnter number of clients (max 5): ")
+    ifbrew(cl_num > 5) {
+        glaze("\tMaximum is 5. Setting to 5.\n")
+        cl_num = 5
+    }
+
+    pour(bean i = 0; i < cl_num; i++) {
+        glaze("------------------------------------------------\n")
+        glaze("\tClient " + (i + 1) + "\n")
+        batter@ cl_name[i]("\tName      : ")
+        batter@ cl_accnum[i]("\tACC NO.   : ")
+        balance[i] = 0
+        cl_tdone[i] = 0
+        cl_dep[i] = 0
+        cl_wdr[i] = 0
+    }
+
+    cont = 'Y'
+    whilehot(cont == 'Y' || cont == 'y') {
+        glaze("\n================================================\n")
+        glaze("\tSELECT CLIENT\n")
+        glaze("\tDate: " + d_month + "-" + d_day + "-" + d_year + "\n")
+        glaze("================================================\n")
+        pour(bean i = 0; i < cl_num; i++) {
+            glaze("\t[" + (i+1) + "] " + cl_name[i] + " | ACC: " + cl_accnum[i] + " | Bal: " + balance[i] + " | Trxn: " + cl_tdone[i] + "/5\n")
+        }
+        glaze("------------------------------------------------\n")
+        glaze("\tSelect client (1 to ")
+        glaze(cl_num)
+        glaze("): ")
+        batter@ sel_cl
+        sel_cl = sel_cl - 1
+
+        ifbrew(sel_cl < 0 || sel_cl >= cl_num) {
+            glaze("\t[!] Invalid client selection.\n")
+            cont = 'N'
+        } elifroth(cl_tdone[sel_cl] >= 5) {
+            glaze("\n\t[!] Client has reached max transactions for today.\n")
+            glaze("\tPlease select another client.\n")
+            batter@ cont("\tTransact with another client? [ Y / N ]: ")
+            ifbrew(cont == 'N' || cont == 'n') {
+                glaze("\tEnding banking day...\n")
+                d_day = d_day + 1
+                d_midx = d_month - 1
+                ifbrew(d_day > dim[d_midx]) {
+                    d_day = 1
+                    d_month = d_month + 1
+                    ifbrew(d_month > 12) {
+                        d_month = 1
+                        d_year = d_year + 1
+                    }
+                }
+                glaze("\tNew Date: " + d_month + "-" + d_day + "-" + d_year + "\n")
+                glaze("\tAll client counters reset for new day.\n")
+                pour(bean i = 0; i < cl_num; i++) {
+                    cl_tdone[i] = 0
+                    cl_dep[i] = 0
+                    cl_wdr[i] = 0
+                }
+                cont = 'Y'
+            }
+        } elspress {
+            t_count = 0
+            t_done = cl_tdone[sel_cl]
+            exited = 0
+
+            whilehot(t_done < 5 && exited == 0) {
+                glaze("\n================================================\n")
+                glaze("\tBANKING TRANSACTION\n")
+                glaze("================================================\n")
+                glaze("\tClient  : " + cl_name[sel_cl] + "\n")
+                glaze("\tACC NO. : " + cl_accnum[sel_cl] + "\n")
+                glaze("\tDate    : " + d_month + "-" + d_day + "-" + d_year + "\n")
+                glaze("\tTrxn    : " + t_done + " / 5\n")
+                glaze("================================================\n")
+                glaze("\t[1] DEPOSIT\n")
+                glaze("\t[2] WITHDRAW\n")
+                glaze("\t[3] BALANCE INQUIRY\n")
+                glaze("\t[4] DISPLAY TRANSACTION SUMMARY\n")
+                glaze("\t[5] EXIT\n")
+                glaze("------------------------------------------------\n")
+                batter@ choice("\tEnter choice: ")
+                valid = 0
+
+                flavour(choice) {
+                    syrup 1:
+                        glaze("------------------------------------------------\n")
+                        batter@ t_amt[t_count]("\tDeposit amount (max 50,000): ")
+                        ifbrew(t_amt[t_count] <= 0) {
+                            glaze("\t[!] Amount must be greater than 0.\n")
+                        } elifroth(t_amt[t_count] > 50000) {
+                            glaze("\t[!] Exceeds maximum deposit of 50,000.\n")
+                        } elifroth(cl_dep[sel_cl] + t_amt[t_count] > 50000) {
+                            glaze("\t[!] Exceeds daily deposit limit of 50,000.\n")
+                        } elspress {
+                            balance[sel_cl] = balance[sel_cl] + t_amt[t_count]
+                            cl_dep[sel_cl] = cl_dep[sel_cl] + t_amt[t_count]
+                            t_type[t_count] = 1
+                            t_day[t_count] = d_day
+                            t_month[t_count] = d_month
+                            t_year[t_count] = d_year
+                            t_count = t_count + 1
+                            t_done = t_done + 1
+                            cl_tdone[sel_cl] = t_done
+                            valid = 1
+                            glaze("\t[OK] Deposit successful!\n")
+                            glaze("\tNew Balance: " + balance[sel_cl] + "\n")
+                        }
+                    snap
+
+                    syrup 2:
+                        glaze("------------------------------------------------\n")
+                        batter@ t_amt[t_count]("\tWithdrawal amount (max 20,000): ")
+                        ifbrew(t_amt[t_count] <= 0) {
+                            glaze("\t[!] Amount must be greater than 0.\n")
+                        } elifroth(t_amt[t_count] > 20000) {
+                            glaze("\t[!] Exceeds maximum withdrawal of 20,000.\n")
+                        } elifroth(cl_wdr[sel_cl] + t_amt[t_count] > 20000) {
+                            glaze("\t[!] Exceeds daily withdrawal limit of 20,000.\n")
+                        } elifroth(t_amt[t_count] > balance[sel_cl]) {
+                            glaze("\t[!] Insufficient balance.\n")
+                        } elspress {
+                            balance[sel_cl] = balance[sel_cl] - t_amt[t_count]
+                            cl_wdr[sel_cl] = cl_wdr[sel_cl] + t_amt[t_count]
+                            t_type[t_count] = 2
+                            t_day[t_count] = d_day
+                            t_month[t_count] = d_month
+                            t_year[t_count] = d_year
+                            t_count = t_count + 1
+                            t_done = t_done + 1
+                            cl_tdone[sel_cl] = t_done
+                            valid = 1
+                            glaze("\t[OK] Withdrawal successful!\n")
+                            glaze("\tNew Balance: " + balance[sel_cl] + "\n")
+                        }
+                    snap
+                    
+                    syrup 3:
+                        glaze("------------------------------------------------\n")
+                        glaze("\tCurrent Balance: " + balance[sel_cl] + "\n")
+                        glaze("------------------------------------------------\n")
+                    snap
+
+                    syrup 4:
+                        glaze("\n================================================\n")
+                        glaze("\tTRANSACTION SUMMARY\n")
+                        glaze("================================================\n")
+                        glaze("\tClient  : " + cl_name[sel_cl] + "\n")
+                        glaze("\tACC NO. : " + cl_accnum[sel_cl] + "\n")
+                        glaze("------------------------------------------------\n")
+                        pour(bean j = 0; j < t_count; j++) {
+                            glaze("\tTrxn " + (j+1) + " | ")
+                            glaze(t_month[j] + "-" + t_day[j] + "-" + t_year[j] + " | ")
+                            ifbrew(t_type[j] == 1) {
+                                glaze("DEPOSIT  | ")
+                            } elspress {
+                                glaze("WITHDRAW | ")
+                            }
+                            glaze("Amount: " + t_amt[j] + "\n")
+                        }
+                        glaze("================================================\n")
+                    snap
+
+                    syrup 5:
+                        exited = 1
+                    snap
+
+                    defoam:
+                        glaze("\t[!] Invalid Input.\n")
+                    snap
+                }
+
+                ifbrew(valid == 1 && t_done < 5) {
+                    batter@ cont("\tAnother transaction? [ Y / N ]: ")
+                    ifbrew(cont == 'N' || cont == 'n') {
+                        exited = 1
+                    }
+                }
+            }
+
+            ifbrew(t_done >= 5 && exited == 0) {
+                glaze("\n\t[!] Max transactions reached for today.\n")
+                glaze("\tPlease select another client.\n")
+                batter@ cont("\tTransact with another client? [ Y / N ]: ")
+                ifbrew(cont == 'N' || cont == 'n') {
+                    glaze("\tEnding banking day...\n")
+                    d_day = d_day + 1
+                    d_midx = d_month - 1
+                    ifbrew(d_day > dim[d_midx]) {
+                        d_day = 1
+                        d_month = d_month + 1
+                        ifbrew(d_month > 12) {
+                            d_month = 1
+                            d_year = d_year + 1
+                        }
+                    }
+                    glaze("\tNew Date: " + d_month + "-" + d_day + "-" + d_year + "\n")
+                    glaze("\tAll client counters reset for new day.\n")
+                    pour(bean i = 0; i < cl_num; i++) {
+                        cl_tdone[i] = 0
+                        cl_dep[i] = 0
+                        cl_wdr[i] = 0
+                    }
+                    cont = 'Y'
+                }
+            }
+
+            ifbrew(exited == 1) {
+                batter@ cont("\tTransact with another client? [ Y / N ]: ")
+            }
+        }
+    }
+
+    glaze("\n================================================\n")
+    glaze("\tBANKING TRANSACTION ENDED\n")
+    glaze("\tThank you for transacting with us!\n")
+    glaze("================================================\n")
+    refill?
+]
+
+~~ ============================================================
+~~ MP53 - JEEPNEY MANAGEMENT
+~~ ============================================================
+empty printjeep() [
+    glaze("     ___________________________\n")
+    glaze("    |  _______________________  |\n")
+    glaze("    | | JEEPNEY               | |\n")
+    glaze("    |_|_______________________|_|\n")
+    glaze("    |  ___________________      |\n")
+    glaze("    | |                   |     |\n")
+    glaze("    | |    DRIVER         | [ ] |\n")
+    glaze("    | |___________________|     |\n")
+    glaze("    |===========================|\n")
+    pour(bean row = 0; row < 11; row++) {
+        bean left = seatarr[row]
+        bean right = seatarr[row + 11]
+        ifbrew(left == 1) {
+            glaze("    | [X]")
+        } elspress {
+            glaze("    | [ ]")
+        }
+        glaze("             ")
+        ifbrew(right == 1) {
+            glaze("[X]      |\n")
+        } elspress {
+            glaze("[ ]      |\n")
+        }
+    }
+    glaze("    |===========================|\n")
+    glaze("    |  ()                  ()   |\n")
+    glaze("     \\_________________________/\n")
+    refill?
+]
+
+empty showseats() [
+    glaze("\n--- Seat Map ---\n")
+    glaze("[ ] = Available  [X] = Taken\n")
+    glaze("Left column | Right column\n")
+    pour(bean row = 0; row < 11; row++) {
+        bean left = seatarr[row]
+        bean right = seatarr[row + 11]
+        bean lnum = row + 1
+        bean rnum = row + 12
+        glaze("Seat ")
+        glaze(lnum)
+        ifbrew(lnum < 10) {
+            glaze("  ")
+        } elspress {
+            glaze(" ")
+        }
+        ifbrew(left == 1) {
+            glaze("[X]    |    Seat ")
+        } elspress {
+            glaze("[ ]    |    Seat ")
+        }
+        glaze(rnum)
+        glaze(" ")
+        ifbrew(right == 1) {
+            glaze("[X]\n")
+        } elspress {
+            glaze("[ ]\n")
+        }
+    }
+    glaze("----------------\n")
+    refill?
+]
+
+empty run_jeepney() [
+    bean passenger_count = 0
+    bean max_capacity = 22
+    bean running = 1
+    bean choice = 0
+    bean vacant = 0
+    bean n = 0
+    bean seat = 0
+    bean loaded_count = 0
+    bean unloaded_count = 0
+    whilehot(running == 1) {
+        glaze("\n== JEEPNEY MANAGEMENT SYSTEM ==\n")
+        glaze("Passengers: " + passenger_count + " / " + max_capacity + "\n")
+        glaze("[1] Load Passengers\n")
+        glaze("[2] Unload Passengers\n")
+        glaze("[3] Show Passengers\n")
+        glaze("[4] Back to Main Menu\n")
+        batter@choice("Choice: ")
+
+        flavour(choice) {
+            syrup 1:
+                vacant = max_capacity - passenger_count
+                glaze("Vacant seats: " + vacant + "\n")
+                ifbrew(vacant < 1) {
+                    glaze("Error: No vacant seat available.\n")
+                    snap
+                }
+                ifbrew(vacant > 0) {
+                    batter@n("How many passengers to load? ")
+                    ifbrew(n <= 0) {
+                        glaze("Error: Enter a positive number!\n")
+                    } elifroth(n > vacant) {
+                        glaze("Error: Not enough vacant seats! Only " + vacant + " available.\n")
+                    } elspress {
+                        loaded_count = 0
+                        whilehot(loaded_count < n) {
+                            showseats()
+                            glaze("Enter seat number (1-22) for passenger " + (loaded_count + 1) + ": ")
+                            batter@seat
+                            ifbrew(seat < 1 || seat > 22) {
+                                glaze("Error: Invalid seat number!\n")
+                            } elifroth(seatarr[seat - 1] == 1) {
+                                glaze("Error: Seat already occupied!\n")
+                            } elspress {
+                                seatarr[seat - 1] = 1
+                                passenger_count = passenger_count + 1
+                                loaded_count = loaded_count + 1
+                                glaze("Passenger seated at seat " + seat + "\n")
+                            }
+                        }
+                    }
+                }
+            snap
+
+            syrup 2:
+                batter@n("How many passengers to unload? ")
+                ifbrew(n <= 0) {
+                    glaze("Error: Enter a positive number!\n")
+                } elifroth(n > passenger_count) {
+                    glaze("Error: Cannot unload " + n + " passengers. Only " + passenger_count + " on board.\n")
+                } elspress {
+                    unloaded_count = 0
+                    whilehot(unloaded_count < n) {
+                        showseats()
+                        batter@seat("Enter seat number to vacate: ")
+                        ifbrew(seat < 1 || seat > 22) {
+                            glaze("Error: Invalid seat number!\n")
+                        } elifroth(seatarr[seat - 1] == 0) {
+                            glaze("Error: Seat is already empty!\n")
+                        } elspress {
+                            seatarr[seat - 1] = 0
+                            passenger_count = passenger_count - 1
+                            unloaded_count = unloaded_count + 1
+                            glaze("Seat " + seat + " is now vacant.\n")
+                        }
+                    }
+                }
+            snap
+            syrup 3:
+                printjeep()
+            snap
+            syrup 4:
+                running = 0
+            snap
+            defoam:
+                glaze("Invalid choice! Please enter 1-4.\n")
+            snap
+        }
+    }
+    refill?
+]
+
+~~ ============================================================
+~~ MAIN MENU
+~~ ============================================================
+bean cup() [
+    bean choice = 0
+    bean running = 1
+    whilehot(running == 1) {
+        glaze("\n======================================\n")
+        glaze("\       CARAMEL PROGRAMS SUITE         \ \n")
+        glaze("/======================================/ \n")
+        glaze("\  [1] MP50 - Matrix Operations        \ \n")
+        glaze("/  [2] MP51 - Student Record System    / \n")
+        glaze("\  [3] MP52 - Banking Transaction      \ \n")
+        glaze("/  [4] MP53 - Jeepney Management       / \n")
+        glaze("\  [5] Exit                            \ \n")
+        glaze("/======================================/ \n")
+        batter@choice("Select a program: ")
+
+
+        flavour(choice) {
+            syrup 1:
+                run_matrix()
+            snap
+            syrup 2:
+                change_studrec()
+            snap
+            syrup 3:
+                run_banking()
+            snap
+            syrup 4:
+                run_jeepney()
+            snap
+            syrup 5:
+                glaze("Goodbye!\n")
+                running = 0
+            snap
+            defoam:
+                glaze("Invalid choice. Please enter 1-5.\n")
+            snap
+        }
+    }
+    refill? 0
+]
