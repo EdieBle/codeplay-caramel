@@ -1,25 +1,86 @@
 """
 IR Optimizer for CARAMEL Language
 
-Performs optimization passes on the three-address code IR:
-  1. Constant Folding   - evaluate constant expressions at compile time
-  2. Constant Propagation - replace variables with known constant values
-  3. Dead Code Elimination - remove unreachable code after unconditional jumps
-  4. Strength Reduction  - replace expensive ops with cheaper equivalents
-  5. Redundant Label Removal - remove labels that are never jumped to
+PIPELINE POSITION:
+  IRGenerator → [IR list] → IROptimizer → [optimized IR list] → CodeGenerator
+
+PURPOSE:
+  Takes the flat three-address code (TAC) IR list from IRGenerator and runs
+  multiple improvement passes over it. The goal is to reduce the size and
+  improve the quality of the generated Python code before CodeGenerator runs.
+  All passes mutate IRInstruction objects in place or replace the instruction
+  list entirely — no new AST or IR nodes are created.
+
+PASSES (run in order, repeated up to N times):
+  1. Constant Folding       — evaluate BINOP/UNARYOP on two literal constants
+                              at compile time, replacing the instruction with
+                              a simple ASSIGN. E.g. _t1 = 3 + 4 → _t1 = 7.
+
+  2. Constant Propagation   — track variables that hold known constant values
+                              (via ASSIGN to a literal) and substitute the
+                              literal directly into subsequent instructions that
+                              read that variable. E.g. if x = 5, then
+                              _t2 = x + 1 becomes _t2 = 5 + 1 (then folded to 6).
+                              Resets at every FUNC_BEGIN/FUNC_END/LABEL boundary
+                              to avoid propagating across control-flow edges.
+
+  3. Strength Reduction      — replace expensive arithmetic operations with
+                              cheaper equivalents where the result is identical:
+                              x*0→0, x*1→x, x+0→x, x-0→x, x/1→x, x*2→x+x.
+                              Guards against applying these to string literals
+                              and churro (char) variables where arithmetic
+                              has different semantics.
+
+  4. Dead Code Elimination   — remove instructions that follow an unconditional
+                              GOTO or RETURN and therefore can never execute.
+                              Stops skipping at the next LABEL/FUNC_BEGIN/FUNC_END
+                              since those may be legitimate jump targets.
+
+  5. Redundant Label Removal — remove LABEL instructions whose name is never
+                              referenced by any GOTO, IF_FALSE, or IF_TRUE.
+                              Labels that are jumped to are collected first,
+                              then all unreferenced ones are filtered out.
+
+MULTI-PASS STRATEGY:
+  Each full cycle of all 5 passes may expose new opportunities for others.
+  For example, constant folding a BINOP may make a variable's value constant,
+  enabling propagation, which may then enable further folding. The optimizer
+  runs up to `passes` cycles (default 3) and stops early if a cycle produces
+  no change in instruction count.
+
+MODULE-LEVEL HELPERS (outside the class):
+  _is_constant(val)   — True if val is a compile-time constant
+  _to_numeric(val)    — coerce a constant to int/float for arithmetic
+  _to_bool(val)       — coerce a constant to bool for logical ops
+  _is_zero(val)       — True if val numerically equals 0
+  _is_one(val)        — True if val numerically equals 1
+  optimize_ir(instrs) — convenience wrapper: create optimizer, run, return result
+
+OPERATION TABLES:
+  _ARITH_OPS  — maps '+', '-', '*', '/', '%' to Python operator functions
+  _REL_OPS    — maps '==', '!=', '>', '<', '>=', '<=' to comparison functions
+  _LOGIC_OPS  — maps '&&', '||' to boolean lambda functions
 """
 
 import operator
 
-# Python operator functions for constant folding
+# ------------------------------------------------------------------
+# Operation dispatch tables
+# Used by _try_fold_binop to evaluate constant binary expressions.
+# Division/modulo guard against zero — return None to skip folding
+# rather than raising ZeroDivisionError at compile time.
+# ------------------------------------------------------------------
+
+# Arithmetic: used when both operands are numeric constants
 _ARITH_OPS = {
     "+": operator.add,
     "-": operator.sub,
     "*": operator.mul,
-    "/": lambda a, b: a / b if b != 0 else None,
+    "/": lambda a, b: a / b if b != 0 else None,   # None = skip fold (div-by-zero)
     "%": lambda a, b: a % b if b != 0 else None,
 }
 
+# Relational: always produce bool; enable constant condition folding
 _REL_OPS = {
     "==": operator.eq,
     "!=": operator.ne,
@@ -36,7 +97,19 @@ _LOGIC_OPS = {
 
 
 def _is_constant(val):
-    """Check if a value is a compile-time constant (int, float, bool, or quoted string)."""
+    """
+    Return True if val is a compile-time constant the optimizer can safely
+    evaluate or substitute into other instructions.
+
+    Constant categories:
+      - Python int, float, bool       — always foldable (e.g. 42, 3.14, True)
+      - Quoted string literals         — e.g. '"hello"' or "'a'" — BLENDLIT/CHURROLIT
+                                         IR format where quotes are part of the value
+      - Numeric strings                — e.g. '42' or '3.14' — stringified numbers
+                                         from some IR generator paths
+
+    Non-constants (return False): variable names, None, unquoted non-numeric strings.
+    """
     if isinstance(val, (int, float, bool)):
         return True
     if isinstance(val, str):
@@ -54,7 +127,19 @@ def _is_constant(val):
 
 
 def _to_numeric(val):
-    """Convert a constant value to a numeric type for arithmetic."""
+    """
+    Coerce a constant to Python int or float for arithmetic/relational evaluation.
+    Called by _try_fold_binop before applying _ARITH_OPS or _REL_OPS.
+
+    Conversion rules:
+      int/float       → returned as-is
+      bool            → 1 (True) or 0 (False)  — bool is a subclass of int
+      numeric str     → int if no '.', float if '.' present
+      non-numeric str → None  (signals: this operand cannot be folded)
+      None/other      → None
+
+    Returns None rather than raising so callers can skip folding safely.
+    """
     if isinstance(val, (int, float)):
         return val
     if isinstance(val, bool):
@@ -70,7 +155,18 @@ def _to_numeric(val):
 
 
 def _to_bool(val):
-    """Convert a value to boolean for logical operations."""
+    """
+    Coerce a constant to Python bool for logical operation folding.
+    Called by _try_fold_binop when the operator is '&&' or '||'.
+
+    Conversion rules:
+      bool                         → returned as-is
+      int/float                    → True if != 0, False if == 0
+      'True' / 'true' / 'hot'     → True   ('hot' is Caramel's true literal)
+      'False' / 'false' / 'cold'  → False  ('cold' is Caramel's false literal)
+      numeric string               → True if != 0 (via _to_numeric)
+      anything else                → None  (signals: cannot evaluate logically)
+    """
     if isinstance(val, bool):
         return val
     if isinstance(val, (int, float)):
@@ -90,11 +186,26 @@ class IROptimizer:
     """
     Multi-pass optimizer for CARAMEL IR instructions.
 
-    Each pass transforms the instruction list in place and may enable
-    further optimizations on subsequent passes.
+    Instantiate with a list of IRInstruction objects from IRGenerator,
+    then call optimize() to run all passes and get the cleaned list back.
+    Each pass either rebuilds self.instructions from scratch (folding,
+    dead code, label removal) or mutates instructions in place (propagation,
+    strength reduction). Passes are run in sequence and the whole cycle
+    repeats up to N times, stopping early when nothing changes.
     """
 
     def __init__(self, instructions):
+        """
+        Initialize the optimizer.
+
+        State variables:
+          self.instructions  — working copy of the IR list; mutated in place
+                               by each pass and returned by optimize()
+          self._constants    — dict mapping variable name → known constant value,
+                               used by _pass_constant_propagation() to track
+                               which variables currently hold literal values.
+                               Reset at every FUNC_BEGIN/FUNC_END/LABEL boundary.
+        """
         self.instructions = list(instructions)
         self._constants = {}  # var -> known constant value
 
@@ -124,7 +235,22 @@ class IROptimizer:
     # ------------------------------------------------------------------
 
     def _pass_constant_folding(self):
-        """Evaluate binary/unary operations on constants at compile time."""
+        """
+        Pass 1: Constant Folding.
+        Scan every instruction; when a BINOP or UNARYOP has both operands as
+        compile-time constants, evaluate the result immediately and replace
+        the instruction with a plain ASSIGN to the folded value.
+
+        Examples:
+          BINOP  _t1 = 3 + 4     → ASSIGN _t1 = 7
+          BINOP  _t2 = 10 > 3   → ASSIGN _t2 = True
+          UNARYOP _t3 = -5      → ASSIGN _t3 = -5
+          UNARYOP _t4 = !True   → ASSIGN _t4 = False
+
+        Delegates to:
+          _try_fold_binop(instr)   — returns folded value or None
+          _try_fold_unaryop(instr) — returns folded value or None
+        """
         new_instrs = []
         for instr in self.instructions:
             if instr.op == "BINOP":
@@ -146,6 +272,19 @@ class IROptimizer:
         self.instructions = new_instrs
 
     def _try_fold_binop(self, instr):
+        """
+        Attempt to constant-fold a BINOP instruction.
+        Returns the folded Python value if both operands are constants
+        and the operation is supported, otherwise returns None.
+
+        Fold order:
+          1. Arithmetic (+, -, *, /, %)  — both operands numeric
+          2. Relational (==, !=, >, etc.) — both operands numeric, returns bool
+          3. Logical (&&, ||)            — both operands bool-coercible
+          4. String concat (+)           — both operands quoted blend literals
+
+        Division/modulo by zero returns None (not an error — just skip the fold).
+        """
         a, b = instr.arg1, instr.arg2
         op = instr.extra.get("binop", "")        
 
@@ -180,6 +319,14 @@ class IROptimizer:
         return None
 
     def _try_fold_unaryop(self, instr):
+        """
+        Attempt to constant-fold a UNARYOP instruction.
+        Returns the folded value if the operand is a constant, else None.
+
+        Supported ops:
+          '-'  — numeric negation: -5 → -5, -3.0 → -3.0
+          '!'  — boolean NOT: !True → False, !0 → True
+        """
         a = instr.arg1
         op = instr.extra.get("unaryop", "")
 
@@ -204,8 +351,38 @@ class IROptimizer:
 
     def _pass_constant_propagation(self):
         """
-        Track which variables hold known constant values and substitute them
-        in subsequent instructions.
+        Pass 2: Constant Propagation.
+        Track which variables hold known constant values (via ASSIGN to a literal)
+        and substitute those literals directly into subsequent instructions that
+        read those variables as operands.
+
+        Algorithm:
+          Walk instructions linearly, maintaining self._constants dict.
+          For each instruction:
+            a) If ASSIGN to a constant literal → record in self._constants
+            b) If ASSIGN to a non-constant → remove from self._constants
+            c) Substitute self._constants[arg1] and self._constants[arg2]
+               into the current instruction where safe
+            d) For PRINT args → substitute known constants in the args list
+            e) If INPUT → invalidate the destination (runtime value, unknowable)
+
+        Boundary resets (self._constants.clear()):
+          FUNC_BEGIN, FUNC_END, LABEL — control flow edges may bring different
+          values into a variable; clearing is conservative but correct.
+
+        Substitution guards (these are never substituted):
+          - MEMBER_SET arg1 (field name): must stay as-is — it's not a variable
+          - MEMBER_ACC/MEMBER_SET/CLASS_FIELD arg2: same reason
+          - churro literals ('a', 'b', etc.) into non-churro BINOP destinations:
+            prevents incorrect type inference downstream in codegen
+
+        Special post-ASSIGN tracking:
+          - bool constants are NOT tracked — they get coerced to 'hot'/'cold'
+            for blend variables, so propagating the raw bool gives wrong types
+          - float assigned to bean destination → track as int (truncated)
+          - int/float assigned to churro destination → track as chr() char
+            e.g. churro c = 96 → stores "'`'" for downstream type()/print()
+          - Everything else tracked as-is
         """
         self._constants = {}
 
@@ -332,6 +509,35 @@ class IROptimizer:
     # ------------------------------------------------------------------
 
     def _pass_strength_reduction(self):
+        """
+        Pass 3: Strength Reduction.
+        Replace expensive BINOP patterns with cheaper equivalents
+        when one operand is a known constant identity value.
+
+        Rules applied (in order, first match wins per instruction):
+          x * 0  → 0         (zero product)
+          x * 1  → x         (multiplicative identity)
+          1 * x  → x
+          x + 0  → x         (additive identity)
+          0 + x  → x
+          x - 0  → x
+          x / 1  → x         (division identity)
+          x * 2  → x + x     (cheaper on some CPUs; also enables further folding)
+
+        Guards:
+          - String literals are never simplified (+ is concatenation)
+          - churro (char) variables are never simplified — arithmetic on
+            chars has different semantics (ord/chr) and must not be elided
+          - bool values are excluded from identity checks to avoid treating
+            True (==1) or False (==0) as identity elements
+
+        Inner helpers (defined once per call to avoid repeated definitions):
+          _is_string_literal(v)     — True if v is a quoted string
+          _is_churro_literal(v)     — True if v is a 3-char quoted churro literal
+          _is_churro_var(v, instrs) — True if v is declared as churro type
+          _safe_zero(v)             — _is_zero(v) excluding bools
+          _safe_one(v)              — _is_one(v) excluding bools
+        """
         for instr in self.instructions:
             if instr.op != "BINOP":
                 continue
@@ -340,13 +546,19 @@ class IROptimizer:
             a, b = instr.arg1, instr.arg2
 
             def _is_string_literal(v):
+                """True if v is any quoted string — blend or churro literal. Guards + from being elided on strings."""
                 return isinstance(v, str) and (v.startswith("'") or v.startswith('"'))
             
             def _is_churro_literal(v):
+                """True if v is a single-char churro literal like "'a'". Exactly 3 chars: quote + char + quote."""
                 return isinstance(v, str) and len(v) == 3 and v[0] == "'" and v[-1] == "'"
             
             def _is_churro_var(v, instructions):
-                """Check if variable v is declared as churro type."""
+                """
+                Return True if v is either a churro literal (3-char quoted string
+                like "'a'") or a variable explicitly declared as churro type.
+                Used to guard strength reduction from eliding char arithmetic.
+                """
                 if _is_churro_literal(v):
                     return True
                 for instr in instructions:
@@ -355,10 +567,12 @@ class IROptimizer:
                 return False
             
             def _safe_zero(v):
+                """_is_zero but excludes bools — prevents treating False (==0) as numeric zero."""
                 if isinstance(v, bool): return False
                 return _is_zero(v)
 
             def _safe_one(v):
+                """_is_one but excludes bools — prevents treating True (==1) as numeric one."""
                 if isinstance(v, bool): return False
                 return _is_one(v)
 
@@ -426,6 +640,25 @@ class IROptimizer:
     # ------------------------------------------------------------------
 
     def _pass_dead_code_elimination(self):
+        """
+        Pass 4: Dead Code Elimination.
+        Remove instructions that appear after an unconditional GOTO or RETURN
+        and therefore can never be reached at runtime.
+
+        Algorithm:
+          - Walk instructions linearly, tracking a 'skip' flag
+          - GOTO or RETURN sets skip=True
+          - LABEL, FUNC_BEGIN, FUNC_END always resets skip=False (they may be
+            jump targets or function boundaries referenced from elsewhere)
+          - Instructions in NEVER_SKIP are always kept regardless of skip flag
+            (BINOP, UNARYOP, ASSIGN, LABEL, FUNC_BEGIN, FUNC_END)
+          - All other instructions while skip=True are dropped
+
+        Example:
+          GOTO L1        ← kept
+          ASSIGN x = 5  ← DROPPED (unreachable after goto)
+          LABEL L1       ← kept (resets skip, may be jumped to)
+        """
         new_instrs = []
         skip = False
         NEVER_SKIP = {"BINOP", "UNARYOP", "ASSIGN", "LABEL", "FUNC_BEGIN", "FUNC_END"}
@@ -446,7 +679,21 @@ class IROptimizer:
     # ------------------------------------------------------------------
 
     def _pass_redundant_label_removal(self):
-        """Remove labels that are never referenced by any jump instruction."""
+        """
+        Pass 5: Redundant Label Removal.
+        Remove LABEL instructions whose name is never the target of any
+        GOTO, IF_FALSE, or IF_TRUE instruction.
+
+        Algorithm:
+          1. Collect all jump targets into a 'referenced' set by scanning
+             every GOTO, IF_FALSE, and IF_TRUE instruction's dest field
+          2. Filter self.instructions, keeping:
+             - All non-LABEL instructions
+             - LABEL instructions whose dest is in 'referenced'
+
+        This cleans up labels left behind after dead code elimination removes
+        the GOTO that previously referenced them.
+        """
         # Collect all labels that are jump targets
         referenced = set()
         for instr in self.instructions:
@@ -466,6 +713,12 @@ class IROptimizer:
 # ------------------------------------------------------------------
 
 def _is_zero(val):
+    """
+    Return True if val numerically equals zero.
+    Used by strength reduction to detect x+0, x-0, x*0 patterns.
+    Note: bool values also return True/False (False==0, True==1) since
+    bool is a subclass of int — callers use _safe_zero() to exclude bools.
+    """
     if isinstance(val, (int, float)):
         return val == 0
     if isinstance(val, bool):
@@ -474,6 +727,11 @@ def _is_zero(val):
 
 
 def _is_one(val):
+    """
+    Return True if val numerically equals one.
+    Used by strength reduction to detect x*1, x/1 patterns.
+    Note: True==1, so bool True would match — callers use _safe_one() to exclude bools.
+    """
     if isinstance(val, (int, float)):
         return val == 1
     if isinstance(val, bool):
@@ -482,7 +740,16 @@ def _is_one(val):
 
 
 def optimize_ir(instructions, passes=3):
-    """Convenience function: optimize a list of IRInstruction objects."""
+    """
+    Convenience wrapper — create an IROptimizer, run all passes, return the result.
+    Called by the compiler pipeline instead of instantiating IROptimizer directly.
+
+    Parameters:
+      instructions — list of IRInstruction objects from IRGenerator
+      passes       — number of full optimization cycles to run (default 3)
+
+    Returns the optimized list of IRInstruction objects.
+    """
     opt = IROptimizer(instructions)
     
     return opt.optimize(passes=passes)
