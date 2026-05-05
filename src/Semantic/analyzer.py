@@ -1245,7 +1245,7 @@ class SemanticAnalyzer:
                                 for bc in tc.children:
                                     if self._is_parse_node(bc) and bc.name in ("arr_elem", "expression", "assign_val", "value"):
                                         inferred = self._infer_value_type(bc)
-                                        if inferred and inferred != symbol.dtype:
+                                        if inferred and not self._is_type_compatible(symbol.dtype, inferred):
                                             self._error(
                                                 "E_ARR_TYPE",
                                                 f"Cannot assign '{inferred}' value to '{symbol.dtype}' array '{var_name}'",
