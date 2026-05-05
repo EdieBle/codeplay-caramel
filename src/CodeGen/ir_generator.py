@@ -2413,17 +2413,8 @@ class IRGenerator:
                         # maybe make this a function? its a value extractor
                         for tc in self._get_children(child):
                             if self._is_node(tc) and tc.name == "opt_assign":
-                                # walk to find the literal value without emitting
-                                for vc in self._get_children(tc):
-                                    if self._is_node(vc) and vc.name == "value":
-                                        for ec in self._get_children(vc):
-                                            if self._is_token(ec) and ec.type in ("BEANLIT", "DRIPLIT", "BLENDLIT", "CHURROLIT"):
-                                                init_val = ec.value
-                                            elif self._is_node(ec):
-                                                # recurse one more level for wrapped literals
-                                                for lc in self._get_children(ec):
-                                                    if self._is_token(lc) and lc.type in ("BEANLIT", "DRIPLIT", "BLENDLIT", "CHURROLIT"):
-                                                        init_val = lc.value
+                                init_val = self._extract_literal_from_node(tc)
+                                break
                                 
                 if self._current_class not in self._class_fields:
                     self._class_fields[self._current_class] = []
@@ -2538,7 +2529,7 @@ class IRGenerator:
         return None
 
     def _visit_id_bracket_tail_rhs(self, node):
-    # """Extract RHS value from id_bracket_tail (the = expr part after array[idx])."""
+        """Extract RHS value from id_bracket_tail (the = expr part after array[idx])."""
         children = self._get_children(node)
         for i, child in enumerate(children):
             if self._is_token(child) and child.type == "EQUALS":
@@ -2549,8 +2540,21 @@ class IRGenerator:
         return None
     
     # ------------------------------------------------------------------
-    # Helpers for function args & array indices & classes
+    # HELPER METHODS
     # ------------------------------------------------------------------
+
+    def _extract_literal_from_node(self, node):
+        """Recursively find first literal token in a node tree."""
+        for child in self._get_children(node):
+            if self._is_token(child) and child.type in (
+                "BEANLIT", "DRIPLIT", "BLENDLIT", "CHURROLIT", "TEMPLIT"
+            ):
+                return child.value
+            if self._is_node(child):
+                result = self._extract_literal_from_node(child)
+                if result is not None:
+                    return result
+        return None
 
     def _visit_crema_method(self, node):
         id_tok = self._find_child_token(node, "ID")

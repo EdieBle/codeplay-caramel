@@ -421,10 +421,10 @@ class SemanticAnalyzer:
             if not self._is_parse_node(child):
                 continue
             inferred = self._infer_value_type(child)
-            if inferred is not None and inferred != "blend":    # a churro data type can also used for sift
+            if inferred is not None and (inferred != "blend" or inferred != "churro") :    # a churro data type can also used for sift
                 self._error(
                     "E_SIFT",
-                    f"'sift' requires a blend argument but got '{inferred}'",   # Error if it is not a blend data type
+                    f"'sift' requires a blend or churro argument but got '{inferred}'",   # Error if it is not a blend or churro data type
                     child
                 )
 
@@ -607,80 +607,71 @@ class SemanticAnalyzer:
     def _visit_crema_body_cont(self, node):
         access = "public"
 
+        # First pass: get access modifier
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type'):
+                if child.type == "CAFE":
+                    access = "public"
+                elif child.type == "BACKROOM":
+                    access = "private"
+
+        # Second pass: process the body
         for child in node.children:
             if self._is_parse_node(child) and child.name == "crema_acc_body":
-                # check if it's a method (has RECIPE or EMPTY token)
                 is_method = any(
-                    not self._is_parse_node(c) and hasattr(c, 'type') 
+                    not self._is_parse_node(c) and hasattr(c, 'type')
                     and c.type in ("RECIPE", "EMPTY")
                     for c in child.children
                 )
                 if is_method:
                     self._visit_crema_method(child, access)
-                    continue
-                # otherwise it's a field — existing logic
-                dtype = self._extract_type_from_node(child)
-                field_name = self._extract_var_name(child)
-                if dtype and field_name and self._current_class_sym is not None:
-                    self._current_class_sym.fields[field_name] = {
-                        "type": dtype, "access": access
-                    }
+                else:
+                    dtype = self._extract_type_from_node(child)
+                    field_name = self._extract_var_name(child)
+                    if dtype and field_name and self._current_class_sym is not None:
+                        self._current_class_sym.fields[field_name] = {
+                            "type": dtype, "access": access
+                        }
+        # NO _visit_children call here
+
+    def _visit_crema_method(self, node, access):
+        """Analyze a method inside a crema — register it, check params and body."""
+        func_name = None
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                func_name = child.value
+                break
+
+        return_type = self._extract_return_type(node)
+
+        if func_name and self._current_class_sym is not None:
+            # store method in class symbol so call sites can look up return type
+            self._current_class_sym.fields[func_name] = {
+                "type": return_type,
+                "access": access,
+                "kind": "method"
+            }
+
+        # push scope, register params, visit body — same as recipe_def
+        self.symbol_table.push_scope()
+        prev_function = self.current_function
+        self.current_function = func_name
 
         for child in node.children:
-            if not self._is_parse_node(child):
-                if hasattr(child, 'type') and child.type == "CAFE":
-                    access = "public"
-                elif hasattr(child, 'type') and child.type == "BACKROOM":
-                    access = "private"
+            if self._is_parse_node(child) and child.name == "parameter":
+                for param_name, param_type in self._extract_parameters(child):
+                    param_symbol = Symbol(
+                        param_name, "variable",
+                        dtype=param_type,
+                        scope_level=self.symbol_table.scope_level
+                    )
+                    param_symbol.is_initialized = True
+                    self.symbol_table.declare(param_name, param_symbol)
+                break
 
-        for child in node.children:
-            if self._is_parse_node(child) and child.name == "crema_acc_body":
-                dtype = self._extract_type_from_node(child)
-                field_name = self._extract_var_name(child)
-                if dtype and field_name and self._current_class_sym is not None:
-                    self._current_class_sym.fields[field_name] = {
-                        "type": dtype, "access": access
-                    }
         self._visit_children(node)
-
-        def _visit_crema_method(self, node, access):
-            """Analyze a method inside a crema — register it, check params and body."""
-            func_name = None
-            for child in node.children:
-                if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
-                    func_name = child.value
-                    break
-
-            return_type = self._extract_return_type(node)
-
-            if func_name and self._current_class_sym is not None:
-                # store method in class symbol so call sites can look up return type
-                self._current_class_sym.fields[func_name] = {
-                    "type": return_type,
-                    "access": access,
-                    "kind": "method"
-                }
-
-            # push scope, register params, visit body — same as recipe_def
-            self.symbol_table.push_scope()
-            prev_function = self.current_function
-            self.current_function = func_name
-
-            for child in node.children:
-                if self._is_parse_node(child) and child.name == "parameter":
-                    for param_name, param_type in self._extract_parameters(child):
-                        param_symbol = Symbol(
-                            param_name, "variable",
-                            dtype=param_type,
-                            scope_level=self.symbol_table.scope_level
-                        )
-                        param_symbol.is_initialized = True
-                        self.symbol_table.declare(param_name, param_symbol)
-                    break
-
-            self._visit_children(node)
-            self.current_function = prev_function
-            self.symbol_table.pop_scope()
+        self.current_function = prev_function
+        self.symbol_table.pop_scope()
 
     def _visit_object_def(self, node):
         """Visit object_def: new ClassName = obj_name
