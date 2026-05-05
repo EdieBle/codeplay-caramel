@@ -421,10 +421,10 @@ class SemanticAnalyzer:
             if not self._is_parse_node(child):
                 continue
             inferred = self._infer_value_type(child)
-            if inferred is not None and (inferred != "blend" or inferred != "churro") :    # a churro data type can also used for sift
+            if inferred is not None and inferred != "blend" and inferred != "churro" and inferred != "array":
                 self._error(
                     "E_SIFT",
-                    f"'sift' requires a blend or churro argument but got '{inferred}'",   # Error if it is not a blend or churro data type
+                    f"'sift' requires a blend, churro, or array argument but got '{inferred}'",
                     child
                 )
 
@@ -1510,6 +1510,10 @@ class SemanticAnalyzer:
         if not self._is_parse_node(node):
             # Token node - check token type
             if hasattr(node, 'type'):
+                if node.type == "ID":
+                    sym = self.symbol_table.lookup(node.value)
+                    if sym and getattr(sym, 'is_array', False):
+                        return "array"
                 return self._infer_type_from_literal(node.type)
             return None
         
@@ -1517,7 +1521,6 @@ class SemanticAnalyzer:
         if node.name == "primary":
             return self._infer_primary_type(node)
         elif node.name == "expression":
-            # print("[SEMANTIC DEBUG EXPRESSION HIT INFER VAL]expression hit")
             return self._infer_expression_type(node)
         elif node.name == "assign_val":
             return self._infer_expression_type(node)
@@ -1532,7 +1535,7 @@ class SemanticAnalyzer:
                     return inferred
         
         return None
-    
+        
     def _infer_primary_type(self, node):
         """Infer type of primary expression."""
         if not hasattr(node, 'children') or not node.children:
@@ -1547,6 +1550,8 @@ class SemanticAnalyzer:
         if id_token:
             symbol = self.symbol_table.lookup(id_token.value)
             if symbol:
+                if getattr(symbol, 'is_array', False):  # ← add this
+                    return "array"
                 member_type = self._infer_member_type(node, id_token.value)
                 return member_type if member_type else symbol.dtype
 
