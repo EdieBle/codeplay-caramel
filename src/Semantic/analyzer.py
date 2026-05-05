@@ -55,6 +55,7 @@ class Symbol:
         self.parameters = parameters or []  # List of (name, type) tuples for functions
         self.return_type = return_type  # For functions
         self.is_initialized = False
+        self.fields = {} # for classes/crema
 
 class SymbolTable:
     """ Manages symbol scopes and symbol tracking. This can be implemented via: 
@@ -193,6 +194,8 @@ class SemanticAnalyzer:
         self.main_function_count = 0
         self.has_main = False
         self.current_var_type = None  # Track type of variable being declared
+        self._current_class_sym = None
+        self.current_class = None
     
     def analyze(self, ast=None):
         """
@@ -564,36 +567,155 @@ class SemanticAnalyzer:
         else:
             self._visit_children(node)
 
-    # Classes
+    # ========================
+    #       CLASSES HERE
+    # ========================
     def _visit_crema_def(self, node):
-        """Visit crema_def: crema ID { body }"""
-        class_name = self._extract_name_from_node(node, depth=2)
+        """Visit crema_def: crema ID [ body ]
+        Classes can only exist at global scope."""
+        # Find class name from ID token
+        class_name = None
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                class_name = child.value
+                break
         
         if class_name:
-            symbol = Symbol(
-                class_name,
-                "class",
-                scope_level=self.symbol_table.scope_level
-            )
-            
+            # Classes only allowed at global scope
+            if self.symbol_table.scope_level > 0:
+                self._error("E_CLASS",
+                    f"Class '{class_name}' must be defined at global scope",
+                    node)
+                return
+
+            symbol = Symbol(class_name, "class",
+                        scope_level=self.symbol_table.scope_level)
             if not self.symbol_table.declare(class_name, symbol):
-                self.errors.append(SemanticError(
-                    "E001",
-                    f"Redefinition of class '{class_name}'",
-                    line=getattr(node, 'line', None)
-                ))
-            
+                self._error("E001", f"Redefinition of class '{class_name}'", node)
+
+            self._current_class_sym = symbol
             self.symbol_table.push_scope()
             prev_class = self.current_class
             self.current_class = class_name
-            
             self._visit_children(node)
-            
             self.current_class = prev_class
+            self._current_class_sym = None
             self.symbol_table.pop_scope()
         else:
-            self._visit_children(node) 
+            self._visit_children(node)
     
+    def _visit_crema_body_cont(self, node):
+        access = "public"
+
+        for child in node.children:
+            if self._is_parse_node(child) and child.name == "crema_acc_body":
+                # check if it's a method (has RECIPE or EMPTY token)
+                is_method = any(
+                    not self._is_parse_node(c) and hasattr(c, 'type') 
+                    and c.type in ("RECIPE", "EMPTY")
+                    for c in child.children
+                )
+                if is_method:
+                    self._visit_crema_method(child, access)
+                    continue
+                # otherwise it's a field — existing logic
+                dtype = self._extract_type_from_node(child)
+                field_name = self._extract_var_name(child)
+                if dtype and field_name and self._current_class_sym is not None:
+                    self._current_class_sym.fields[field_name] = {
+                        "type": dtype, "access": access
+                    }
+
+        for child in node.children:
+            if not self._is_parse_node(child):
+                if hasattr(child, 'type') and child.type == "CAFE":
+                    access = "public"
+                elif hasattr(child, 'type') and child.type == "BACKROOM":
+                    access = "private"
+
+        for child in node.children:
+            if self._is_parse_node(child) and child.name == "crema_acc_body":
+                dtype = self._extract_type_from_node(child)
+                field_name = self._extract_var_name(child)
+                if dtype and field_name and self._current_class_sym is not None:
+                    self._current_class_sym.fields[field_name] = {
+                        "type": dtype, "access": access
+                    }
+        self._visit_children(node)
+
+        def _visit_crema_method(self, node, access):
+            """Analyze a method inside a crema — register it, check params and body."""
+            func_name = None
+            for child in node.children:
+                if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                    func_name = child.value
+                    break
+
+            return_type = self._extract_return_type(node)
+
+            if func_name and self._current_class_sym is not None:
+                # store method in class symbol so call sites can look up return type
+                self._current_class_sym.fields[func_name] = {
+                    "type": return_type,
+                    "access": access,
+                    "kind": "method"
+                }
+
+            # push scope, register params, visit body — same as recipe_def
+            self.symbol_table.push_scope()
+            prev_function = self.current_function
+            self.current_function = func_name
+
+            for child in node.children:
+                if self._is_parse_node(child) and child.name == "parameter":
+                    for param_name, param_type in self._extract_parameters(child):
+                        param_symbol = Symbol(
+                            param_name, "variable",
+                            dtype=param_type,
+                            scope_level=self.symbol_table.scope_level
+                        )
+                        param_symbol.is_initialized = True
+                        self.symbol_table.declare(param_name, param_symbol)
+                    break
+
+            self._visit_children(node)
+            self.current_function = prev_function
+            self.symbol_table.pop_scope()
+
+    def _visit_object_def(self, node):
+        """Visit object_def: new ClassName = obj_name
+        Declares obj_name as an instance of ClassName."""
+        ids = []
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                ids.append(child)
+        
+        if len(ids) >= 2:
+            class_name_tok = ids[0]
+            obj_name_tok = ids[1]
+            
+            # Verify class exists
+            class_sym = self.symbol_table.lookup(class_name_tok.value)
+            if not class_sym or class_sym.kind != "class":
+                self._error("E002", 
+                    f"Undeclared class '{class_name_tok.value}'", 
+                    class_name_tok)
+                return
+            
+            # Declare object variable with class type
+            sym = Symbol(
+                obj_name_tok.value,
+                "variable",
+                dtype=class_name_tok.value,
+                scope_level=self.symbol_table.scope_level
+            )
+            if not self.symbol_table.declare(obj_name_tok.value, sym):
+                self._error("E001",
+                    f"Redefinition of identifier '{obj_name_tok.value}'",
+                    obj_name_tok)
+        
+        self._visit_children(node)
+
     """ _visit_dtype_dec -> handles all typed variable declarations. This has the following passes:
     Pass 1: If brewed appears anywhere in children before finding the ID -> set is_constant = True
     Pass 2: If ID is found, declare symbol in symbol table. It also does the following for arrays:
@@ -799,6 +921,20 @@ class SemanticAnalyzer:
                 var_name = child.value
                 if var_name and not self.symbol_table.lookup(var_name):
                     self._error("E002", f"Undeclared identifier '{var_name}'", child)
+                else:
+                    # Check for member access in primary_id_tail
+                    for sibling in node.children:
+                        if self._is_parse_node(sibling) and sibling.name == "primary_id_tail":
+                            for tc in sibling.children:
+                                if not self._is_parse_node(tc) and hasattr(tc, 'type') and tc.type == "DOT_ACC":
+                                    # Find the member name (ID after DOT_ACC)
+                                    children_list = list(sibling.children)
+                                    for i, sc in enumerate(children_list):
+                                        if not self._is_parse_node(sc) and hasattr(sc, 'type') and sc.type == "DOT_ACC":
+                                            if i + 1 < len(children_list):
+                                                member_tok = children_list[i + 1]
+                                                if hasattr(member_tok, 'type') and member_tok.type == "ID":
+                                                    self._check_member_access(var_name, member_tok.value, member_tok)
             
             # walang sift dito kc yung SIFT may sariling AST node na ginawa siya called sift_call, ctrl+f mo nalang - J
             elif child.type == "SQRT":
@@ -972,12 +1108,41 @@ class SemanticAnalyzer:
                                     id_tok)
                             i += 3
                             continue
+                        
                 elif hasattr(child, 'type') and child.type == "ID":
                     symbol = self.symbol_table.lookup(child.value)
                     if not symbol:
                         self._error("E002", f"Undeclared identifier '{child.value}'", child)
                     elif symbol.is_constant:
                         self._error("E005", f"Cannot modify constant identifier '{child.value}'", child)
+                    else:
+                        # Check for obj.field (crema member access in batter@)
+                        if i + 1 < len(children):
+                            next_child = children[i + 1]
+                            if self._is_parse_node(next_child) and next_child.name == "input_id_tail":
+                                tail_children = list(next_child.children) if hasattr(next_child, 'children') else []
+                                if tail_children and hasattr(tail_children[0], 'type') \
+                                        and tail_children[0].type == "DOT_ACC":
+                                    # It's obj.field — validate the field exists on the crema
+                                    if len(tail_children) > 1 and hasattr(tail_children[1], 'type') \
+                                            and tail_children[1].type == "ID":
+                                        field_tok = tail_children[1]
+                                        # Look up the class symbol for this object
+                                        class_sym = self.symbol_table.lookup(symbol.dtype) \
+                                            if symbol.dtype else None
+                                        if class_sym and class_sym.kind == "class":
+                                            if field_tok.value not in class_sym.fields:
+                                                self._error("E_FIELD",
+                                                    f"'{symbol.dtype}' has no field '{field_tok.value}'",
+                                                    field_tok)
+                                            else:
+                                                field_info = class_sym.fields[field_tok.value]
+                                                if field_info.get("is_constant"):
+                                                    self._error("E005",
+                                                        f"Cannot modify constant field '{field_tok.value}'",
+                                                        field_tok)
+                                        i += 2  # skip obj + tail
+                                        continue
             else:
                 if child.name not in ("_empty", "input_val"):
                     self._check_input_args(child)
@@ -1033,6 +1198,7 @@ class SemanticAnalyzer:
             if symbol.is_constant:
                 self._error("E005", f"Cannot modify constant identifier '{var_name}'", id_token)
 
+        
             # Check ++/-- on non-numeric types
             if symbol.dtype in ("blend", "churro", "temp"):
                 for child in node.children:
@@ -1060,6 +1226,16 @@ class SemanticAnalyzer:
                                                 f"Cannot assign '{inferred}' value to '{symbol.dtype}' array '{var_name}'",
                                                 id_token
                                             )
+
+            # crema after getting var_name and symbol:
+            for child in node.children:
+                if self._is_parse_node(child) and child.name == "id_dec_tail":
+                    for tc in child.children:
+                        if not self._is_parse_node(tc) and hasattr(tc, 'type') and tc.type == "DOT_ACC":
+                            # Next token is the member name
+                            for mc in child.children:
+                                if not self._is_parse_node(mc) and hasattr(mc, 'type') and mc.type == "ID" and mc.value != var_name:
+                                    self._check_member_access(var_name, mc.value, mc)
 
         self._visit_children(node)    
    
@@ -1129,7 +1305,7 @@ class SemanticAnalyzer:
                             f"'{self.current_var_type}' variable",
                             node
                         )
-                        
+
                 sym = Symbol(
                     var_name, "variable",
                     dtype=self.current_var_type,
@@ -1439,6 +1615,20 @@ class SemanticAnalyzer:
     # ========================================================================
     # HELPER METHODS
     # ========================================================================
+    
+    def _check_member_access(self, obj_name, member_name, token):
+        sym = self.symbol_table.lookup(obj_name)
+        if sym and sym.kind == "variable" and sym.dtype:
+            class_sym = self.symbol_table.lookup(sym.dtype)
+            if class_sym and class_sym.kind == "class":
+                field = class_sym.fields.get(member_name)
+                if field and field["access"] == "private":
+                    if self.current_class != sym.dtype:
+                        self._error(
+                            "E_ACCESS",
+                            f"Cannot access private member '{member_name}' of class '{sym.dtype}'",
+                            token
+                        )
     
     def _infer_expression_type_with_target(self, node, target_type):
         """Infer expression type knowing the assignment target type."""

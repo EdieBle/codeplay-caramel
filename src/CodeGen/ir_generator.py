@@ -52,6 +52,7 @@ class IRInstruction:
         self.arg1 = arg1
         self.arg2 = arg2
         self.extra = extra
+        
 
     def to_dict(self):
         d = {"op": self.op}
@@ -127,6 +128,9 @@ class IRGenerator:
         self._current_func = None     # track current function scope
         self._loop_stack = []         # stack of (continue_label, break_label)
         self._current_return_type = None
+        self._current_class = None        # track current class being defined
+        self._current_field_access = "public"
+        self._class_fields = {}           # class_name -> list of field dicts
         
         # handles the cases for shadowing variables in parent to child stuff in for/while and if/elsif/else cases
         self._scope_depth = 0               
@@ -258,6 +262,8 @@ class IRGenerator:
 
     def _visit(self, node):
         """Dispatch to a _visit_<name> method or walk children."""
+        if self._is_node(node) and self._current_class:
+            print(f"[VISIT IN CLASS] node={node.name}")
         if not self._is_node(node):
             return None
 
@@ -328,6 +334,28 @@ class IRGenerator:
         self._visit_children_all(node)
 
     def _visit_acc_mod_dec(self, node):
+        # If inside a class, collect field info
+        print(f"[ACC_MOD_DEC] _current_class={self._current_class}")
+        if self._current_class:
+            access = "public"
+            for child in self._get_children(node):
+                if self._is_token(child) and child.type == "CAFE":
+                    access = "public"
+                elif self._is_token(child) and child.type == "BACKROOM":
+                    access = "private"
+            # Collect dtype and field name
+            dtype = self._extract_dtype(node)
+            id_tok = self._find_child_token_deep(node, "ID")
+            if dtype and id_tok:
+                field_name = id_tok.value
+                if self._current_class not in self._class_fields:
+                    self._class_fields[self._current_class] = []
+                self._class_fields[self._current_class].append({
+                    "name": field_name, "type": dtype, "access": access
+                })
+                self._emit("CLASS_FIELD", dest=field_name, 
+                        type=dtype, access=access, class_name=self._current_class)
+            return  # don't emit regular DECLARE for class fields
         self._visit_children_all(node)
 
     def _visit_acc_mod_dec_body(self, node):
@@ -670,6 +698,34 @@ class IRGenerator:
             self._emit("CALL", dest=t, arg1=var_name, arg_count=len(args))
             return t
 
+        # Member access: DOT_ACC ID (e.g. point.x in string concat)
+        if (self._is_token(first) and first.type == "DOT_ACC") or \
+        (self._is_node(first) and first.name == "DOT_ACC"):
+            member_id = None
+            for c in children[1:]:
+                if self._is_token(c) and c.type == "ID":
+                    member_id = c.value
+                    break
+            if member_id:
+                # check for method call via primary_dot_tail
+                for c in children[1:]:
+                    if self._is_node(c) and c.name == "primary_dot_tail":
+                        dot_children = self._get_children(c)
+                        first_dc = next((dc for dc in dot_children
+                                        if not (self._is_node(dc) and dc.name == "_empty")), None)
+                        if first_dc and self._is_token(first_dc) and first_dc.type == "OP_PAREN":
+                            args = self._collect_function_args(c)
+                            for a in args:
+                                self._emit("PARAM", arg1=a)
+                            t = self._new_temp()
+                            self._emit("METHOD_CALL", dest=t, arg1=var_name,
+                                       arg2=member_id, arg_count=len(args))
+                            return t
+                # plain field access
+                t = self._new_temp()
+                self._emit("MEMBER_ACC", dest=t, arg1=var_name, arg2=member_id)
+                return t
+
         # Default: just return the variable name
         return var_name
 
@@ -869,10 +925,34 @@ class IRGenerator:
             self._emit("CALL", dest=t, arg1=var_name, arg_count=len(args))
             return
 
-        # Dot access: .member
+        # Dot access: obj.member = value (MEMBER_SET)
         if (self._is_node(first) and first.name == "DOT_ACC") or \
-           (self._is_token(first) and first.type == "DOT_ACC"):
-            self._visit_children_all(tail_node)
+        (self._is_token(first) and first.type == "DOT_ACC"):
+            # Find member name (ID after DOT_ACC)
+            member_id = None
+            assign_val = None
+            for i, c in enumerate(children):
+                if self._is_token(c) and c.type == "ID":
+                    member_id = c.value
+                if self._is_node(c) and c.name == "id_dot_tail":
+                    dot_children = self._get_children(c)
+                    # check if it's a method call (OP_PAREN) vs assignment
+                    is_call = any(self._is_token(dc) and dc.type == "OP_PAREN" for dc in dot_children)
+                    if is_call:
+                        args = self._collect_function_args(c)
+                        for a in args:
+                            self._emit("PARAM", arg1=a)
+                        t = self._new_temp()
+                        self._emit("METHOD_CALL", dest=t, arg1=var_name, arg2=member_id, arg_count=len(args))
+                        return
+                    for dc in dot_children:
+                        if self._is_node(dc) and dc.name in ("assign_val", "value", "expression"):
+                            assign_val = self._visit(dc)
+                            break
+            if member_id and assign_val is not None:
+                self._emit("MEMBER_SET", dest=var_name, arg1=member_id, arg2=assign_val)
+            else:
+                self._visit_children_all(tail_node)
             return
 
         # Array element assignment: [index] = value
@@ -1339,8 +1419,7 @@ class IRGenerator:
             return var_name
 
         # Function call: OP_PAREN args CL_PAREN
-        if (self._is_node(first) and first.name == "OP_PAREN") or \
-           (self._is_token(first) and first.type == "OP_PAREN"):
+        if (self._is_node(first) and first.name == "OP_PAREN") or (self._is_token(first) and first.type == "OP_PAREN"):
             args = self._collect_function_args(tail_node)
             for a in args:
                 self._emit("PARAM", arg1=a)
@@ -1372,15 +1451,32 @@ class IRGenerator:
             self._emit("ARR_LOAD", dest=t, arg1=var_name, arg2=idx)
             return t
 
-        # Member access: DOT_ACC ID
-        if (self._is_node(first) and first.name == "DOT_ACC") or \
-           (self._is_token(first) and first.type == "DOT_ACC"):
+         # Member access: .member
+        if (self._is_token(first) and first.type == "DOT_ACC") or \
+        (self._is_node(first) and first.name == "DOT_ACC"):
+            
+            # Find member name
             member_id = None
             for c in children[1:]:
                 if self._is_token(c) and c.type == "ID":
                     member_id = c.value
                     break
             if member_id:
+                # check if primary_dot_tail has OP_PAREN → method call
+                for c in children[1:]:
+                    if self._is_node(c) and c.name == "primary_dot_tail":
+                        dot_children = self._get_children(c)
+                        first = next((dc for dc in dot_children
+                                    if not (self._is_node(dc) and dc.name == "_empty")), None)
+                        if first and self._is_token(first) and first.type == "OP_PAREN":
+                            args = self._collect_function_args(c)
+                            for a in args:
+                                self._emit("PARAM", arg1=a)
+                            t = self._new_temp()
+                            self._emit("METHOD_CALL", dest=t, arg1=var_name,
+                                    arg2=member_id, arg_count=len(args))
+                            return t
+                # no call — plain field access
                 t = self._new_temp()
                 self._emit("MEMBER_ACC", dest=t, arg1=var_name, arg2=member_id)
                 return t
@@ -1555,13 +1651,13 @@ class IRGenerator:
         return None, None
     
     def _collect_input_targets(self, node):
+        """ Collects where the input is going to from the batter@ statement and disambiguates between crema, order, and local."""
         targets = []
         children = self._get_children(node)
         i = 0
         while i < len(children):
             child = children[i]
             if self._is_token(child) and child.type == "ORDER":
-                # Look ahead for DOT_ACC and ID
                 if i + 2 < len(children):
                     dot = children[i + 1]
                     id_tok = children[i + 2]
@@ -1571,9 +1667,24 @@ class IRGenerator:
                         i += 3
                         continue
             elif self._is_token(child) and child.type == "ID":
-                name = child.value
-                targets.append(self._shadow_map.get(name, name))
-            elif self._is_node(child) and child.name not in ("_empty", "input_val"):
+                var_name = self._shadow_map.get(child.value, child.value)
+                # Check if next sibling is input_id_tail with DOT_ACC
+                if i + 1 < len(children):
+                    next_child = children[i + 1]
+                    if self._is_node(next_child) and next_child.name == "input_id_tail":
+                        tail_children = self._get_children(next_child)
+                        if tail_children and self._is_token(tail_children[0]) \
+                                and tail_children[0].type == "DOT_ACC":
+                            if len(tail_children) > 1 and self._is_token(tail_children[1]) \
+                                    and tail_children[1].type == "ID":
+                                member = tail_children[1].value
+                                targets.append(f"{var_name}.{member}")
+                                i += 2
+                                continue
+                targets.append(var_name)
+            elif self._is_node(child) and child.name not in ("_empty", "input_val",
+                                                            "input_id_tail",
+                                                            "input_order_tail"):
                 targets.extend(self._collect_input_targets(child))
             i += 1
         return targets
@@ -2253,20 +2364,94 @@ class IRGenerator:
     # ------------------------------------------------------------------
 
     def _visit_crema_def(self, node):
-        """Generate IR for class definition."""
+        """Generate IR for class definition.
+        Emits CLASS_DEF with fields, then individual FIELD_DECL instructions."""
         id_tok = self._find_child_token(node, "ID")
         class_name = id_tok.value if id_tok else "_anon_class"
+        self._current_class = class_name
+        self._class_fields[class_name] = []  # track fields
 
-        self._emit("FUNC_BEGIN", dest=f"class_{class_name}")
+        self._emit("CLASS_DEF", dest=class_name)
         self._visit_children_all(node)
-        self._emit("FUNC_END", dest=f"class_{class_name}")
+        self._emit("CLASS_END", dest=class_name)
+        self._current_class = None
 
     def _visit_crema_body(self, node):
         self._visit_children_all(node)
 
     def _visit_crema_body_cont(self, node):
+        for child in self._get_children(node):
+            if self._is_token(child) and child.type == "CAFE":
+                self._current_field_access = "public"
+            elif self._is_token(child) and child.type == "BACKROOM":
+                self._current_field_access = "private"
+        # visit only crema_acc_body children
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name == "crema_acc_body":
+                self._visit_crema_acc_body(child)
+
+    def _visit_crema_acc_body(self, node):
+        """Handle cafe/backroom field declaration inside a crema class."""
+        
+        # If this is a method (RECIPE or EMPTY), handle separately
+        for child in self._get_children(node):
+            if self._is_token(child) and child.type in ("RECIPE", "EMPTY"):
+                self._visit_crema_method(node)
+                return
+            
+        if self._current_class:
+            access = getattr(self, '_current_field_access', 'public')
+            dtype = self._extract_dtype(node)
+            id_tok = self._find_child_token_deep(node, "ID")
+            if dtype and id_tok:
+                field_name = id_tok.value
+                # Check for initializer value
+                init_val = None
+                for child in self._get_children(node):
+                    if self._is_node(child) and child.name == "crema_dtype_id_tail":
+
+                        # maybe make this a function? its a value extractor
+                        for tc in self._get_children(child):
+                            if self._is_node(tc) and tc.name == "opt_assign":
+                                # walk to find the literal value without emitting
+                                for vc in self._get_children(tc):
+                                    if self._is_node(vc) and vc.name == "value":
+                                        for ec in self._get_children(vc):
+                                            if self._is_token(ec) and ec.type in ("BEANLIT", "DRIPLIT", "BLENDLIT", "CHURROLIT"):
+                                                init_val = ec.value
+                                            elif self._is_node(ec):
+                                                # recurse one more level for wrapped literals
+                                                for lc in self._get_children(ec):
+                                                    if self._is_token(lc) and lc.type in ("BEANLIT", "DRIPLIT", "BLENDLIT", "CHURROLIT"):
+                                                        init_val = lc.value
+                                
+                if self._current_class not in self._class_fields:
+                    self._class_fields[self._current_class] = []
+                self._class_fields[self._current_class].append({
+                    "name": field_name, "type": dtype, 
+                    "access": access, "init": init_val
+                })
+                self._emit("CLASS_FIELD", dest=field_name,
+                        type=dtype, access=access, 
+                        class_name=self._current_class,
+                        init=init_val)
+            return
         self._visit_children_all(node)
 
+    def _visit_crema_dtype_id_tail(self, node):
+        """Skip — field handled by _visit_crema_acc_body."""
+        pass
+
+    def _find_child_token_deep(self, node, token_type):
+        """Recursively find first token with given type in any descendant."""
+        for c in self._get_children(node):
+            if self._is_token(c) and c.type == token_type:
+                return c
+            if self._is_node(c):
+                result = self._find_child_token_deep(c, token_type)
+                if result:
+                    return result
+        return None
     # ------------------------------------------------------------------
     # Objects (new)
     # ------------------------------------------------------------------
@@ -2364,8 +2549,35 @@ class IRGenerator:
         return None
     
     # ------------------------------------------------------------------
-    # Helpers for function args & array indices
+    # Helpers for function args & array indices & classes
     # ------------------------------------------------------------------
+
+    def _visit_crema_method(self, node):
+        id_tok = self._find_child_token(node, "ID")
+        method_name = id_tok.value if id_tok else "_anon_method"
+        
+        class_name = self._current_class  # save NOW before touching anything
+        mangled = f"class_{class_name}__{method_name}"
+
+        self._emit("FUNC_BEGIN", dest=mangled, method_of=class_name)  # emit before clearing
+        
+        prev_class = self._current_class
+        self._current_class = None   # now safe to clear for body
+        prev_func = self._current_func
+        self._current_func = mangled
+
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name == "parameter":
+                self._visit_parameter(child)
+        for child in self._get_children(node):
+            if self._is_node(child) and child.name in ("recipe_body", "empty_body"):
+                self._visit(child)
+            elif self._is_node(child) and child.name == "refill_final":
+                self._visit_refill_final(child)
+
+        self._current_func = prev_func
+        self._current_class = prev_class  # restore to "point", not None
+        self._emit("FUNC_END", dest=mangled)
 
     def _collect_function_args(self, node):
         """Collect evaluated arguments from function call nodes."""

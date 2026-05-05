@@ -228,7 +228,10 @@ class IROptimizer:
             # Substitute known constants in operands
             old_arg1 = instr.arg1
             if instr.arg1 in self._constants:
-                val = self._constants[instr.arg1]
+                if instr.op in ("MEMBER_SET",):
+                    pass 
+                else:
+                    val = self._constants[instr.arg1]
                 # if instr.arg1 == "i":
                 #     print(f"[OPT SUBST] substituting i → {val!r} in op={instr.op} dest={instr.dest}")
 
@@ -246,9 +249,13 @@ class IROptimizer:
                         instr.arg1 = val
                 elif not is_ir_churro or instr.op == "ASSIGN":
                     instr.arg1 = val
+                    
             if instr.arg2 in self._constants:
                 val = self._constants[instr.arg2]
-                if not (isinstance(val, str) and len(val) == 3 and val[0] == "'" and val[-1] == "'") \
+                # don't substitute field names in member access/set
+                if instr.op in ("MEMBER_ACC", "MEMBER_SET", "CLASS_FIELD"):
+                    pass
+                elif not (isinstance(val, str) and len(val) == 3 and val[0] == "'" and val[-1] == "'") \
                 or instr.op == "ASSIGN":
                     instr.arg2 = val
             

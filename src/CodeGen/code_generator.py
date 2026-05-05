@@ -188,7 +188,18 @@ class StructuredCodeGenerator:
         if isinstance(val, float):
             return repr(val)
         s = str(val)
+
+        if isinstance(val, str) and not val.startswith('"') and not val.startswith("'"):
+            # inside a method, check class fields first
+            if getattr(self, '_current_class_name', None) and \
+            val in self._get_class_field_names(self._current_class_name):
+                return f"self.{val}"
+            # then global check
+            if self._is_global_var(val):
+                return f'_order["{val}"]'
+            
         eb = getattr(self, '_elif_binops', {})
+        
         if s.startswith('_t') and s in eb:
             print(f"[STRUCT CODEGEN PY_VAL] resolving {s!r} -> {eb[s]!r} from _elif_binops")
             return eb[s]
@@ -444,7 +455,52 @@ class StructuredCodeGenerator:
         try:
             instr = self.ir[start]
             func_name = instr.dest
+            method_of = instr.extra.get("method_of")
             py_name = self._py_func_name(func_name)
+
+            # Find FUNC_END first — needed by both branches
+            func_end = start + 1
+            depth = 1
+            while func_end < len(self.ir):
+                if self.ir[func_end].op == "FUNC_BEGIN":
+                    depth += 1
+                elif self.ir[func_end].op == "FUNC_END":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                func_end += 1
+
+            if method_of:
+                # self._pop()  # close __init__ breaks the codegen
+                self._current_class_name = method_of
+
+                print(f"[DEBUG _gen_function] method={func_name} indent_before_pop={self._indent} init_closed={getattr(self,'_init_closed',False)}")
+                if not getattr(self, '_init_closed', False):
+                    self._pop()          # close __init__ only once
+                    self._init_closed = True
+                
+                print(f"[DEBUG _gen_function] indent_after_pop={self._indent}")
+
+                short_name = func_name.split("__", 1)[1]
+                params = []
+
+                for j in range(start + 1, func_end):
+                    if self.ir[j].op == "DECLARE" and self.ir[j].extra.get("param"):
+                        params.append(self.ir[j].dest)
+
+                param_str = ", ".join(["self"] + params)
+                self._emit(f"def {short_name}({param_str}):")
+                self._push()
+                old_in_func = self._in_func        
+                old_declared = self._declared.copy()  
+                self._in_func = True               
+                self._declared = set(params)       
+                self._translate(start + 1, func_end)
+                self._in_func = old_in_func       
+                self._declared = old_declared      
+                self._current_class_name = None
+                self._pop()
+                return func_end + 1
 
             # Find FUNC_END
             func_end = start + 1
@@ -1095,19 +1151,35 @@ class StructuredCodeGenerator:
                 else:
                     self._emit("_caramel_print()")
 
-            elif op == "INPUT": # WALA PALA YUNG TEMP PAKI TEST IF VALID, also check if it does indeed print kase sa parser oks naman and child siya ni batter@
-                dest = self._py_var(instr.dest)
-                dtype = self._get_var_type(instr.dest) or instr.extra.get("array_elem_type")
-                prompt = instr.extra.get("prompt") or ""
-                prompt_arg = f"{prompt}" if prompt else "''"
-                if dtype == "bean":
-                    self._emit(f"{dest} = _caramel_input_bean({prompt_arg})")
-                elif dtype == "drip":
-                    self._emit(f"{dest} = _caramel_input_drip({prompt_arg})")
-                elif dtype == "temp":
-                    self._emit(f"{dest} = _caramel_input_temp({prompt_arg})")
+            elif op == "INPUT":
+                dest_raw = instr.dest
+                # Handle member access targets like p.y
+                if isinstance(dest_raw, str) and '.' in dest_raw and not dest_raw.startswith('order.'):
+                    obj, member = dest_raw.split('.', 1)
+                    dtype = self._get_member_type(obj, member) or instr.extra.get("array_elem_type") or "blend"
+                    prompt = instr.extra.get("prompt") or ""
+                    prompt_arg = f"{prompt}" if prompt else "''"
+                    if dtype == "bean":
+                        self._emit(f"{obj}.{member} = _caramel_input_bean({prompt_arg})")
+                    elif dtype == "drip":
+                        self._emit(f"{obj}.{member} = _caramel_input_drip({prompt_arg})")
+                    elif dtype == "temp":
+                        self._emit(f"{obj}.{member} = _caramel_input_temp({prompt_arg})")
+                    else:
+                        self._emit(f"{obj}.{member} = _caramel_input({prompt_arg})")
                 else:
-                    self._emit(f"{dest} = _caramel_input({prompt_arg})")
+                    dest = self._py_var(dest_raw)
+                    dtype = self._get_var_type(dest_raw) or instr.extra.get("array_elem_type")
+                    prompt = instr.extra.get("prompt") or ""
+                    prompt_arg = f"{prompt}" if prompt else "''"
+                    if dtype == "bean":
+                        self._emit(f"{dest} = _caramel_input_bean({prompt_arg})")
+                    elif dtype == "drip":
+                        self._emit(f"{dest} = _caramel_input_drip({prompt_arg})")
+                    elif dtype == "temp":
+                        self._emit(f"{dest} = _caramel_input_temp({prompt_arg})")
+                    else:
+                        self._emit(f"{dest} = _caramel_input({prompt_arg})")
             
             elif op == "RETURN":
                 if instr.arg1 is not None:
@@ -1248,19 +1320,80 @@ class StructuredCodeGenerator:
                         self._emit(f"while len({arr}) <= {idx_val}: {arr}.append({self._get_default_for(instr.dest)})")
                     self._emit(f"{arr}[{idx_val}] = {val}")
 
-            elif op == "MEMBER_ACC":
-                dest = self._py_var(instr.dest)
-                obj = self._py_var(instr.arg1)
-                member = instr.arg2
-                self._emit(f"{dest} = {obj}.get('{member}', None) if isinstance({obj}, dict) else getattr({obj}, '{member}', None)")
-
             elif op == "SNAP":
                 self._emit("break")
 
             elif op == "SKIP":
                 self._emit("continue")
 
+            # Classes
+            elif op == "CLASS_DEF":
+                class_name = instr.dest
+                self._emit(f"class _Caramel_{class_name}:")
+                self._push()
+                print(f"[DEBUG CLASS_DEF] after class push, indent={self._indent}")
+                self._emit(f"def __init__(self):")
+                self._push()
+                print(f"[DEBUG CLASS_DEF] after init push, indent={self._indent}")
+                self._init_closed = False
+
+            elif op == "CLASS_FIELD":
+                field_name = instr.dest
+                dtype = instr.extra.get("type", "bean")
+                init = instr.extra.get("init")
+                if init is not None:
+                    # don't use _py_val here - it may route to _order changing this makes the __init__ for custom class have order for some reason
+                    # just convert the raw init value directly
+                    default = str(init) if not isinstance(init, str) else init
+                else:
+                    default = {"churro": "''", "blend": '""', "temp": "False", "drip": "0.0"}.get(dtype, "0")
+                self._emit(f"self.{field_name} = {default}")
+
+            elif op == "CLASS_END":
+                # Close __init__ and class
+                self._pop()  # close __init__
+                self._pop()  # close class
+                self._init_closed = False # reset for next
+                # Emit factory function
+                class_name = instr.dest
+                self._emit(f"def _func_new_{class_name}():")
+                self._push()
+                self._emit(f"return _Caramel_{class_name}()")
+                self._pop()
+
+            elif op == "MEMBER_ACC":
+                dest = self._py_var(instr.dest)
+                obj_raw = instr.arg1
+                # inside a method, class name resolves to self
+                if hasattr(self, '_current_class_name') and obj_raw == self._current_class_name:
+                    obj = "self"
+                else:
+                    obj = self._py_var(obj_raw)
+                member = instr.arg2
+                self._emit(f"{dest} = {obj}.{member}")
+
+            elif op == "MEMBER_SET":
+                obj = self._py_var(instr.dest)
+                member = instr.arg1
+                val = self._py_val(instr.arg2)
+                self._emit(f"{obj}.{member} = {val}")
                 
+            elif op == "METHOD_CALL":
+                obj = self._py_var(instr.arg1)
+                method = instr.arg2
+                arg_count = instr.extra.get("arg_count", 0)
+                py_args = []
+                # walk backwards to collect PARAMs
+                j = idx - 1
+                collected = []
+                while j >= 0 and len(collected) < arg_count:
+                    if self.ir[j].op == "PARAM":
+                        collected.insert(0, self._py_val(self.ir[j].arg1))
+                    j -= 1
+                dest = self._py_var(instr.dest)
+                self._emit(f"{dest} = {obj}.{method}({', '.join(collected)})")
+                return idx + 1
+            
             elif op in ("FUNC_BEGIN", "FUNC_END", "LABEL", "GOTO",
                         "IF_FALSE", "IF_TRUE", "NOP", "PARAM"):
                 pass  # handled elsewhere
@@ -1320,6 +1453,30 @@ class StructuredCodeGenerator:
     # HELPER FUNCTIONS
     # ==========================
 
+    def _get_class_field_names(self, class_name):
+        """Return set of field names for a given class from IR."""
+        return {
+            instr.dest 
+            for instr in self.ir 
+            if instr.op == "CLASS_FIELD" and instr.extra.get("class_name") == class_name
+        }
+
+    def _get_member_type(self, obj_name, member_name):
+        """Get the declared type of obj.member by looking up CLASS_FIELD in IR."""
+        # First find the class name from the object's DECLARE instruction
+        class_name = None
+        for instr in self.ir:
+            if instr.op == "DECLARE" and instr.dest == obj_name:
+                class_name = instr.extra.get("type")
+                break
+        if not class_name:
+            return None
+        # Then find the CLASS_FIELD with matching name and class
+        for instr in self.ir:
+            if instr.op == "CLASS_FIELD" and instr.dest == member_name \
+                    and instr.extra.get("class_name") == class_name:
+                return instr.extra.get("type")
+        return None
 
     def _clean_init_val(self, v):
         """Strip surrounding IR quotes from string literals for array init."""

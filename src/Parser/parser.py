@@ -965,12 +965,20 @@ class RDParser:
     # nested member access (.), or array element on the member ([]).
     # ---------------------------------------------------------------
     def parse_id_dot_tail(self):
-        """Parse rule: id_dot_tail -> = value | . member | [idx] | (args) | λ"""
+        """Parse rule: id_dot_tail -> = value | (args) | . member | [idx] | λ"""
         t = self._current().type
         if t == "EQUALS":
             return self._node("id_dot_tail", [
                 self._expect("EQUALS"),
                 self.parse_assign_val()
+            ])
+        if t == "OP_PAREN" and self._allow_function_calls:
+            # p.method(args) — method call used as statement
+            return self._node("id_dot_tail", [
+                self._expect("OP_PAREN"),
+                self.parse_function_args(),
+                self.parse_function_args_tail(),
+                self._expect("CL_PAREN")
             ])
         if t == "DOT_ACC":
             return self._node("id_dot_tail", [
@@ -986,7 +994,8 @@ class RDParser:
                 self.parse_arr_call_tail(),
                 self.parse_id_crema_assign_tail()
             ])
-        self._error({"EQUALS", "DOT_ACC", "OP_BRACKETS"})
+        # λ — bare member access as statement (e.g. p.x with no assignment)
+        return self._node("id_dot_tail", [self._node("_empty")])
 
     # ---------------------------------------------------------------
     # CFG#32# id_crema_assign_tail -> EQUALS assign_val
@@ -996,10 +1005,12 @@ class RDParser:
     # ---------------------------------------------------------------
     def parse_id_crema_assign_tail(self):
         """Parse rule: id_crema_assign_tail -> = value | λ"""
-        return self._node("id_crema_assign_tail", [
-            self._expect("EQUALS"),
-            self.parse_assign_val()
-        ])
+        if self._current().type == "EQUALS":
+            return self._node("id_crema_assign_tail", [
+                self._expect("EQUALS"),
+                self.parse_assign_val()
+            ])
+        return self._node("id_crema_assign_tail", [self._node("_empty")])
 
     # ---------------------------------------------------------------
     # CFG#33# id_bracket_tail -> OP_BRACKETS array_index CL_BRACKETS EQUALS arr_elem
