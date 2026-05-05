@@ -2433,7 +2433,7 @@ class IRGenerator:
                                 break
                         # reuse same BEANLIT-after-OP_BRACKETS pattern as regular arrays
                         toks = self._get_children(child)
-                        print(f"[DEBUG toks] {[(getattr(t,'type',None), getattr(t,'name',None)) for t in toks]}")
+                        # print(f"[DEBUG toks] {[(getattr(t,'type',None), getattr(t,'name',None)) for t in toks]}")
                         for i, tc in enumerate(toks):
                             if (self._is_token(tc) and tc.type == "OP_BRACKETS") or \
                             (self._is_node(tc) and tc.name == "OP_BRACKETS"):  # ← add node check
