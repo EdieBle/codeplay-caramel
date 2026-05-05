@@ -2421,27 +2421,41 @@ class IRGenerator:
             id_tok = self._find_child_token_deep(node, "ID")
             if dtype and id_tok:
                 field_name = id_tok.value
-                # Check for initializer value
                 init_val = None
+                array_size = None  # track array size
+
                 for child in self._get_children(node):
                     if self._is_node(child) and child.name == "crema_dtype_id_tail":
-
-                        # maybe make this a function? its a value extractor
+                        # extract init value
                         for tc in self._get_children(child):
                             if self._is_node(tc) and tc.name == "opt_assign":
                                 init_val = self._extract_literal_from_node(tc)
                                 break
-                                
-                if self._current_class not in self._class_fields:
-                    self._class_fields[self._current_class] = []
-                self._class_fields[self._current_class].append({
-                    "name": field_name, "type": dtype, 
-                    "access": access, "init": init_val
+                        # reuse same BEANLIT-after-OP_BRACKETS pattern as regular arrays
+                        toks = self._get_children(child)
+                        print(f"[DEBUG toks] {[(getattr(t,'type',None), getattr(t,'name',None)) for t in toks]}")
+                        for i, tc in enumerate(toks):
+                            if (self._is_token(tc) and tc.type == "OP_BRACKETS") or \
+                            (self._is_node(tc) and tc.name == "OP_BRACKETS"):  # ← add node check
+                                if i + 1 < len(toks):
+                                    next_node = toks[i + 1]
+                                    if self._is_node(next_node) and next_node.name == "arr_size_val":
+                                        for sc in self._get_children(next_node):
+                                            if self._is_token(sc) and sc.type == "BEANLIT":
+                                                array_size = int(sc.value)
+                                    elif self._is_token(next_node) and next_node.type == "BEANLIT":
+                                        array_size = int(next_node.value)
+
+                        
+                self._class_fields.setdefault(self._current_class, []).append({
+                    "name": field_name, "type": dtype,
+                    "access": access, "init": init_val,
+                    "array_size": array_size  # store for codegen
                 })
                 self._emit("CLASS_FIELD", dest=field_name,
-                        type=dtype, access=access, 
+                        type=dtype, access=access,
                         class_name=self._current_class,
-                        init=init_val)
+                        init=init_val, array_size=array_size)  # pass to codegen
             return
         self._visit_children_all(node)
 

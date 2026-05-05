@@ -640,6 +640,7 @@ class SemanticAnalyzer:
                 else:
                     dtype = self._extract_type_from_node(child)
                     field_name = self._extract_var_name(child)
+                    print(f"[DEBUG crema field] name={field_name} dtype={dtype}")
                     if dtype and field_name and self._current_class_sym is not None:
                         if field_name in self._current_class_sym.fields:
                             self._error("E001",
@@ -1211,16 +1212,14 @@ class SemanticAnalyzer:
             symbol = self.symbol_table.lookup(lookup_name)
 
             if not symbol:
-                # allow bare sibling method calls inside a class method
                 if self.current_class and self._current_class_sym and \
-                var_name in self._current_class_sym.fields and \
-                self._current_class_sym.fields[var_name].get("kind") == "method":
+                var_name in self._current_class_sym.fields:
                     self._visit_children(node)
                     return
                 self._error("E002", f"Undeclared identifier '{var_name}'", id_token)
                 self._visit_children(node)
                 return
-
+            
             if symbol.is_constant:
                 self._error("E005", f"Cannot modify constant identifier '{var_name}'", id_token)
 
@@ -1676,13 +1675,13 @@ class SemanticAnalyzer:
     def _check_member_access(self, obj_name, member_name, token):
         sym = self.symbol_table.lookup(obj_name)
         
-        print(f"[DEBUG _check_member_access] obj={obj_name} sym={sym} dtype={getattr(sym,'dtype',None)}")
+        # print(f"[SEM DEBUG _check_member_access] obj={obj_name} sym={sym} dtype={getattr(sym,'dtype',None)}")
         
         if not sym or sym.kind != "variable" or not sym.dtype:
             return None
 
         class_sym = self.symbol_table.lookup(sym.dtype)
-        print(f"[DEBUG _check_member_access] class_sym={class_sym} fields={getattr(class_sym,'fields',None)}")
+        # print(f"[SEM DEBUG _check_member_access] class_sym={class_sym} fields={getattr(class_sym,'fields',None)}")
         if not class_sym or class_sym.kind != "class":
             return None
 
