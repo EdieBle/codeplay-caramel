@@ -1550,8 +1550,21 @@ class SemanticAnalyzer:
         if id_token:
             symbol = self.symbol_table.lookup(id_token.value)
             if symbol:
-                if getattr(symbol, 'is_array', False):  # ← add this
-                    return "array"
+                if getattr(symbol, 'is_array', False):
+                    # check if there's an index access — if so, return element type
+                    has_index = any(
+                        self._is_parse_node(c) and c.name == "primary_id_tail" and
+                        any(
+                            not self._is_parse_node(tc) and hasattr(tc, 'type')
+                            and tc.type == "OP_BRACKETS"
+                            for tc in c.children
+                        )
+                        for c in node.children
+                    )
+                    if not has_index:
+                        return "array"   # bare array name e.g. sift(xarr)
+                    # indexed access → return element type
+                    return symbol.dtype
                 member_type = self._infer_member_type(node, id_token.value)
                 return member_type if member_type else symbol.dtype
 
