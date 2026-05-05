@@ -335,7 +335,8 @@ class IRGenerator:
 
     def _visit_acc_mod_dec(self, node):
         # If inside a class, collect field info
-        print(f"[ACC_MOD_DEC] _current_class={self._current_class}")
+        # print(f"[IRGEN DEBUG ACC_MOD_DEC] _current_class={self._current_class}")
+        
         if self._current_class:
             access = "public"
             for child in self._get_children(node):

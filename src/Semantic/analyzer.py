@@ -629,9 +629,14 @@ class SemanticAnalyzer:
                     dtype = self._extract_type_from_node(child)
                     field_name = self._extract_var_name(child)
                     if dtype and field_name and self._current_class_sym is not None:
-                        self._current_class_sym.fields[field_name] = {
-                            "type": dtype, "access": access
-                        }
+                        if field_name in self._current_class_sym.fields:
+                            self._error("E001",
+                                f"Field '{field_name}' is already declared in class '{self.current_class}'",
+                                child)
+                        else:
+                            self._current_class_sym.fields[field_name] = {
+                                "type": dtype, "access": access
+                            }
         # NO _visit_children call here
 
     def _visit_crema_method(self, node, access):
@@ -1359,6 +1364,20 @@ class SemanticAnalyzer:
     
     def _visit_acc_mod_dec_body(self, node):
         """Visit access modifier declaration body"""
+            # cafe/backroom only allowed inside a crema definition
+        if self.current_class is None:
+            self._error("E_ACCESS",
+                "Access modifiers 'cafe'/'backroom' are only allowed inside a class definition",
+                node)
+            return
+        # also not allowed inside a method body
+        if self.current_function is not None:
+            self._error("E_ACCESS",
+                "Access modifiers 'cafe'/'backroom' are not allowed inside a method body",
+                node)
+            return
+        self._visit_children(node)
+
         dtype = self._extract_type_from_node(node)
         if dtype:
             self.current_var_type = dtype
