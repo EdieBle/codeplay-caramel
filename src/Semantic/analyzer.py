@@ -34,29 +34,6 @@ class SemanticError:
             "severity": self.severity
         }
    
-        """
-        Semantic ERROR list:
-        | Code | Meaning | Example trigger |
-        |---|---|---|
-        | `E001` | Redefinition — identifier declared twice in same scope | `bean x = 1` then `bean x = 2` in same block |
-        | `E002` | Undeclared identifier — variable used before declaration | `glaze(y)` when `y` was never declared |
-        | `E003` | Type mismatch — incompatible types in assignment or return | `bean x = "hello"` |
-        | `E004` | Invalid type conversion | explicit cast that Caramel rejects |
-        | `E005` | Constant modified — brewed variable reassigned | `brewed bean x = 1` then `x = 2` |
-        | `E006` | Invalid operation — operator used on incompatible type | arithmetic on a blend variable |
-        | `E007` | Missing main — no `bean cup()` found | program with no entry point |
-        | `E008` | Multiple main — `bean cup()` declared more than once | two `cup()` definitions |
-        | `E009` | Attempted type cast (rejected in Caramel) | any explicit cast expression |
-        | `E010` | Invalid operator compatibility | e.g. `temp + bean` |
-        | `E011` | Parameter count mismatch in function call | `recipe bean add(bean a, bean b)` called as `add(1)` |
-        | `E012` | Array initializer has too many elements | `bean x[3] = [1,2,3,4,5]` |
-        | `E013` | Array initializer has too few elements | `bean x[5] = [1,2]` |
-        | `E_SIFT` | sift() called with wrong argument type | `sift(someInt)` |
-        | `E_ACCESS` | Private member accessed from outside its class | accessing a `backroom` field externally |
-        | `E_RES_FUNC` | Function named the same as a built-in | `recipe bean sift()` |
-        | `E_CONST` | Constant declared without an initializer | `brewed bean x` with no `= value` |
-        | `E_ARR_TYPE` | Wrong element type assigned to typed array | `drip prices[5]` then `prices[0] = "hello"` |
-        """
 class Symbol:
     """ Represents a symbol (an entry) in the symbol table.
         kind = represents a symbol whether it a variable, function, or class in the program
@@ -149,20 +126,29 @@ class SemanticAnalyzer:
     Analyzes CARAMEL AST for semantic correctness.
     
     Checks based on specification:
-    - E001: Redefinition of identifier
-    - E002: Undeclared identifier
-    - E003: Type mismatch
-    - E004: Invalid type conversion
-    - E005: Constant value being modified
-    - E006: Invalid operation
-    - E007: Missing main function
-    - E008: Multiple main functions
-    - E009: Attempted type cast (REJECTED)
-    - E010: Invalid operator compatibility
-    - E011: Parameter unfulfilled by the arguments passed
-    - E012: Array Overloaded
-    - E013: Array 
-    - E014: 
+        
+    Semantic ERROR list:
+    | Code | Meaning | Example trigger |
+    |---|---|---|
+    | `E001` | Redefinition — identifier declared twice in same scope | `bean x = 1` then `bean x = 2` in same block |
+    | `E002` | Undeclared identifier — variable used before declaration | `glaze(y)` when `y` was never declared |
+    | `E003` | Type mismatch — incompatible types in assignment or return | `bean x = "hello"` |
+    | `E004` | Invalid type conversion | explicit cast that Caramel rejects |
+    | `E005` | Constant modified — brewed variable reassigned | `brewed bean x = 1` then `x = 2` |
+    | `E006` | Invalid operation — operator used on incompatible type | arithmetic on a blend variable |
+    | `E007` | Missing main — no `bean cup()` found | program with no entry point |
+    | `E008` | Multiple main — `bean cup()` declared more than once | two `cup()` definitions |
+    | `E009` | Attempted type cast (rejected in Caramel) | any explicit cast expression |
+    | `E010` | Invalid operator compatibility | e.g. `temp + bean` |
+    | `E011` | Parameter count mismatch in function call | `recipe bean add(bean a, bean b)` called as `add(1)` |
+    | `E012` | Array initializer has too many elements | `bean x[3] = [1,2,3,4,5]` |
+    | `E013` | Array initializer has too few elements | `bean x[5] = [1,2]` |
+    | `E_SIFT` | sift() called with wrong argument type | `sift(someInt)` |
+    | `E_ACCESS` | Private member accessed from outside its class | accessing a `backroom` field externally |
+    | `E_RES_FUNC` | Function named the same as a built-in | `recipe bean sift()` |
+    | `E_CONST` | Constant declared without an initializer | `brewed bean x` with no `= value` |
+    | `E_ARR_TYPE` | Wrong element type assigned to typed array | `drip prices[5]` then `prices[0] = "hello"` |
+    
     """
     
     # Valid data types
