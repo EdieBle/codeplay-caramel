@@ -86,6 +86,36 @@ class IRInstruction:
                 PRINT:      args (list of values)
     """
 
+    """
+        DECLARE     - variable declaration          (dest=var, type=dtype)
+        ASSIGN      - simple assignment             (dest=var, arg1=value)
+        BINOP       - binary operation              (dest=temp, arg1, arg2, binop=op)
+        UNARYOP     - unary operation               (dest=temp, arg1, unaryop=op)
+        LABEL       - label marker                  (dest=label_name)
+        GOTO        - unconditional jump            (dest=label)
+        IF_FALSE    - conditional jump if false     (arg1=cond, dest=label)
+        IF_TRUE     - conditional jump if true      (arg1=cond, dest=label)
+        CALL        - function call                 (dest=temp, arg1=func_name, arg_count=n)
+        METHOD_CALL - object method call            (dest=temp, arg1=obj, arg2=method, arg_count=n)
+        PARAM       - push parameter before CALL    (arg1=value)
+        RETURN      - return from function          (arg1=value, return_type=dtype)
+        FUNC_BEGIN  - function entry point          (dest=func_name, [method_of=class])
+        FUNC_END    - function exit point           (dest=func_name)
+        PRINT       - glaze() output                (args=[val, val, ...])
+        INPUT       - batter@ input                 (dest=var, prompt=str)
+        ARR_DECLARE - array declaration             (dest=var, type=dtype, dims=[size])
+        ARR_STORE   - array element write           (dest=arr, arg1=index, arg2=value)
+        ARR_LOAD    - array element read            (dest=temp, arg1=arr, arg2=index)
+        CONCAT      - string concatenation          (dest=temp, arg1, arg2)
+        CAST        - type conversion               (dest=temp, arg1=source, type=target)
+        MEMBER_ACC  - object field read             (dest=temp, arg1=obj, arg2=field)
+        MEMBER_SET  - object field write            (dest=obj, arg1=field, arg2=value)
+        CLASS_DEF   - class definition start        (dest=class_name)
+        CLASS_FIELD - class field declaration       (dest=field, type=dtype, class_name=name)
+        CLASS_END   - class definition end          (dest=class_name)
+        NOP         - no operation placeholder
+    """
+
     __slots__ = ("op", "dest", "arg1", "arg2", "extra")
 
     def __init__(self, op, dest=None, arg1=None, arg2=None, **extra):
