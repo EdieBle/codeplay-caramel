@@ -85,35 +85,165 @@ class IRInstruction:
                 CLASS_FIELD: type, access, class_name, init, array_size
                 PRINT:      args (list of values)
     """
-
     """
-        DECLARE     - variable declaration          (dest=var, type=dtype)
-        ASSIGN      - simple assignment             (dest=var, arg1=value)
-        BINOP       - binary operation              (dest=temp, arg1, arg2, binop=op)
-        UNARYOP     - unary operation               (dest=temp, arg1, unaryop=op)
-        LABEL       - label marker                  (dest=label_name)
-        GOTO        - unconditional jump            (dest=label)
-        IF_FALSE    - conditional jump if false     (arg1=cond, dest=label)
-        IF_TRUE     - conditional jump if true      (arg1=cond, dest=label)
-        CALL        - function call                 (dest=temp, arg1=func_name, arg_count=n)
-        METHOD_CALL - object method call            (dest=temp, arg1=obj, arg2=method, arg_count=n)
-        PARAM       - push parameter before CALL    (arg1=value)
-        RETURN      - return from function          (arg1=value, return_type=dtype)
-        FUNC_BEGIN  - function entry point          (dest=func_name, [method_of=class])
-        FUNC_END    - function exit point           (dest=func_name)
-        PRINT       - glaze() output                (args=[val, val, ...])
-        INPUT       - batter@ input                 (dest=var, prompt=str)
-        ARR_DECLARE - array declaration             (dest=var, type=dtype, dims=[size])
-        ARR_STORE   - array element write           (dest=arr, arg1=index, arg2=value)
-        ARR_LOAD    - array element read            (dest=temp, arg1=arr, arg2=index)
-        CONCAT      - string concatenation          (dest=temp, arg1, arg2)
-        CAST        - type conversion               (dest=temp, arg1=source, type=target)
-        MEMBER_ACC  - object field read             (dest=temp, arg1=obj, arg2=field)
-        MEMBER_SET  - object field write            (dest=obj, arg1=field, arg2=value)
-        CLASS_DEF   - class definition start        (dest=class_name)
-        CLASS_FIELD - class field declaration       (dest=field, type=dtype, class_name=name)
-        CLASS_END   - class definition end          (dest=class_name)
-        NOP         - no operation placeholder
+    IR Instruction Master List
+    ===========================
+
+    Every operation that IRGenerator can emit, with full field descriptions.
+    Verified against ir_generator.py (_emit calls), optimizer.py (op checks),
+    and code_generator.py (elif op == handlers).
+
+    Format: OP  (field=value, ...)  -> what the codegen produces
+
+    ──────────────────────────────────────────────────────
+    VARIABLES & DECLARATIONS
+    ──────────────────────────────────────────────────────
+    DECLARE     (dest=var, type=dtype, [param=True], [constant=True])
+                -> var = default_for_type
+                param=True means it's a function parameter (no emit in codegen,
+                used to build def signature). constant=True means brewed.
+
+    ASSIGN      (dest=var, arg1=value)
+                -> var = value  (with type coercion: int(), float(), chr(), ord()
+                based on dest's declared type vs source type)
+
+    ARR_DECLARE (dest=var, type=dtype, dims=[size], [init=[values]], [is_2d=True])
+                -> var = [default] * size     (static sized)
+                -> var = []                   (dynamic ***  array)
+                -> var = [[...], [...]]       (2D array)
+                Upgraded from DECLARE by _visit_dtype_id_tail when OP_BRACKETS found.
+
+    ──────────────────────────────────────────────────────
+    ARITHMETIC & LOGIC
+    ──────────────────────────────────────────────────────
+    BINOP       (dest=temp, arg1, arg2, binop=op)
+                op ∈ {'+', '-', '*', '/', '%', '==', '!=', '>', '<', '>=', '<=', '&&', '||'}
+                -> _tN = arg1 op arg2
+
+    UNARYOP     (dest=temp, arg1, unaryop=op)
+                op ∈ {'-', '!'}
+                -> _tN = -arg1   or   _tN = not arg1
+
+    CONCAT      (dest=temp, arg1, arg2)
+                -> _tN = str(arg1) + str(arg2)
+                Used specifically for blend (string) concatenation via the '+' operator
+                in string context. Distinct from BINOP '+' which is numeric addition.
+
+    CAST        (dest=temp, arg1=source, type=target_type)
+                -> _tN = int/float/str/bool(source)
+                Emitted for explicit type coercion operations.
+
+    ──────────────────────────────────────────────────────
+    CONTROL FLOW
+    ──────────────────────────────────────────────────────
+    LABEL       (dest=label_name)
+                -> (no code emitted — marks a jump target position in the IR)
+                Used as: WHILE_START_N, WHILE_END_N, IF_END_N, ELSE_N,
+                        POUR_UPDATE_N, DOWHILE_START_N, SWITCH_END_N
+
+    GOTO        (dest=label_name)
+                -> (structural — consumed by _gen_while_loop/_gen_if_block,
+                emitted as 'continue' or loop-back; never emitted literally)
+
+    IF_FALSE    (arg1=cond, dest=label_name)
+                -> if not _caramel_to_bool(cond): goto label
+                Structural — consumed by control flow generators.
+
+    IF_TRUE     (arg1=cond, dest=label_name)
+                -> if _caramel_to_bool(cond): goto label
+                Used by tastetill (do-while) back-edge condition.
+
+    SNAP        (no fields)
+                -> break
+                Emitted when snap keyword has no update_label on the loop stack
+                (i.e. inside a flavour/switch or a whilehot with no update).
+                Note: inside pour loops, snap emits GOTO end_label instead.
+
+    SKIP        (no fields)
+                -> continue
+                Emitted when skip keyword has no update_label on the loop stack.
+                Inside pour loops, skip emits GOTO update_label instead so the
+                loop increment still runs before the next iteration.
+
+    ──────────────────────────────────────────────────────
+    FUNCTIONS
+    ──────────────────────────────────────────────────────
+    FUNC_BEGIN  (dest=func_name, [method_of=class_name])
+                -> def _func_name(params):   (regular function)
+                -> def method_name(self, params):  (if method_of is set)
+
+    FUNC_END    (dest=func_name)
+                -> (closes the function block — handled via indent pop in codegen)
+
+    PARAM       (arg1=value)
+                -> (no direct emit — collected by the codegen before CALL/METHOD_CALL
+                and assembled into the argument list)
+
+    CALL        (dest=temp, arg1=func_name, arg_count=n)
+                -> _tN = _func_funcname(arg1, arg2, ...)
+                Collects n preceding PARAM instructions as arguments.
+
+    METHOD_CALL (dest=temp, arg1=obj, arg2=method_name, arg_count=n)
+                -> _tN = obj.method_name(arg1, arg2, ...)
+                arg1='__self__' -> emitted as 'self' (sibling method call inside class).
+
+    RETURN      (arg1=value, [return_type=dtype])
+                -> return value
+                return_type used by codegen for coercion (e.g. int(val) for bean return).
+
+    ──────────────────────────────────────────────────────
+    I/O
+    ──────────────────────────────────────────────────────
+    PRINT       (args=[val, val, ...])
+                -> _caramel_print(val, val, ...)
+
+    INPUT       (dest=var, [prompt=str], [array_elem_type=dtype])
+                -> var = _caramel_input_bean/drip/temp(prompt)
+                array_elem_type tells codegen which typed input function to use.
+
+    ──────────────────────────────────────────────────────
+    ARRAYS
+    ──────────────────────────────────────────────────────
+    ARR_STORE   (dest=arr, arg1=index, arg2=value)
+                -> arr[index] = value
+                dest -> 'self.arr' when inside a class method.
+
+    ARR_LOAD    (dest=temp, arg1=arr, arg2=index, [is_2d=True])
+                -> _tN = arr[index]
+                is_2d=True means arr is a row (result of prior ARR_LOAD on 2D array),
+                so dest becomes the row variable: row[col_index].
+                dest -> 'self.arr' when inside a class method.
+
+    ──────────────────────────────────────────────────────
+    OBJECTS & CLASSES
+    ──────────────────────────────────────────────────────
+    MEMBER_ACC  (dest=temp, arg1=obj, arg2=field_name)
+                -> _tN = obj.field_name
+                arg1='store' and obj == _current_class_name -> 'self.field_name'
+
+    MEMBER_SET  (dest=obj, arg1=field_name, arg2=value)
+                -> obj.field_name = value
+                dest == _current_class_name -> 'self.field_name = value'
+
+    CLASS_DEF   (dest=class_name)
+                -> class _Caramel_classname:
+                    def __init__(self):   (opened, waiting for CLASS_FIELD instructions)
+
+    CLASS_FIELD (dest=field_name, type=dtype, class_name=name,
+                [init=value], [array_size=n])
+                -> self.field = default          (scalar field inside __init__)
+                -> self.field = [default] * n    (array field inside __init__)
+
+    CLASS_END   (dest=class_name)
+                -> (closes __init__ and class indent)
+                def _func_new_classname():
+                    return _Caramel_classname()
+
+    ──────────────────────────────────────────────────────
+    MISC
+    ──────────────────────────────────────────────────────
+    NOP         (no fields)
+                -> pass  (or nothing — used as a placeholder in empty bodies)
     """
 
     __slots__ = ("op", "dest", "arg1", "arg2", "extra")
