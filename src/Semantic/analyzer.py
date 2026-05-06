@@ -1609,7 +1609,7 @@ class SemanticAnalyzer:
         has_blend = "blend" in collected
 
         if churro_count >= 2 and not has_numeric:
-            # churro + churro with no numeric → blend (string concat)
+            # churro + churro with no numeric -> blend (string concat)
             return "blend"
         if has_blend:
             return "blend"
@@ -1709,7 +1709,7 @@ class SemanticAnalyzer:
                         mem = children[i + 1]
                         if hasattr(mem, 'type') and mem.type == "ID":
                             result = self._check_member_access(obj_name, mem.value, mem)
-                            print(f"[DEBUG _infer_member_type] obj={obj_name} member={mem.value} → {result}")
+                            print(f"[DEBUG _infer_member_type] obj={obj_name} member={mem.value} -> {result}")
                             return result
         return None
         

@@ -2,7 +2,7 @@
 IR Optimizer for CARAMEL Language
 
 PIPELINE POSITION:
-  IRGenerator → [IR list] → IROptimizer → [optimized IR list] → CodeGenerator
+  IRGenerator -> [IR list] -> IROptimizer -> [optimized IR list] -> CodeGenerator
 
 PURPOSE:
   Takes the flat three-address code (TAC) IR list from IRGenerator and runs
@@ -14,7 +14,7 @@ PURPOSE:
 PASSES (run in order, repeated up to N times):
   1. Constant Folding       — evaluate BINOP/UNARYOP on two literal constants
                               at compile time, replacing the instruction with
-                              a simple ASSIGN. E.g. _t1 = 3 + 4 → _t1 = 7.
+                              a simple ASSIGN. E.g. _t1 = 3 + 4 -> _t1 = 7.
 
   2. Constant Propagation   — track variables that hold known constant values
                               (via ASSIGN to a literal) and substitute the
@@ -26,7 +26,7 @@ PASSES (run in order, repeated up to N times):
 
   3. Strength Reduction      — replace expensive arithmetic operations with
                               cheaper equivalents where the result is identical:
-                              x*0→0, x*1→x, x+0→x, x-0→x, x/1→x, x*2→x+x.
+                              x*0->0, x*1->x, x+0->x, x-0->x, x/1->x, x*2->x+x.
                               Guards against applying these to string literals
                               and churro (char) variables where arithmetic
                               has different semantics.
@@ -132,11 +132,11 @@ def _to_numeric(val):
     Called by _try_fold_binop before applying _ARITH_OPS or _REL_OPS.
 
     Conversion rules:
-      int/float       → returned as-is
-      bool            → 1 (True) or 0 (False)  — bool is a subclass of int
-      numeric str     → int if no '.', float if '.' present
-      non-numeric str → None  (signals: this operand cannot be folded)
-      None/other      → None
+      int/float       -> returned as-is
+      bool            -> 1 (True) or 0 (False)  — bool is a subclass of int
+      numeric str     -> int if no '.', float if '.' present
+      non-numeric str -> None  (signals: this operand cannot be folded)
+      None/other      -> None
 
     Returns None rather than raising so callers can skip folding safely.
     """
@@ -160,12 +160,12 @@ def _to_bool(val):
     Called by _try_fold_binop when the operator is '&&' or '||'.
 
     Conversion rules:
-      bool                         → returned as-is
-      int/float                    → True if != 0, False if == 0
-      'True' / 'true' / 'hot'     → True   ('hot' is Caramel's true literal)
-      'False' / 'false' / 'cold'  → False  ('cold' is Caramel's false literal)
-      numeric string               → True if != 0 (via _to_numeric)
-      anything else                → None  (signals: cannot evaluate logically)
+      bool                         -> returned as-is
+      int/float                    -> True if != 0, False if == 0
+      'True' / 'true' / 'hot'     -> True   ('hot' is Caramel's true literal)
+      'False' / 'false' / 'cold'  -> False  ('cold' is Caramel's false literal)
+      numeric string               -> True if != 0 (via _to_numeric)
+      anything else                -> None  (signals: cannot evaluate logically)
     """
     if isinstance(val, bool):
         return val
@@ -201,7 +201,7 @@ class IROptimizer:
         State variables:
           self.instructions  — working copy of the IR list; mutated in place
                                by each pass and returned by optimize()
-          self._constants    — dict mapping variable name → known constant value,
+          self._constants    — dict mapping variable name -> known constant value,
                                used by _pass_constant_propagation() to track
                                which variables currently hold literal values.
                                Reset at every FUNC_BEGIN/FUNC_END/LABEL boundary.
@@ -242,10 +242,10 @@ class IROptimizer:
         the instruction with a plain ASSIGN to the folded value.
 
         Examples:
-          BINOP  _t1 = 3 + 4     → ASSIGN _t1 = 7
-          BINOP  _t2 = 10 > 3   → ASSIGN _t2 = True
-          UNARYOP _t3 = -5      → ASSIGN _t3 = -5
-          UNARYOP _t4 = !True   → ASSIGN _t4 = False
+          BINOP  _t1 = 3 + 4     -> ASSIGN _t1 = 7
+          BINOP  _t2 = 10 > 3   -> ASSIGN _t2 = True
+          UNARYOP _t3 = -5      -> ASSIGN _t3 = -5
+          UNARYOP _t4 = !True   -> ASSIGN _t4 = False
 
         Delegates to:
           _try_fold_binop(instr)   — returns folded value or None
@@ -296,7 +296,7 @@ class IROptimizer:
             na, nb = _to_numeric(a), _to_numeric(b)
             if na is not None and nb is not None:
                 result = _ARITH_OPS[op](na, nb)
-                # print(f"[FOLD_BINOP ARITH_OPS] {instr.dest} = {a!r} {op} {b!r} → {result!r}")
+                # print(f"[FOLD_BINOP ARITH_OPS] {instr.dest} = {a!r} {op} {b!r} -> {result!r}")
                 return result
 
         # Relational
@@ -324,8 +324,8 @@ class IROptimizer:
         Returns the folded value if the operand is a constant, else None.
 
         Supported ops:
-          '-'  — numeric negation: -5 → -5, -3.0 → -3.0
-          '!'  — boolean NOT: !True → False, !0 → True
+          '-'  — numeric negation: -5 -> -5, -3.0 -> -3.0
+          '!'  — boolean NOT: !True -> False, !0 -> True
         """
         a = instr.arg1
         op = instr.extra.get("unaryop", "")
@@ -359,12 +359,12 @@ class IROptimizer:
         Algorithm:
           Walk instructions linearly, maintaining self._constants dict.
           For each instruction:
-            a) If ASSIGN to a constant literal → record in self._constants
-            b) If ASSIGN to a non-constant → remove from self._constants
+            a) If ASSIGN to a constant literal -> record in self._constants
+            b) If ASSIGN to a non-constant -> remove from self._constants
             c) Substitute self._constants[arg1] and self._constants[arg2]
                into the current instruction where safe
-            d) For PRINT args → substitute known constants in the args list
-            e) If INPUT → invalidate the destination (runtime value, unknowable)
+            d) For PRINT args -> substitute known constants in the args list
+            e) If INPUT -> invalidate the destination (runtime value, unknowable)
 
         Boundary resets (self._constants.clear()):
           FUNC_BEGIN, FUNC_END, LABEL — control flow edges may bring different
@@ -379,9 +379,9 @@ class IROptimizer:
         Special post-ASSIGN tracking:
           - bool constants are NOT tracked — they get coerced to 'hot'/'cold'
             for blend variables, so propagating the raw bool gives wrong types
-          - float assigned to bean destination → track as int (truncated)
-          - int/float assigned to churro destination → track as chr() char
-            e.g. churro c = 96 → stores "'`'" for downstream type()/print()
+          - float assigned to bean destination -> track as int (truncated)
+          - int/float assigned to churro destination -> track as chr() char
+            e.g. churro c = 96 -> stores "'`'" for downstream type()/print()
           - Everything else tracked as-is
         """
         self._constants = {}
@@ -392,7 +392,7 @@ class IROptimizer:
                 self._constants.clear()
                 continue
             # if instr.op == "ASSIGN" and instr.dest:
-            #     print(f"[PROP] {instr.dest} = {instr.arg1!r} → constants[{instr.dest}] = {instr.arg1 if _is_constant(instr.arg1) else 'REMOVED'}")
+            #     print(f"[PROP] {instr.dest} = {instr.arg1!r} -> constants[{instr.dest}] = {instr.arg1 if _is_constant(instr.arg1) else 'REMOVED'}")
 
             # Track assignments of constants
             if instr.op == "ASSIGN" and instr.dest:
@@ -410,7 +410,7 @@ class IROptimizer:
                 else:
                     val = self._constants[instr.arg1]
                 # if instr.arg1 == "i":
-                #     print(f"[OPT SUBST] substituting i → {val!r} in op={instr.op} dest={instr.dest}")
+                #     print(f"[OPT SUBST] substituting i -> {val!r} in op={instr.op} dest={instr.dest}")
 
                 is_ir_churro = isinstance(val, str) and len(val) == 3 and val[0] == "'" and val[-1] == "'"
                 # Don't substitute churro into non-churro BINOP
@@ -437,7 +437,7 @@ class IROptimizer:
                     instr.arg2 = val
             
             # if old_arg1 != instr.arg1:
-                # print(f"[CONST_PROP] {instr.dest}: arg1 {old_arg1!r} → {instr.arg1!r}")
+                # print(f"[CONST_PROP] {instr.dest}: arg1 {old_arg1!r} -> {instr.arg1!r}")
 
             # Also substitute in extra args
             if "args" in instr.extra:
@@ -452,7 +452,7 @@ class IROptimizer:
                     for a in instr.extra["args"]
                 ]
                 if old_args != instr.extra["args"]:
-                    print(f"[ARGS SUBST] {old_args} → {instr.extra['args']}")
+                    print(f"[ARGS SUBST] {old_args} -> {instr.extra['args']}")
             
             if instr.op == "ASSIGN" and instr.dest:
                 if _is_constant(instr.arg1):
@@ -470,16 +470,16 @@ class IROptimizer:
                                 dest_type = di.extra.get("type")
                                 break
                         if dest_type == "bean" and isinstance(instr.arg1, float):
-                            # drip literal assigned to bean → truncate to int
-                            # e.g. bean n = 4.0 → propagate 4 not 4.0
+                            # drip literal assigned to bean -> truncate to int
+                            # e.g. bean n = 4.0 -> propagate 4 not 4.0
                             self._constants[instr.dest] = int(instr.arg1)
                         elif dest_type == "churro":
-                            # numeric literal assigned to churro → convert to char
-                            # e.g. churro c = 96 → propagate '`' not 96
+                            # numeric literal assigned to churro -> convert to char
+                            # e.g. churro c = 96 -> propagate '`' not 96
                             # so downstream type() and print() see the actual char
                             try:
                                 char = chr(int(instr.arg1))
-                                print(f"[CHURRO PROP] dest={instr.dest} arg1={instr.arg1!r} → storing '{char}'")
+                                print(f"[CHURRO PROP] dest={instr.dest} arg1={instr.arg1!r} -> storing '{char}'")
                                 self._constants[instr.dest] = f"'{char}'"
                             except (ValueError, TypeError, OverflowError):
                                 self._constants.pop(instr.dest, None)
@@ -515,14 +515,14 @@ class IROptimizer:
         when one operand is a known constant identity value.
 
         Rules applied (in order, first match wins per instruction):
-          x * 0  → 0         (zero product)
-          x * 1  → x         (multiplicative identity)
-          1 * x  → x
-          x + 0  → x         (additive identity)
-          0 + x  → x
-          x - 0  → x
-          x / 1  → x         (division identity)
-          x * 2  → x + x     (cheaper on some CPUs; also enables further folding)
+          x * 0  -> 0         (zero product)
+          x * 1  -> x         (multiplicative identity)
+          1 * x  -> x
+          x + 0  -> x         (additive identity)
+          0 + x  -> x
+          x - 0  -> x
+          x / 1  -> x         (division identity)
+          x * 2  -> x + x     (cheaper on some CPUs; also enables further folding)
 
         Guards:
           - String literals are never simplified (+ is concatenation)

@@ -6,7 +6,7 @@ Three-Address Code (TAC) instructions. Each instruction is an IRInstruction obje
 with an op field and operand fields.
 
 PIPELINE POSITION:
-  Parser → [AST] → IRGenerator → [IR list] → Optimizer → CodeGenerator
+  Parser -> [AST] -> IRGenerator -> [IR list] -> Optimizer -> CodeGenerator
 
 HOW IT WORKS:
   1. IRGenerator.generate() calls _visit(ast) which dispatches to _visit_<nodename>()
@@ -213,9 +213,9 @@ class IRGenerator:
                                   (_t1, _t2, ...). Temps hold intermediate expression results.
         self._label_count      — monotonic counter for generating unique control-flow labels
                                   (WHILE_START_1, IF_END_2, etc.)
-        self._var_types        — maps variable name → Caramel type string ('bean', 'drip', etc.)
+        self._var_types        — maps variable name -> Caramel type string ('bean', 'drip', etc.)
                                   Set when DECLARE is emitted, read during assignment coercion
-                                  to decide if a value needs to be converted (e.g. bool→int)
+                                  to decide if a value needs to be converted (e.g. bool->int)
         self._current_func     — name of the function currently being compiled, or None at
                                   global scope. Used by refill? to know its context.
         self._loop_stack       — stack of (continue_label, break_label) tuples, one entry
@@ -231,7 +231,7 @@ class IRGenerator:
         self._current_field_access — 'public' or 'private', set when CAFE/BACKROOM token
                                   is seen in _visit_crema_body_cont. Used as access level
                                   for the next field/method emitted.
-        self._class_fields     — dict: class_name → list of field/method dicts.
+        self._class_fields     — dict: class_name -> list of field/method dicts.
                                   Each dict has 'name', 'type', 'access', optional 'kind'.
                                   Built during class definition. Used by _visit_crema_method
                                   to populate _class_field_names for sibling method resolution.
@@ -242,7 +242,7 @@ class IRGenerator:
         self._scope_depth      — integer depth of nested pour loops. Incremented on pour
                                   entry, decremented on exit. Used to generate unique
                                   scoped variable names to avoid shadowing bugs.
-        self._shadow_map       — dict: original_var_name → scoped_var_name.
+        self._shadow_map       — dict: original_var_name -> scoped_var_name.
                                   When a pour loop declares a variable that already exists
                                   in an outer scope, the inner variable is renamed to
                                   '_s{depth}_{name}' and the mapping is stored here so
@@ -319,7 +319,7 @@ class IRGenerator:
         Create an IRInstruction and append it to self.instructions.
         This is the only way instructions are added — all _visit_* methods call this.
         Returns the created instruction (occasionally used to retroactively modify it,
-        e.g. upgrading DECLARE→ARR_DECLARE in _visit_dtype_id_tail).
+        e.g. upgrading DECLARE->ARR_DECLARE in _visit_dtype_id_tail).
         """
         instr = IRInstruction(op, **kwargs)
         # DEBUG
@@ -439,11 +439,11 @@ class IRGenerator:
         """
         Convert a literal Token to its Python IR value.
         The IR stores values as Python native types wherever possible:
-          BEANLIT   → int        (used directly in BINOP arithmetic)
-          DRIPLIT   → float
-          HOT/COLD  → True/False
-          CHURROLIT → str with quotes e.g. "'a'"  (quotes kept so codegen can detect churro)
-          BLENDLIT  → str with quotes e.g. '"hello"' (quotes kept for same reason)
+          BEANLIT   -> int        (used directly in BINOP arithmetic)
+          DRIPLIT   -> float
+          HOT/COLD  -> True/False
+          CHURROLIT -> str with quotes e.g. "'a'"  (quotes kept so codegen can detect churro)
+          BLENDLIT  -> str with quotes e.g. '"hello"' (quotes kept for same reason)
         """
         if tok.type == "BEANLIT":
             return int(tok.value)
@@ -468,11 +468,11 @@ class IRGenerator:
         """
         Convert a literal Token to its Python IR value.
         The IR stores values as Python native types wherever possible:
-          BEANLIT   → int        (used directly in BINOP arithmetic)
-          DRIPLIT   → float
-          HOT/COLD  → True/False
-          CHURROLIT → str with quotes e.g. "'a'"  (quotes kept so codegen can detect churro)
-          BLENDLIT  → str with quotes e.g. '"hello"' (quotes kept for same reason)
+          BEANLIT   -> int        (used directly in BINOP arithmetic)
+          DRIPLIT   -> float
+          HOT/COLD  -> True/False
+          CHURROLIT -> str with quotes e.g. "'a'"  (quotes kept so codegen can detect churro)
+          BLENDLIT  -> str with quotes e.g. '"hello"' (quotes kept for same reason)
         """
         if tok.type == "BEANLIT":
             return int(tok.value)
@@ -501,8 +501,8 @@ class IRGenerator:
         and returning the last non-None result.
 
         Special cases:
-          - Non-node objects (tokens) → return None immediately
-          - _empty productions → return None (no-op nodes from the parser)
+          - Non-node objects (tokens) -> return None immediately
+          - _empty productions -> return None (no-op nodes from the parser)
 
         Return value convention:
           - Expression visitors (primary, arith_expr, etc.) return a value:
@@ -980,12 +980,12 @@ class IRGenerator:
         called from _visit_blend_term instead of _visit_primary.
 
         Handles:
-          arr[idx]      → emits ARR_LOAD, returns temp
-          arr[row][col] → emits two ARR_LOADs, returns temp
-          func(args)    → emits PARAMs + CALL, returns temp
-          obj.member    → emits MEMBER_ACC, returns temp
-          obj.method()  → emits PARAMs + METHOD_CALL, returns temp
-          (empty)       → returns var_name unchanged
+          arr[idx]      -> emits ARR_LOAD, returns temp
+          arr[row][col] -> emits two ARR_LOADs, returns temp
+          func(args)    -> emits PARAMs + CALL, returns temp
+          obj.member    -> emits MEMBER_ACC, returns temp
+          obj.method()  -> emits PARAMs + METHOD_CALL, returns temp
+          (empty)       -> returns var_name unchanged
 
         Parameters:
           var_name  — the variable name whose tail is being processed
@@ -1114,14 +1114,14 @@ class IRGenerator:
         """
         Handle any statement that starts with an identifier.
         This is the most common statement type — dispatches based on what follows:
-          ID = value         → ASSIGN via _visit_id_dec_tail (EQUALS branch)
-          ID += value        → BINOP + ASSIGN (compound assignment)
-          ID++               → BINOP + ASSIGN (increment)
-          ID[idx] = value    → ARR_STORE
-          ID[r][c] = value   → ARR_LOAD + ARR_STORE (2D)
-          ID.member = value  → MEMBER_SET
-          ID.method(args)    → PARAMs + METHOD_CALL
-          ID(args)           → PARAMs + CALL (or METHOD_CALL if sibling method)
+          ID = value         -> ASSIGN via _visit_id_dec_tail (EQUALS branch)
+          ID += value        -> BINOP + ASSIGN (compound assignment)
+          ID++               -> BINOP + ASSIGN (increment)
+          ID[idx] = value    -> ARR_STORE
+          ID[r][c] = value   -> ARR_LOAD + ARR_STORE (2D)
+          ID.member = value  -> MEMBER_SET
+          ID.method(args)    -> PARAMs + METHOD_CALL
+          ID(args)           -> PARAMs + CALL (or METHOD_CALL if sibling method)
 
         Applies _shadow_map lookup so loop-scoped variables use their renamed version.
         Delegates to _visit_id_dec_tail() for the actual IR emission.
@@ -1880,7 +1880,7 @@ class IRGenerator:
                     member_id = c.value
                     break
             if member_id:
-                # check if primary_dot_tail has OP_PAREN → method call
+                # check if primary_dot_tail has OP_PAREN -> method call
                 for c in children[1:]:
                     if self._is_node(c) and c.name == "primary_dot_tail":
                         dot_children = self._get_children(c)
@@ -1971,7 +1971,7 @@ class IRGenerator:
     def _visit_stmt_tail(self, node):
         """
         Statement tail — the continuation of a block body (recursive list structure).
-        In the grammar, bodies are right-recursive: stmt_tail → statement stmt_tail.
+        In the grammar, bodies are right-recursive: stmt_tail -> statement stmt_tail.
         Pass-through visits all children including the next stmt_tail.
         """
         # debug
@@ -2193,7 +2193,7 @@ class IRGenerator:
 
         Pattern emitted:
           [condition BINOPs]
-          IF_FALSE cond → else_label
+          IF_FALSE cond -> else_label
           [if-body statements]
           GOTO end_label
           LABEL else_label
@@ -2250,8 +2250,8 @@ class IRGenerator:
     def _generate_if_chain(self, node, end_label):
         """
         Generate IR for one if/elifroth branch. Called by _visit_if_cond and recursively
-        by _visit_if_cond_tail for each elifroth. Emits IF_FALSE → body → GOTO end_label
-        → LABEL else_label, then routes the tail to _visit_if_cond_tail.
+        by _visit_if_cond_tail for each elifroth. Emits IF_FALSE -> body -> GOTO end_label
+        -> LABEL else_label, then routes the tail to _visit_if_cond_tail.
         """
         children = self._get_children(node)
 
@@ -2291,9 +2291,9 @@ class IRGenerator:
         """
         Handle the tail of an if statement — elifroth or elspress.
         Three cases:
-          empty       → nothing to emit
-          ELIFROTH    → recurse into _generate_if_chain() (another if branch)
-          ELSPRESS    → visit the else body statements directly
+          empty       -> nothing to emit
+          ELIFROTH    -> recurse into _generate_if_chain() (another if branch)
+          ELSPRESS    -> visit the else body statements directly
         Parameters:
           node      — the if_cond_tail ParseNode
           end_label — passed through so all branches jump to the same end
@@ -2774,7 +2774,7 @@ class IRGenerator:
     def _visit_recipe_def(self, node):
         """
         Generate IR for a named returning function (recipe returntype name(params) [...]).
-        Emits: FUNC_BEGIN → params (DECLARE param=True) → body → FUNC_END.
+        Emits: FUNC_BEGIN -> params (DECLARE param=True) -> body -> FUNC_END.
         Sets _current_func and _current_return_type while visiting the body so
         refill? knows both the function name and the expected return type for coercion.
         Local vars:
@@ -2835,7 +2835,7 @@ class IRGenerator:
         Generate IR for a void function (empty returntype name(params) [...]).
         Same structure as _visit_recipe_def but always emits RETURN arg1=None at the end
         since void functions have no explicit return value.
-        Emits: FUNC_BEGIN → params → body → RETURN None → FUNC_END.
+        Emits: FUNC_BEGIN -> params -> body -> RETURN None -> FUNC_END.
         """
         id_tok = self._find_child_token(node, "ID")
         func_name = id_tok.value if id_tok else "_anon_void"
@@ -2947,7 +2947,7 @@ class IRGenerator:
     def _visit_refill_arg(self, node):
         """
         Extract the return value from a refill? argument node.
-        Tries in order: refill_content node → any non-paren node child → literal token.
+        Tries in order: refill_content node -> any non-paren node child -> literal token.
         Returns 0 as fallback (refill? with no explicit value in main).
         """
         for child in self._get_children(node):
@@ -2986,7 +2986,7 @@ class IRGenerator:
         inside a class context. Emits CLASS_DEF at the start and CLASS_END at the end.
         Also initializes _class_fields[class_name] = [] to track all fields/methods.
         The class body (fields and methods) is emitted between CLASS_DEF and CLASS_END
-        via _visit_children_all → _visit_crema_body → _visit_crema_body_cont.
+        via _visit_children_all -> _visit_crema_body -> _visit_crema_body_cont.
         """
         id_tok = self._find_child_token(node, "ID")
         class_name = id_tok.value if id_tok else "_anon_class"
@@ -3236,7 +3236,7 @@ class IRGenerator:
 
         Key steps:
         1. Extracts method name and saves class_name before clearing _current_class
-        2. Mangles the name: 'describe' in class 'point' → 'class_point__describe'
+        2. Mangles the name: 'describe' in class 'point' -> 'class_point__describe'
         3. Registers the method in _class_fields so sibling methods can find it
         4. Populates _class_field_names with all fields/methods of this class
            so bare references like 'increment()' inside the body emit METHOD_CALL
@@ -3244,7 +3244,7 @@ class IRGenerator:
            don't accidentally get registered as class fields
         6. Restores _current_class and clears _class_field_names after body
 
-        Emits: FUNC_BEGIN (with method_of=class_name) → params → body → FUNC_END
+        Emits: FUNC_BEGIN (with method_of=class_name) -> params -> body -> FUNC_END
 
         Local vars:
           class_name  — saved _current_class (e.g. 'counter')
@@ -3313,7 +3313,7 @@ class IRGenerator:
     def _visit_function_args_node(self, node):
         """
         Evaluate a single function_args node (one argument in a call).
-        Returns the value: BLENDLIT string → raw string, expression → visits and returns result.
+        Returns the value: BLENDLIT string -> raw string, expression -> visits and returns result.
         Called by _collect_function_args() for each argument in a function call.
         """
         for child in self._get_children(node):

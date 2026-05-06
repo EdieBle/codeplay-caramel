@@ -32,7 +32,7 @@ class StructuredCodeGenerator:
       - DECLARE + ASSIGN + LABEL + IF_FALSE...GOTO + LABEL -> for loops
     """
 
-        # CARAMEL type - Python default value
+    # CARAMEL type - Python default value
     DEFAULT_VALUES = {
         "bean": "0",
         "drip": "0.0",

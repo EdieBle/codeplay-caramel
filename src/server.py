@@ -11,14 +11,14 @@ is delegated to the modules in ``src/CodeGen/`` and the new centralised
 
 Endpoints
 ---------
-POST /tokenize              → Run the lexer only
-POST /parse                 → Run lexer + parser
-POST /analyze               → Run lexer + parser + semantic analyser
-POST /execute               → Full pipeline + synchronous execution (legacy)
-POST /execute/start         → Start an interactive execution session
-GET  /execute/status/<id>   → Poll session status
-POST /execute/input/<id>    → Send user input to a waiting session
-POST /build-exe             → Compile → validate → build a standalone .exe
+POST /tokenize              -> Run the lexer only
+POST /parse                 -> Run lexer + parser
+POST /analyze               -> Run lexer + parser + semantic analyser
+POST /execute               -> Full pipeline + synchronous execution (legacy)
+POST /execute/start         -> Start an interactive execution session
+GET  /execute/status/<id>   -> Poll session status
+POST /execute/input/<id>    -> Send user input to a waiting session
+POST /build-exe             -> Compile -> validate -> build a standalone .exe
 
 Infinite Loop Protection
 ------------------------
@@ -188,7 +188,7 @@ def _run_session(session):
     Pipeline
     --------
     1. Compile via ``pipeline_validator.validate_and_compile()``
-       (lexer → parser → semantic → IR → loop detection → codegen)
+       (lexer -> parser -> semantic -> IR -> loop detection -> codegen)
     2. Execute the generated code with mock I/O
     3. Handle _CaramelLoopTimeout (from the iteration-counter guard)
     4. Handle all other runtime exceptions
@@ -483,7 +483,7 @@ def build_exe():
     4. Optimiser
     5. **Infinite Loop Detector** ← new safety gate
     6. Code Generator (standalone mode)
-    7. PyInstaller → .exe
+    7. PyInstaller -> .exe
     8. Stream .exe to client
 
     If any stage fails the endpoint returns a 400/500 JSON response with
@@ -521,8 +521,8 @@ def build_exe():
 
     if not result.success:
         # Map stage name to HTTP status code
-        # Loop detection / semantic / parser errors → 400 (client fault)
-        # Internal crashes → 500
+        # Loop detection / semantic / parser errors -> 400 (client fault)
+        # Internal crashes -> 500
         client_stages = {"parser", "semantic", "ir", "codegen", "loop_detection"}
         status_code   = 400 if result.stage in client_stages else 500
 

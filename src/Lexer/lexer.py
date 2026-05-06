@@ -161,7 +161,7 @@ def tokenize(code):
             2. Find the transition condition that matches characters
             3. Move to next_state
             4. IF next_state is an accepting state -> update last_accept
-            5. If no transition matches → DFA is stuck -> use last_accept to emit what we have
+            5. If no transition matches -> DFA is stuck -> use last_accept to emit what we have
         """
         
         start_col = column
