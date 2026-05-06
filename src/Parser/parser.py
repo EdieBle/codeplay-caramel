@@ -25,7 +25,7 @@ Organization:
   15. Empty (Void Functions)
   16. Crema (Classes)
   17. Main Definitions
-  19. Statements
+  18. Statements
   19. Input/Output
   20. Control Flow (If/Switch/Loops)
   21. Interrupt Statements
@@ -148,17 +148,26 @@ class TokenStream:
 
 class RDParser:
     """
-    Recursive Descent Parser implementing LL(1) grammar from cfg.lark.
-    
-    Attributes:
-        stream: TokenStream for managing input tokens
-        DATA_TYPE: Set of valid data type tokens
-        LOGIC_OP: Logical operators (AND, OR)
-        REL_OP: Relational operators (>, <, ==, !=, etc.)
-        ARITHM_OP: Arithmetic operators (+, -, *, /, %)
-        UNARY_OP: Unary operators (++, --)
-        PRIMARY_LITERALS: Literal token types
-        EXPR_START: Tokens that can start an expression
+    Recursive Descent LL(1) parser for the CARAMEL language.
+
+    Class-level constants define precomputed FIRST sets used for one-token
+    lookahead decisions throughout the parser:
+        DATA_TYPE:        {BEAN, DRIP, CHURRO, TEMP, BLEND} — all base type keywords
+        LOGIC_OP:         {AND, OR}
+        REL_OP:           {GREATER_THAN, LESSER_THAN, EQ_EQUALS, NOT_EQUAL,
+                           GREATER_EQUAL, LESSER_EQUAL}
+        ARITHM_OP:        {PLUS, MINUS, MULTIPLY, DIVIDE, MODULO}
+        UNARY_OP:         {INCREMENT, DECREMENT}
+        PRIMARY_LITERALS: {BEANLIT, DRIPLIT, CHURROLIT, HOT, COLD, BLENDLIT}
+        EXPR_START:       FIRST(expression) — every token that can begin an expression
+        BLEND_TERM_START: FIRST(blend_term) — tokens valid inside string expressions
+
+    Instance attributes:
+        stream:                 TokenStream managing the current token position
+        _allow_function_calls:  Temporarily set to False inside array-element
+                                positions to prevent call expressions as elements
+        _allow_unary_ops:       Temporarily set to False inside array-element
+                                positions to prevent ++ / -- side effects in literals
     """
 
     # Precomputed FIRST sets — used by _is_start_* methods and while-loop guards
@@ -2586,7 +2595,7 @@ class RDParser:
 
     # ========================================================================
     # 19. INPUT/OUTPUT
-    # bter@ is the input keyword (scanf-like); glaze is the output keyword
+    # batter@ is the input keyword (scanf-like); glaze is the output keyword
     # (printf-like).  Both accept comma-separated variable targets/values.
     # input also accepts an optional prompt string: batter@(x)("Enter x: ").
     # ========================================================================
