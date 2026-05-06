@@ -56,6 +56,7 @@ class Symbol:
         self.return_type = return_type  # For functions
         self.is_initialized = False
         self.fields = {} # for classes/crema
+        self._seen_case_values = set() # for case values for the syrup/switch values
 
 class SymbolTable:
     """ Manages symbol scopes and symbol tracking. This can be implemented via: 
@@ -1259,9 +1260,30 @@ class SemanticAnalyzer:
     def _visit_flav_switch(self, node):
         """Visit switch statement: create block scope"""
         self.symbol_table.push_scope()
+
+        # we HATE duplicates ova here!!!!!!!!!!!!
+        self._seen_case_values = set()  # reset for each new switch
+
         self._visit_children(node)
+        self._seen_case_values = set()  # clear after
+
         self.symbol_table.pop_scope()
-    
+
+
+    def _visit_case_lit(self, node):
+        """Check for duplicate case values inside a flavour switch."""
+        tok = self._find_first_token(node)
+        if tok:
+            val = getattr(tok, 'value', None)
+            if val in self._seen_case_values:
+                self._error(
+                    "E_DUP_CASE",
+                    f"Duplicate case value '{val}' already defined in this switch",
+                    tok
+                )
+            else:
+                self._seen_case_values.add(val)
+        
     # ID stuff
     def _visit_id_dec_stmt(self, node):
         """ Visit id_dec_stmt: ID = value
@@ -1563,9 +1585,27 @@ class SemanticAnalyzer:
         self._visit_children(node)
 
     
-    # ========================================================================
-    # HELPER METHODS
-    # ========================================================================
+    def _visit_order_dec_stmt(self, node):
+        """Visit order declaration also checks if target is brewed constant."""
+        # Extract the field name after order.
+        field_name = None
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
+                field_name = child.value
+                break
+        
+        if field_name:
+            # order. always accesses global scope, look there specifically
+            symbol = self.symbol_table.lookup_global(field_name)
+            if symbol and symbol.is_constant:
+                self._error(
+                    "E005",
+                    f"Cannot modify constant identifier '{field_name}'",
+                    node
+                )
+            
+        self._visit_children(node)
+
 
     def _visit_blend_id_tail(self, node):
         """Visit blend variable declaration"""
@@ -1589,6 +1629,9 @@ class SemanticAnalyzer:
         self._visit_children(node)
     
 
+    # ========================================================================
+    # HELPER METHODS
+    # ========================================================================
 
     def _count_arr_elements_1d(self, arr_cont_1d_node):
         """Count elements in a 1D array initializer (arr_cont_1d node)."""
@@ -1616,26 +1659,39 @@ class SemanticAnalyzer:
                         count += self._count_arr_elements_1d(tc)
         return count
 
-    def _visit_order_dec_stmt(self, node):
-        """Visit order declaration also checks if target is brewed constant."""
-        # Extract the field name after order.
-        field_name = None
-        for child in node.children:
-            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
-                field_name = child.value
-                break
-        
-        if field_name:
-            # order. always accesses global scope, look there specifically
-            symbol = self.symbol_table.lookup_global(field_name)
-            if symbol and symbol.is_constant:
-                self._error(
-                    "E005",
-                    f"Cannot modify constant identifier '{field_name}'",
-                    node
-                )
-            
-        self._visit_children(node)
+
+    def _collect_duplicate_cases(self, node, seen_cases):
+        """
+        Walk syrup_switch and syrup_switch_tail to find duplicate case values.
+        seen_cases: dict mapping case_value → first line it appeared on.
+        Fires E_DUP_CASE if the same value appears more than once.
+        """
+        current = node
+        while current and self._is_parse_node(current):
+            case_lit_node = None
+            tail_node = None
+            for child in current.children:
+                if self._is_parse_node(child) and child.name == "case_lit":
+                    case_lit_node = child
+                elif self._is_parse_node(child) and child.name == "syrup_switch_tail":
+                    tail_node = child
+
+            if case_lit_node:
+                # extract the literal value token
+                tok = self._find_first_token(case_lit_node)
+                if tok:
+                    val = getattr(tok, 'value', None)
+                    line = getattr(tok, 'line', None)
+                    if val in seen_cases:
+                        self._error(
+                            "E_DUP_CASE",
+                            f"Duplicate case value '{val}' — already defined on line {seen_cases[val]}",
+                            tok
+                        )
+                    else:
+                        seen_cases[val] = line
+
+            current = tail_node
 
     # TYPE CHECKING METHODS
     def _infer_type_from_literal(self, token_type):
