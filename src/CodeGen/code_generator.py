@@ -26,10 +26,10 @@ class StructuredCodeGenerator:
     rather than emitting flat goto-style code.
 
     This walks the IR and builds Python directly, recognizing patterns:
-      - FUNC_BEGIN...FUNC_END → def blocks
-      - IF_FALSE + LABEL + GOTO + LABEL → if/else blocks
-      - LABEL + IF_FALSE + GOTO + LABEL → while loops
-      - DECLARE + ASSIGN + LABEL + IF_FALSE...GOTO + LABEL → for loops
+      - FUNC_BEGIN...FUNC_END -> def blocks
+      - IF_FALSE + LABEL + GOTO + LABEL -> if/else blocks
+      - LABEL + IF_FALSE + GOTO + LABEL -> while loops
+      - DECLARE + ASSIGN + LABEL + IF_FALSE...GOTO + LABEL -> for loops
     """
 
         # CARAMEL type - Python default value
@@ -161,17 +161,17 @@ class StructuredCodeGenerator:
         """
         Convert a Caramel IR function name to a safe Python function name.
         Mapping rules:
-          'cup'              → '_main_cup'         (program entry point)
-          '__sift__'         → 'len'               (built-in length)
-          '__sqrt__'         → 'math.sqrt'
-          '__ceil__'         → 'math.ceil'
-          '__floor__'        → 'math.floor'
-          '__pow__'          → 'math.pow'
-          '__type__'         → '_caramel_type'
-          'class_X__Y'       → '_class_X__Y'       (mangled method names — _gen_function
+          'cup'              -> '_main_cup'         (program entry point)
+          '__sift__'         -> 'len'               (built-in length)
+          '__sqrt__'         -> 'math.sqrt'
+          '__ceil__'         -> 'math.ceil'
+          '__floor__'        -> 'math.floor'
+          '__pow__'          -> 'math.pow'
+          '__type__'         -> '_caramel_type'
+          'class_X__Y'       -> '_class_X__Y'       (mangled method names — _gen_function
                                                      handles actual def emission, this is
                                                      used for non-method call sites only)
-          anything else      → '_func_{name}'      (regular user-defined function)
+          anything else      -> '_func_{name}'      (regular user-defined function)
         """
         if not name:
             return "_anon"
@@ -199,12 +199,12 @@ class StructuredCodeGenerator:
         """
         Convert an IR variable reference to a safe Python variable expression.
         Priority:
-          1. Numeric/bool literals passed as name → str(name)
-          2. Temp vars (_t1, _t2, ...) → returned as-is (no prefix)
-          3. order.X references → '_order["X"]'  (explicit global access syntax)
-          4. Global variables (via _is_global_var) → '_order["name"]'
-          5. Python reserved words → prefixed with '_' to avoid syntax errors
-          6. Everything else → sanitized name (dots→_, ?→_q, @→_at)
+          1. Numeric/bool literals passed as name -> str(name)
+          2. Temp vars (_t1, _t2, ...) -> returned as-is (no prefix)
+          3. order.X references -> '_order["X"]'  (explicit global access syntax)
+          4. Global variables (via _is_global_var) -> '_order["name"]'
+          5. Python reserved words -> prefixed with '_' to avoid syntax errors
+          6. Everything else -> sanitized name (dots->_, ?->_q, @->_at)
         Note: Does NOT check class fields — that's done in _py_val before calling here.
         """
         if not name:
@@ -229,26 +229,26 @@ class StructuredCodeGenerator:
             safe = f"_{safe}"
 
         if str(name) in ('a', 'b'):
-            print(f"[PY_VAR] name={name!r} → returning {safe!r}")
+            print(f"[PY_VAR] name={name!r} -> returning {safe!r}")
         return safe
 
     def _py_val(self, val):
         """
         Convert an IR value (literal OR variable reference) to a Python expression string.
         Priority order — first match wins:
-          1. None                → 'None'
-          2. bool literal        → 'True' / 'False'
-          3. int literal         → str(val)
-          4. float literal       → repr(val)  (preserves precision)
+          1. None                -> 'None'
+          2. bool literal        -> 'True' / 'False'
+          3. int literal         -> str(val)
+          4. float literal       -> repr(val)  (preserves precision)
           5. str + inside method + is class field
-                                 → 'self.fieldname'  (field access in method body)
-          6. str + is global var → '_order["name"]'
-          7. str in _elif_binops cache → cached expression (elif condition reuse)
-          8. quoted string literal → returned as-is
-          9. temp var (_t*)      → returned as-is
-         10. order.X             → '_order["X"]'
-         11. global var (second pass) → '_order["name"]'
-         12. fallback            → _py_var(val)
+                                 -> 'self.fieldname'  (field access in method body)
+          6. str + is global var -> '_order["name"]'
+          7. str in _elif_binops cache -> cached expression (elif condition reuse)
+          8. quoted string literal -> returned as-is
+          9. temp var (_t*)      -> returned as-is
+         10. order.X             -> '_order["X"]'
+         11. global var (second pass) -> '_order["name"]'
+         12. fallback            -> _py_var(val)
         Key design note: steps 5-6 must come before step 12 to ensure class fields
         and globals don't accidentally resolve to bare Python variable names.
         """
@@ -298,8 +298,8 @@ class StructuredCodeGenerator:
         """
         Infer the Caramel type of a variable or expression by scanning the IR.
         Used primarily by the BINOP handler to decide casting behavior:
-          - blend + anything → str() wrapping for concatenation
-          - bean/drip arithmetic → int()/float() coercion
+          - blend + anything -> str() wrapping for concatenation
+          - bean/drip arithmetic -> int()/float() coercion
         Scans in order: DECLARE (explicit type), ASSIGN (propagate), BINOP (result type),
         ARR_LOAD (element type), CALL (known built-in return types).
         Returns: 'bean', 'drip', 'blend', 'churro', 'temp', or None if unknown.
@@ -526,11 +526,11 @@ class StructuredCodeGenerator:
         Main linear IR walker. Processes instructions from index [start, end).
         Acts as a dispatcher — recognizes structural patterns and routes to
         specialized generators:
-          FUNC_BEGIN          → _gen_function()   (function/method definition)
-          LABEL (loop header) → _gen_while_loop() (while/pour loop)
-          IF_FALSE            → _gen_if_block()   (if/elif/else block)
-          GOTO                → skipped           (handled structurally)
-          everything else     → _gen_simple()     (single instruction)
+          FUNC_BEGIN          -> _gen_function()   (function/method definition)
+          LABEL (loop header) -> _gen_while_loop() (while/pour loop)
+          IF_FALSE            -> _gen_if_block()   (if/elif/else block)
+          GOTO                -> skipped           (handled structurally)
+          everything else     -> _gen_simple()     (single instruction)
         Also handles CLASS_DEF/CLASS_FIELD/CLASS_END via _gen_simple().
         """
         i = start
@@ -770,14 +770,14 @@ class StructuredCodeGenerator:
 
         Supports two loop variants:
           whilehot (regular while):
-            LABEL WHILE_START → IF_FALSE WHILE_END → body → GOTO WHILE_START → LABEL WHILE_END
+            LABEL WHILE_START -> IF_FALSE WHILE_END -> body -> GOTO WHILE_START -> LABEL WHILE_END
           refill? (do-while):
-            LABEL DOWHILE_START → body → IF_TRUE DOWHILE_START → LABEL DOWHILE_END
+            LABEL DOWHILE_START -> body -> IF_TRUE DOWHILE_START -> LABEL DOWHILE_END
 
         Also handles:
           - pour (for) loops: detects POUR_UPDATE label and emits range-based Python for loops
-          - 'snap' (break) → emits Python 'break'
-          - 'skip' (continue in pour) → calls _emit_pour_continue() to re-emit update before continue
+          - 'snap' (break) -> emits Python 'break'
+          - 'skip' (continue in pour) -> calls _emit_pour_continue() to re-emit update before continue
           - Loop safety guard: wraps body with _caramel_check_loop(loop_id) to detect infinite loops
 
         Local variables:
@@ -925,7 +925,7 @@ class StructuredCodeGenerator:
         Generate a Python if/elif/else block from the IF_FALSE...LABEL...GOTO...LABEL IR pattern.
 
         Pattern recognition:
-          IF_FALSE cond → else_label       (start of if block)
+          IF_FALSE cond -> else_label       (start of if block)
           ... if-body ...
           GOTO end_label                   (skip over else)
           LABEL else_label                 (start of else/elif)
@@ -1040,7 +1040,7 @@ class StructuredCodeGenerator:
 
             if end_label_idx and end_label_idx > else_label_idx + 1:
                 # Check if else block is an elif chain (elifroth)
-                # Pattern: [BINOPs...] IF_FALSE → elif
+                # Pattern: [BINOPs...] IF_FALSE -> elif
                 elif_if_false = None
                 for j in range(else_label_idx + 1, end_label_idx):
                     op_j = self.ir[j].op
@@ -1116,7 +1116,7 @@ class StructuredCodeGenerator:
                             bi += 1
                             continue
 
-                        # Non-elif content after last elif → else block
+                        # Non-elif content after last elif -> else block
                         self._emit("else:")
                         self._push()
                         while bi < end_label_idx:
@@ -1229,26 +1229,26 @@ class StructuredCodeGenerator:
 
         Handled IR operations and their Python output:
 
-        DECLARE      → 'var = default_for_type'   (only if not already in _declared and _in_func)
-        ASSIGN       → 'dest = val'               (with type coercion if dest has a declared type)
-        BINOP        → 'dest = left op right'     (str()/int()/float() wrapping based on types)
-        PRINT        → '_caramel_print(args...)'  (with str() wrapping for non-string args)
-        RETURN       → 'return val'
-        CALL         → 'dest = _func_name(args)'  (PARAMs collected by walking backwards)
-        METHOD_CALL  → 'dest = obj.method(args)'  (same PARAM collection; obj='self' if __self__)
-        INPUT        → 'dest = _caramel_input_TYPE(prompt)'  (typed input with validation)
-        CAST         → 'dest = TYPE(val)'
-        CONCAT       → 'dest = str(a) + str(b)'
-        ARR_DECLARE  → 'var = [default] * size'   (dynamic: empty list; static: sized list)
-        ARR_LOAD     → 'dest = arr[idx]'          (arr → 'self.arr' if class field in method)
-        ARR_STORE    → 'arr[idx] = val'            (arr → 'self.arr' if class field in method)
-        MEMBER_ACC   → 'dest = obj.member'         (obj → 'self' if obj == _current_class_name)
-        MEMBER_SET   → 'obj.member = val'          (obj → 'self' if obj == _current_class_name)
-        CLASS_DEF    → 'class _Caramel_name:'      then 'def __init__(self):'; sets _init_closed=False
-        CLASS_FIELD  → 'self.field = default'      or '[default]*size' for arrays; inside __init__
-        CLASS_END    → closes __init__ (if not already via _init_closed), closes class,
+        DECLARE      -> 'var = default_for_type'   (only if not already in _declared and _in_func)
+        ASSIGN       -> 'dest = val'               (with type coercion if dest has a declared type)
+        BINOP        -> 'dest = left op right'     (str()/int()/float() wrapping based on types)
+        PRINT        -> '_caramel_print(args...)'  (with str() wrapping for non-string args)
+        RETURN       -> 'return val'
+        CALL         -> 'dest = _func_name(args)'  (PARAMs collected by walking backwards)
+        METHOD_CALL  -> 'dest = obj.method(args)'  (same PARAM collection; obj='self' if __self__)
+        INPUT        -> 'dest = _caramel_input_TYPE(prompt)'  (typed input with validation)
+        CAST         -> 'dest = TYPE(val)'
+        CONCAT       -> 'dest = str(a) + str(b)'
+        ARR_DECLARE  -> 'var = [default] * size'   (dynamic: empty list; static: sized list)
+        ARR_LOAD     -> 'dest = arr[idx]'          (arr -> 'self.arr' if class field in method)
+        ARR_STORE    -> 'arr[idx] = val'            (arr -> 'self.arr' if class field in method)
+        MEMBER_ACC   -> 'dest = obj.member'         (obj -> 'self' if obj == _current_class_name)
+        MEMBER_SET   -> 'obj.member = val'          (obj -> 'self' if obj == _current_class_name)
+        CLASS_DEF    -> 'class _Caramel_name:'      then 'def __init__(self):'; sets _init_closed=False
+        CLASS_FIELD  -> 'self.field = default'      or '[default]*size' for arrays; inside __init__
+        CLASS_END    -> closes __init__ (if not already via _init_closed), closes class,
                        emits '_func_new_classname()' factory function
-        NOP/PARAM/FUNC_BEGIN/FUNC_END/LABEL/GOTO/IF_FALSE/IF_TRUE → pass (handled elsewhere)
+        NOP/PARAM/FUNC_BEGIN/FUNC_END/LABEL/GOTO/IF_FALSE/IF_TRUE -> pass (handled elsewhere)
 
         Parameters:
           instr — the IR instruction object (has .op, .dest, .arg1, .arg2, .extra)
@@ -1284,6 +1284,9 @@ class StructuredCodeGenerator:
 
                 if not self._in_func:
                     self._emit(f'_order["{var_name}"] = {val}')
+                elif self._current_class_name and var_name in self._get_class_field_names(self._current_class_name):
+                    # Inside a method — bare field name on LHS must become self.field as long as it is inside crema
+                    self._emit(f"self.{var_name} = {val}")
                 elif var_type == "churro":
                     src_is_int = (
                         src_type == "bean" or
@@ -1372,10 +1375,10 @@ class StructuredCodeGenerator:
                 a = self._py_val(instr.arg1)
                 uop = instr.extra.get("unaryop", "-")
                 if uop == "!":
-                    print(f"[uop = ! PRINT] raw args={instr.extra.get('args')} → py_args={[self._py_val(a) for a in instr.extra.get('args', [])]}")
+                    print(f"[uop = ! PRINT] raw args={instr.extra.get('args')} -> py_args={[self._py_val(a) for a in instr.extra.get('args', [])]}")
                     self._emit(f"{dest} = not _caramel_to_bool({a})")
                 else:
-                    print(f"[else not uop = ! PRINT] raw args={instr.extra.get('args')} → py_args={[self._py_val(a) for a in instr.extra.get('args', [])]}")
+                    print(f"[else not uop = ! PRINT] raw args={instr.extra.get('args')} -> py_args={[self._py_val(a) for a in instr.extra.get('args', [])]}")
                     self._emit(f"{dest} = {uop}({a})")
 
             elif op == "PRINT":
@@ -1575,12 +1578,21 @@ class StructuredCodeGenerator:
             elif op == "CLASS_DEF":
                 class_name = instr.dest
                 self._emit(f"class _Caramel_{class_name}:")
+                # Check if this class has any fields — if not, __init__ needs pass
+                has_fields = any(
+                    i.op == "CLASS_FIELD" and i.extra.get("class_name") == class_name
+                    for i in self.ir
+                )
                 self._push()
                 print(f"[DEBUG CLASS_DEF] after class push, indent={self._indent}")
                 self._emit(f"def __init__(self):")
                 self._push()
+                if not has_fields:
+                    self._emit("pass")
+                    self._pop()  
+                    self._init_closed = True  # nothing to close later
                 print(f"[DEBUG CLASS_DEF] after init push, indent={self._indent}")
-                self._init_closed = False
+                self._init_closed = not has_fields
 
             elif op == "CLASS_FIELD":
                 field_name = instr.dest
@@ -1663,11 +1675,11 @@ class StructuredCodeGenerator:
     #     which is shadowed by this one at runtime — the earlier copy should be removed).
 
     #     Detection order:
-    #       1. Non-string values (int/float/bool) → inferred directly
-    #       2. Quoted single char  e.g. "'c'"  → 'churro'
-    #       3. Quoted string       e.g. '"hi"' → 'blend'
-    #       4. DECLARE instruction with matching dest → returns declared type
-    #       5. ASSIGN/BINOP/ARR_LOAD/CALL chains → recursive type inference
+    #       1. Non-string values (int/float/bool) -> inferred directly
+    #       2. Quoted single char  e.g. "'c'"  -> 'churro'
+    #       3. Quoted string       e.g. '"hi"' -> 'blend'
+    #       4. DECLARE instruction with matching dest -> returns declared type
+    #       5. ASSIGN/BINOP/ARR_LOAD/CALL chains -> recursive type inference
     #     Returns: 'bean', 'drip', 'blend', 'churro', 'temp', or None if unknown.
     #     """
     #     for instr in self.ir:
@@ -1715,7 +1727,7 @@ class StructuredCodeGenerator:
         Used by _py_val, MEMBER_ACC, MEMBER_SET, ARR_LOAD, ARR_STORE to detect when a bare
         variable name inside a method body should be prefixed with 'self.' rather than
         treated as a local or global variable.
-        Example: for class 'point' with fields x, y → returns {'x', 'y'}
+        Example: for class 'point' with fields x, y -> returns {'x', 'y'}
         """
         return {
             instr.dest 
@@ -1744,10 +1756,10 @@ class StructuredCodeGenerator:
         """
         Strip surrounding IR-format quotes from string literals used as array init values.
         Converts:
-          '"hello"' (blend literal with outer quotes) → 'hello'  (raw Python string)
-          "'c'"     (churro literal with outer quotes) → 'c'     (single char)
-          '_t5'     (temp var reference)               → '_t5'   (returned as-is)
-          everything else                              → returned as-is
+          '"hello"' (blend literal with outer quotes) -> 'hello'  (raw Python string)
+          "'c'"     (churro literal with outer quotes) -> 'c'     (single char)
+          '_t5'     (temp var reference)               -> '_t5'   (returned as-is)
+          everything else                              -> returned as-is
         Used by ARR_DECLARE when building the initial value list for a static array.
         """
         if isinstance(v, str):
@@ -1763,11 +1775,11 @@ class StructuredCodeGenerator:
         """
         Return the Python default value expression for a variable's type.
         Looks up the variable's type via _get_var_type, then maps:
-        'churro' → "''"    (empty char)
-        'blend'  → '""'   (empty string)
-        'temp'   → 'False'
-        'drip'   → '0.0'
-        anything else / unknown → '0'  (bean default)
+        'churro' -> "''"    (empty char)
+        'blend'  -> '""'   (empty string)
+        'temp'   -> 'False'
+        'drip'   -> '0.0'
+        anything else / unknown -> '0'  (bean default)
         Used by ARR_DECLARE and ARR_STORE when auto-expanding dynamic arrays.
         """
         dtype = self._get_var_type(var_name)

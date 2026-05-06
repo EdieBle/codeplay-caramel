@@ -1443,8 +1443,9 @@ class RDParser:
     # ---------------------------------------------------------------
     def parse_neg_operand(self):
         """Parse rule: neg_operand -> ID | (expression)"""
-        if self._accept("ID"):
-            return self._node("neg_operand", [self._node("ID", [])])
+        tok = self._accept("ID")
+        if tok:
+            return self._node("neg_operand", [tok])  # ← pass tok, not _node("ID", [])
         if self._accept("OP_PAREN"):
             return self._node("neg_operand", [
                 self._node("OP_PAREN", []),

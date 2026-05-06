@@ -1603,6 +1603,7 @@ class IRGenerator:
                         val = self._visit(c2)
                         if val is not None:
                             t = self._new_temp()
+                            # print(f"[DEBUG IRGEN] dest={t}, arg1={val}, unaryop="-"")
                             self._emit("UNARYOP", dest=t, arg1=val, unaryop="-")
                             return t
 
@@ -1624,6 +1625,11 @@ class IRGenerator:
         Called by _visit_unary_expr after detecting a MINUS token.
         """
         for child in self._get_children(node):
+            # Skip paren delimiters — they're structural, not values
+            if self._is_node(child) and child.name in ("OP_PAREN", "CL_PAREN"):
+                continue
+            if self._is_token(child) and child.type in ("OP_PAREN", "CL_PAREN"):
+                continue
             if self._is_node(child):
                 return self._visit(child)
             if self._is_token(child) and child.type == "ID":

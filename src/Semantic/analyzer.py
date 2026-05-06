@@ -1541,6 +1541,11 @@ class SemanticAnalyzer:
         if not hasattr(node, 'children') or not node.children:
             return None
 
+        # sift() uses a SIFT token (not ID), always returns bean (integer length)
+        for child in node.children:
+            if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "SIFT":
+                return "bean"
+
         id_token = next(
             (c for c in node.children
             if not self._is_parse_node(c) and hasattr(c, 'type') and c.type == "ID"),
@@ -1549,9 +1554,29 @@ class SemanticAnalyzer:
 
         if id_token:
             symbol = self.symbol_table.lookup(id_token.value)
+            
+            is_call = any(
+                self._is_parse_node(c) and c.name == "primary_id_tail" and
+                any(
+                    not self._is_parse_node(tc) and hasattr(tc, 'type')
+                    and tc.type == "OP_PAREN"
+                    for tc in c.children
+                )
+                for c in node.children
+            )
+            
+            if is_call:
+                if id_token.value in ("sift", "__sift__"):
+                    return "bean"
+                if id_token.value in ("__sqrt__", "__ceil__", "__floor__", "__pow__"):
+                    return "drip"
+                func_sym = self.symbol_table.lookup(id_token.value)
+                if func_sym and hasattr(func_sym, 'return_type'):
+                    return func_sym.return_type
+                return None
+
             if symbol:
                 if getattr(symbol, 'is_array', False):
-                    # check if there's an index access — if so, return element type
                     has_index = any(
                         self._is_parse_node(c) and c.name == "primary_id_tail" and
                         any(
@@ -1562,8 +1587,7 @@ class SemanticAnalyzer:
                         for c in node.children
                     )
                     if not has_index:
-                        return "array"   # bare array name e.g. sift(xarr)
-                    # indexed access → return element type
+                        return "array"
                     return symbol.dtype
                 member_type = self._infer_member_type(node, id_token.value)
                 return member_type if member_type else symbol.dtype
