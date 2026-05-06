@@ -1155,7 +1155,30 @@ class SemanticAnalyzer:
         self.symbol_table.push_scope()
         prev_loop = self.in_loop
         self.in_loop = True
-        self._check_same_line_statements(node)
+
+        # self._check_same_line_statements(node)
+
+        # Direct check: statement + stmt_tail siblings
+        last_line = None
+        for child in node.children:
+            if self._is_parse_node(child) and child.name == "statement":
+                line = self._get_first_line(child)
+                if line and last_line and line == last_line:
+                    self._error("E_NEWLINE",
+                        f"Statements must be on separate lines (line {line})",
+                        self._find_first_token(child))
+                last_line = line
+            elif self._is_parse_node(child) and child.name == "stmt_tail":
+                # check first statement in stmt_tail against last_line
+                for tc in child.children:
+                    if self._is_parse_node(tc) and tc.name == "statement":
+                        line = self._get_first_line(tc)
+                        if line and last_line and line == last_line:
+                            self._error("E_NEWLINE",
+                                f"Statements must be on separate lines (line {line})",
+                                self._find_first_token(tc))
+                        last_line = line
+                        break
 
         self._visit_children(node)
         
@@ -1175,7 +1198,28 @@ class SemanticAnalyzer:
         self.symbol_table.push_scope()
         prev_loop = self.in_loop
         self.in_loop = True
-        self._check_same_line_statements(node)
+        
+        # Direct check: statement + stmt_tail siblings
+        last_line = None
+        for child in node.children:
+            if self._is_parse_node(child) and child.name == "statement":
+                line = self._get_first_line(child)
+                if line and last_line and line == last_line:
+                    self._error("E_NEWLINE",
+                        f"Statements must be on separate lines (line {line})",
+                        self._find_first_token(child))
+                last_line = line
+            elif self._is_parse_node(child) and child.name == "stmt_tail":
+                # check first statement in stmt_tail against last_line
+                for tc in child.children:
+                    if self._is_parse_node(tc) and tc.name == "statement":
+                        line = self._get_first_line(tc)
+                        if line and last_line and line == last_line:
+                            self._error("E_NEWLINE",
+                                f"Statements must be on separate lines (line {line})",
+                                self._find_first_token(tc))
+                        last_line = line
+                        break
 
         self._visit_children(node)
         
