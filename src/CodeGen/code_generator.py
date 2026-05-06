@@ -22,8 +22,7 @@ import traceback
 class StructuredCodeGenerator:
     """
     A higher-level code generator that produces cleaner Python output by
-    reconstructing control flow structures (if/while/for) from the IR
-    rather than emitting flat goto-style code.
+    reconstructing instructions from the IR.
 
     This walks the IR and builds Python directly, recognizing patterns:
       - FUNC_BEGIN...FUNC_END -> def blocks
