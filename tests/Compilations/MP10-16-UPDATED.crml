@@ -1,0 +1,293 @@
+recipe bean fibonacci(bean n) [
+    ifbrew(n <= 1) {
+        refill? (n)
+    }
+    refill? (fibonacci(n-1) + fibonacci(n-2))
+]
+
+recipe drip squareroot(bean n) [
+    ifbrew(n == 0) {
+        refill? (0)
+    }
+    drip fn = n
+    drip guess = fn / 2.0
+    drip div = 0.0
+    drip sum = 0.0
+    pour(bean i = 0; i < 20; i++) {
+        div = fn / guess
+        sum = guess + div
+        guess = sum / 2.0
+    }
+    refill? (guess)
+]
+
+recipe bean squared(bean n) [
+    refill? (n * n)
+]
+
+recipe bean cubed(bean n) [
+    refill? (n * n * n)
+]
+
+recipe bean convert_a(bean n) [
+    ifbrew(n > 1) {
+        glaze("Invalid Input")
+        refill? 0
+    }
+    bean num = n, decimal = 0, bit = 0, place = 1, prod = 0, even = 0
+    whilehot(num > 0) {
+        bit = num % 10
+        prod = bit * place
+        decimal = decimal + prod
+        place = place * 2
+        even = num - bit
+        num = even / 10
+    }
+    refill? (decimal)
+]
+
+recipe bean convert_b(bean n) [
+    ifbrew(n <= 0) {
+        refill? (0)
+    }
+    bean num = n, binary = 0, bit = 0, place = 1, prod = 0, even = 0
+    whilehot(num > 0) {
+        bit = num % 2
+        prod = bit * place
+        binary = binary + prod
+        place = place * 10
+        even = num - bit
+        num = even / 2
+    }
+    refill? (binary)
+]
+
+empty reversed() [
+    bean n = 0
+    bean num = 0
+    bean rev = 0
+    bean sumdig = 0
+    bean digit = 0
+    bean even = 0
+    bean prod = 0
+    temp is_neg = cold
+    glaze("Enter a number: ")
+    batter@n
+    ifbrew(n < 0) {
+        n *= -1
+        is_neg = hot
+    }
+    num = n
+    whilehot(num > 0) {
+        digit = num % 10
+        prod = rev * 10
+        rev = prod + digit
+        sumdig = sumdig + digit
+        even = num - digit
+        num = even / 10
+    }
+    ifbrew(is_neg == hot) {
+        rev *= -1
+    }
+    glaze("Sum of digits: " + sumdig + "\n")
+    glaze("Reverse: " + rev + "\n")
+    refill?
+]
+
+recipe bean sumdigits(bean n) [
+    ifbrew(n == 0) {
+        refill? (0)
+    }
+    refill? (n % 10 + sumdigits(n / 10))
+]
+
+recipe temp ask_again(churro rechoice) [
+    refill? (rechoice == 'Y')
+]
+empty area() [
+ bean choice = 0
+    drip radius = 0.0
+    drip base = 0.0
+    drip height = 0.0
+    drip side = 0.0
+    drip length = 0.0
+    drip width = 0.0
+    drip area = 0.0
+
+    glaze("Area Calculator\n")
+    glaze("1. Circle\n")
+    glaze("2. Triangle\n")
+    glaze("3. Square\n")
+    glaze("4. Rectangle\n")
+    glaze("Enter choice: ")
+    batter@ choice
+
+    flavour (choice) {
+        syrup 1:
+            glaze("Enter radius: ")
+            batter@ radius
+            area = 3.14159 * radius * radius
+            glaze("Area: ")
+            glaze(area)
+            glaze("\n")
+        snap
+        syrup 2:
+            glaze("Enter base: ")
+            batter@ base
+            glaze("Enter height: ")
+            batter@ height
+            area = 0.5 * base * height
+            glaze("Area: ")
+            glaze(area)
+            glaze("\n")
+        snap
+        syrup 3:
+            glaze("Enter side: ")
+            batter@ side
+            area = side * side
+            glaze("Area: ")
+            glaze(area)
+            glaze("\n")
+        snap
+        syrup 4:
+            glaze("Enter length: ")
+            batter@ length
+            glaze("Enter width: ")
+            batter@ width
+            area = length * width
+            glaze("Area: ")
+            glaze(area)
+            glaze("\n")
+        snap
+        defoam:
+            glaze("Invalid Input\n")
+        snap
+    }
+refill? 
+]
+bean cup() [
+    temp tryagain = hot
+    bean total = 0
+    bean program = 0
+    churro rechoice = ' '
+
+    whilehot(tryagain == hot) {
+        glaze("\n========== List of Available Programs: ==========\n")
+        glaze("1. Fibonacci Series\n")
+        glaze("2. Square Root of a Number\n")
+        glaze("3. Sum of the Squares from 1 to n\n")
+        glaze("4. Sum of the Cubes from 1 to n\n")
+        glaze("5. Conversion of Binary and Decimal\n")
+        glaze("6. Reverse of Digits and Sum of Digits\n")
+		glaze("7. Finding the Area\n")
+        glaze("8. Exit\n\n")
+        batter@program("Choose a program: ")
+
+        flavour(program) {
+
+            syrup 1:
+                bean fiboinputn = 0
+                glaze("Fibonacci sequence up to nth number:\n")
+                batter@fiboinputn("Please enter a positive number: ")
+                ifbrew(fiboinputn <= 0) {
+                    glaze("\nInvalid input, please enter a positive number!\n")
+                } elspress {
+                    pour(bean i = 0; i <= fiboinputn; i++) {
+                        glaze(fibonacci(i))
+                        ifbrew(i < fiboinputn) {
+                            glaze(" ")
+                        }
+                    }
+                    glaze("\n")
+                }
+            snap
+
+            syrup 2:
+                bean sqrtinputn = 0
+                glaze("Square root of a number:\n")
+                batter@sqrtinputn("Please enter a positive number: ")
+                ifbrew(sqrtinputn <= 0) {
+                    glaze("\nInvalid input, please enter a positive number!\n")
+                } elspress {
+                    glaze("\nSquare root of " + sqrtinputn + " = " + squareroot(sqrtinputn) + "\n")
+                }
+            snap
+
+            syrup 3:
+                bean squareinputn = 1
+                total = 0
+                glaze("Sum of squares from 1 to n:\n")
+                batter@squareinputn("Please enter a positive number: ")
+                ifbrew(squareinputn <= 0) {
+                    glaze("\nInvalid input, please enter a positive number!\n")
+                } elspress {
+                    pour(bean i = 1; i <= squareinputn; i++) {
+                        total = total + squared(i)
+                    }
+                    glaze("\nSum of squares 1 to " + squareinputn + " = " + total + "\n")
+                }
+            snap
+
+            syrup 4:
+                bean cubeinputn = 0
+                total = 0
+                glaze("Sum of cubes from 1 to n:\n")
+                batter@cubeinputn("Please enter a positive number: ")
+                ifbrew(cubeinputn <= 0) {
+                    glaze("\nInvalid input, please enter a positive number!\n")
+                } elspress {
+                    pour(bean i = 1; i <= cubeinputn; i++) {
+                        total = total + cubed(i)
+                    }
+                    glaze("\nSum of cubes 1 to " + cubeinputn + " = " + total + "\n")
+                }
+            snap
+
+            syrup 5:
+                bean convertchoice = 0
+                bean convertinputn = 0
+                glaze("Binary/Decimal conversion:\n")
+                glaze("1. Binary to Decimal\n")
+                glaze("2. Decimal to Binary\n")
+                batter@convertchoice("Please choose a conversion: ")
+                ifbrew(convertchoice == 1) {
+                    batter@convertinputn("Please enter a positive binary number: ")
+                    glaze("\nDecimal: " + convert_a(convertinputn) + "\n")
+                } elifroth(convertchoice == 2) {
+                    batter@convertinputn("Please enter a positive decimal number: ")
+                    glaze("\nBinary: " + convert_b(convertinputn) + "\n")
+                } elspress {
+                    glaze("\nInvalid choice.\n")
+                }
+            snap
+
+            syrup 6:
+                reversed()
+            snap
+
+			syrup 7:
+                area()
+            snap
+
+            syrup 8:
+                 glaze("Exiting program...")
+                 tryagain = cold
+                 snap
+
+            defoam:
+                glaze("\nInvalid choice, please select a valid option!\n")
+            snap
+        }
+
+        ~~rechoice = ' '
+        ~~whilehot(rechoice != 'Y' && rechoice != 'N') {
+        ~~    batter@rechoice("\nChoose from the list of programs again? [Y/N]: ")
+        ~~    ifbrew(rechoice != 'Y' && rechoice != 'N') {
+        ~~        glaze("\nInvalid choice, please enter Y or N.\n")
+        ~~    }
+        ~~}
+        ~~tryagain = ask_again(rechoice)
+    }
+
+    refill? 0
+]
