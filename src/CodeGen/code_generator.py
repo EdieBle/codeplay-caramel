@@ -140,11 +140,11 @@ class StructuredCodeGenerator:
     # ------------------------------------------------------------------
 
     def _emit(self, line):
-        """Append a line to _lines at the current indentation level (self._indent * 4 spaces)."""
+        """Append a line to _lines at the current indentation level (self._indent * 4 spaces which is just tabbing ngl)."""
         self._lines.append("    " * self._indent + line)
 
     def _emit_raw(self, line):
-        """Append a line to _lines with NO indentation. Used for top-level boilerplate."""
+        """Append a line to _lines with NO indentation. Used for the top-level."""
         self._lines.append(line)
 
     def _push(self):
@@ -152,7 +152,7 @@ class StructuredCodeGenerator:
         self._indent += 1
 
     def _pop(self):
-        """Decrease indentation by one level. Guards against going below 0 (underflow protection)."""
+        """Decrease indentation by one level. Guards against going below 0."""
         if self._indent > 0:
             self._indent -= 1
 
@@ -238,7 +238,7 @@ class StructuredCodeGenerator:
           1. None                -> 'None'
           2. bool literal        -> 'True' / 'False'
           3. int literal         -> str(val)
-          4. float literal       -> repr(val)  (preserves precision)
+          4. float literal       -> repr(val)  
           5. str + inside method + is class field
                                  -> 'self.fieldname'  (field access in method body)
           6. str + is global var -> '_order["name"]'
@@ -249,7 +249,7 @@ class StructuredCodeGenerator:
          11. global var (second pass) -> '_order["name"]'
          12. fallback            -> _py_var(val)
         Key design note: steps 5-6 must come before step 12 to ensure class fields
-        and globals don't accidentally resolve to bare Python variable names.
+        and globals don't accidentally resolve to bare variable names.
         """
         if val is None:
             return "None"
@@ -273,7 +273,7 @@ class StructuredCodeGenerator:
         eb = getattr(self, '_elif_binops', {})
         
         if s.startswith('_t') and s in eb:
-            print(f"[STRUCT CODEGEN PY_VAL] resolving {s!r} -> {eb[s]!r} from _elif_binops")
+            # print(f"[STRUCT CODEGEN PY_VAL] resolving {s!r} -> {eb[s]!r} from _elif_binops")
             return eb[s]
         # String literals
         if (s.startswith('"') and s.endswith('"')) or \
@@ -292,7 +292,7 @@ class StructuredCodeGenerator:
         # Regular variable reference
         return self._py_var(s)
 
-    # RELATED TO BINOP — used to decide str() vs int()/float() wrapping
+    # RELATED TO BINOP - used to decide str() vs int()/float() wrapping
     def _get_var_type(self, var_name):
         """
         Infer the Caramel type of a variable or expression by scanning the IR.
@@ -546,7 +546,7 @@ class StructuredCodeGenerator:
                 if loop_end is not None:
                     i = self._gen_while_loop(i, loop_end)
                     continue
-                # Skip labels in structured mode
+                # Skip labels
                 i += 1
                 continue
 
@@ -564,7 +564,6 @@ class StructuredCodeGenerator:
             if instr.op in ("GOTO",):
                 i += 1  # Skip gotos in structured code
                 continue
-
             
             # Regular instructions
             i = self._gen_simple(instr, i)
@@ -575,7 +574,7 @@ class StructuredCodeGenerator:
 
         Two distinct branches based on instr.extra['method_of']:
 
-        BRANCH 1 — Class method (method_of is set, e.g. 'point'):
+        BRANCH 1 — Class method (method_of is set, e.g. 'point' which is an example in our tests pahanap nalang if andun):
           - Pops __init__'s indent exactly once (guarded by _init_closed flag)
           - Sets _current_class_name so _py_val/MEMBER_ACC/etc. emit 'self.x'
           - Emits: def methodname(self, param1, param2, ...):
