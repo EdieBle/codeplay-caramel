@@ -321,34 +321,10 @@ class SemanticAnalyzer:
     
     def _visit_global_def(self, node):
         """Visit global_def for global declarations"""
-         # Check all global_dec children for same-line violations
-        last_line = None
-        for child in node.children:
-            if self._is_parse_node(child) and child.name == "global_dec":
-                line = self._get_first_line(child)
-                if line is not None:
-                    if last_line is not None and line == last_line:
-                        tok = self._find_first_token(child)
-                        self._error("E_NEWLINE",
-                            f"Statements must be on separate lines (line {line})",
-                            tok)
-                    last_line = line
         self._visit_children(node)
     
     def _visit_global_dec(self, node):
         """Visit global_dec"""
-        # Check all global_dec children for same-line violations
-        last_line = None
-        for child in node.children:
-            if self._is_parse_node(child) and child.name == "global_dec":
-                line = self._get_first_line(child)
-                if line is not None:
-                    if last_line is not None and line == last_line:
-                        tok = self._find_first_token(child)
-                        self._error("E_NEWLINE",
-                            f"Statements must be on separate lines (line {line})",
-                            tok)
-                    last_line = line
         self._visit_children(node)
     
 
@@ -362,7 +338,6 @@ class SemanticAnalyzer:
         prev_function = self.current_function
         self.current_function = "cup"   # current function is "cup"
         
-        self._check_same_line_statements(node)
         self._visit_children(node)
         
         self.current_function = prev_function
@@ -370,7 +345,6 @@ class SemanticAnalyzer:
 
     def _visit_main_body(self, node):
         # print(f"[SEMANTIC MAIN BODY DEBUG] children: {[c.name if hasattr(c, 'name') else f'{c.type}={c.value}' for c in node.children]}")
-        self._check_same_line_statements(node, stmt_names={"statement", "refill_main"})
         self._visit_children(node)
     
     """"Functions: _visit_recipe_def
@@ -554,7 +528,6 @@ class SemanticAnalyzer:
             dtype = None, return_type = "void", kind = "function" is_initialized = true
             """
         func_name = None
-        self._check_same_line_statements(node)
         for child in node.children:
             if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
                 func_name = child.value
@@ -1029,7 +1002,6 @@ class SemanticAnalyzer:
         self.symbol_table.push_scope()
         prev_loop = self.in_loop
         self.in_loop = True
-        self._check_same_line_statements(node)
         
         # self._visit_children(node) 
 
@@ -1088,8 +1060,7 @@ class SemanticAnalyzer:
         self.symbol_table.push_scope()
         prev_loop = self.in_loop
         self.in_loop = True
-        self._check_same_line_statements(node)
-
+        
         self._visit_children(node)
         
         self.in_loop = prev_loop
@@ -1108,8 +1079,7 @@ class SemanticAnalyzer:
         self.symbol_table.push_scope()
         prev_loop = self.in_loop
         self.in_loop = True
-        self._check_same_line_statements(node)
-
+        
         self._visit_children(node)
         
         self.in_loop = prev_loop
@@ -1131,15 +1101,15 @@ class SemanticAnalyzer:
                     stmt_type = first_child.type
             
 
-            if stmt_type in ("SNAP", "SKIP"):
-                err_line = getattr(node, 'line', None) or getattr(first_child, 'line', None)
-                err_col = getattr(node, 'column', None) or getattr(first_child, 'column', None)
-                self.errors.append(SemanticError(
-                    "E006",
-                    f"'{stmt_type.lower()}' statement outside of loop",
-                    line=err_line,
-                    column=err_col
-                ))
+        if stmt_type in ("SNAP", "SKIP"):
+            err_line = getattr(node, 'line', None) or getattr(first_child, 'line', None)
+            err_col = getattr(node, 'column', None) or getattr(first_child, 'column', None)
+            self.errors.append(SemanticError(
+                "E006",
+                f"'{stmt_type.lower()}' statement outside of loop",
+                line=err_line,
+                column=err_col
+            ))
 
     def _visit_input_stmt(self, node):
         """Visit batter@ statement — check all target variables are declared."""
@@ -1211,7 +1181,6 @@ class SemanticAnalyzer:
     def _visit_if_cond(self, node):
         """Visit if condition: create block scope"""
         self.symbol_table.push_scope()
-        self._check_same_line_statements(node)
         self._visit_children(node)
         self.symbol_table.pop_scope()
     
@@ -1736,57 +1705,7 @@ class SemanticAnalyzer:
     # ========================================================================
     # HELPER METHODS
     # ========================================================================
-
-    def _check_same_line_statements(self, node, stmt_names=None):
-        if stmt_names is None:
-            stmt_names = {"statement"}
-
-        last_line = None
-        current = node
-        while current and self._is_parse_node(current):
-            stmt = None
-            next_body = None
-            for child in current.children:
-                if self._is_parse_node(child) and child.name in stmt_names:
-                    stmt = child
-                elif self._is_parse_node(child) and child.name in (
-                    "main_body", "stmt_tail", "global_def",
-                    "recipe_body", "empty_body", "crema_body"
-                ):
-                    next_body = child
-
-            if stmt:
-                line = self._get_first_line(stmt)
-                if line is not None:
-                    if last_line is not None and line == last_line:
-                        tok = self._find_first_token(stmt)
-                        self._error("E_NEWLINE",
-                            f"Statements must be on separate lines (line {line})",
-                            tok)
-                    last_line = line
-
-            current = next_body
-
-    def _get_first_line(self, node):
-        """Return the line number of the first token found in a node subtree."""
-        if not self._is_parse_node(node):
-            return getattr(node, 'line', None)
-        for child in node.children:
-            line = self._get_first_line(child)
-            if line is not None:
-                return line
-        return None
-
-    def _find_first_token(self, node):
-        """Return the first token found in a node subtree (for error reporting)."""
-        if not self._is_parse_node(node):
-            return node
-        for child in node.children:
-            tok = self._find_first_token(child)
-            if tok is not None:
-                return tok
-        return None
-
+    
     def _infer_member_type(self, primary_node, obj_name):
         """If primary has a .member access, return the member's type. Else None."""
         for child in primary_node.children:
