@@ -1265,9 +1265,9 @@ class IRGenerator:
         var_name = self._shadow_map.get(var_name, var_name)
         # print(f"\n[DEBUG id_dec_stmt] var_name={var_name}")
         for child in self._get_children(node):
-            print(f"  child: is_node={self._is_node(child)}, is_token={self._is_token(child)}, "
-                f"name={getattr(child, 'name', None)}, type={getattr(child, 'type', None)}, "
-                f"value={getattr(child, 'value', None)}")
+            # print(f"  DEBUG child: is_node={self._is_node(child)}, is_token={self._is_token(child)}, "
+            #     f"name={getattr(child, 'name', None)}, type={getattr(child, 'type', None)}, "
+            #     f"value={getattr(child, 'value', None)}")
             if self._is_node(child) and child.name == "id_dec_tail":
                 for gc in self._get_children(child):
                     print(f"    tail_child: is_node={self._is_node(gc)}, is_token={self._is_token(gc)}, "
