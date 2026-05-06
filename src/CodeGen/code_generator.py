@@ -1222,7 +1222,7 @@ class StructuredCodeGenerator:
 
     def _gen_simple(self, instr, idx):
         """
-        Generate Python for a single non-control-flow IR instruction.
+        Generate Python for a single IR instruction.
         Called by _translate, _gen_function, _gen_while_loop for every instruction
         that isn't a structural keyword (FUNC_BEGIN, LABEL, IF_FALSE, GOTO).
         Always returns idx + 1.
