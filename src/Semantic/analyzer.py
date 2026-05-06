@@ -364,7 +364,34 @@ class SemanticAnalyzer:
         
         self._check_same_line_statements(node)
         self._visit_children(node)
+
+        # After visiting children, check [ and refill_main aren't on same line
+        bracket_tok = next((c for c in node.children
+            if not self._is_parse_node(c) and hasattr(c, 'type') 
+            and c.type == "OP_BRACKETS"), None)
         
+        # Walk into main_body to find refill_main
+        def find_refill_main(n):
+            if not self._is_parse_node(n):
+                return None
+            if n.name == "refill_main":
+                return n
+            for child in n.children:
+                result = find_refill_main(child)
+                if result:
+                    return result
+            return None
+        
+        refill_node = find_refill_main(node)
+        
+        if bracket_tok and refill_node:
+            bracket_line = getattr(bracket_tok, 'line', None)
+            refill_line = self._get_first_line(refill_node)
+            if bracket_line and refill_line and bracket_line == refill_line:
+                tok = self._find_first_token(refill_node)
+                self._error("E_NEWLINE",
+                    f"Statement 'refill?' must be on its own line (line {refill_line})", tok)
+            
         self.current_function = prev_function
         self.symbol_table.pop_scope()
 
@@ -438,6 +465,20 @@ class SemanticAnalyzer:
             #debug
             # print(f"[RECIPE '{func_name}'] scope before visit_children: {list(self.symbol_table.scopes[-1].keys())}")
             self._visit_children(node)
+            
+            recipe_body_node = next((c for c in node.children 
+                if self._is_parse_node(c) and c.name == "recipe_body"), None)
+
+            refill_node = next((c for c in node.children 
+                if self._is_parse_node(c) and c.name == "refill_final"), None)
+            
+            if recipe_body_node and refill_node:
+                last_stmt_line = self._get_first_line(recipe_body_node)
+                refill_line = self._get_first_line(refill_node)
+                if last_stmt_line and refill_line and last_stmt_line == refill_line:
+                    tok = self._find_first_token(refill_node)
+                    self._error("E_NEWLINE",
+                        f"statement must be on its own line (line {refill_line})", tok)
 
             self.current_function = prev_function
             self.symbol_table.pop_scope()
@@ -1462,6 +1503,70 @@ class SemanticAnalyzer:
         self._visit_children(node)
         self.current_var_type = None
 
+    def _visit_recipe_body(self, node):
+        """Body of a recipe function — enforce newline between statements."""
+        self._check_same_line_statements(node, stmt_names={"statement"})
+        self._visit_children(node)
+
+    def _visit_empty_body(self, node):
+        """Body of an empty (void) function — enforce newline between statements."""
+        self._check_same_line_statements(node, stmt_names={"statement"})
+        self._visit_children(node)
+
+    def _visit_crema_body(self, node):
+        """Body of a crema class — enforce newline between member declarations."""
+        self._check_same_line_statements(node, stmt_names={"crema_body_cont"})
+        self._visit_children(node)
+
+    def _visit_syrup_switch(self, node):
+        """
+        A single syrup (case) block inside a flavour switch.
+        Enforces newline between statements inside the case body.
+        Structure: SYRUP case_lit COLON statement stmt_tail_until_snap SNAP
+        """
+        first_stmt = None
+        tail_node = None
+        for child in node.children:
+            if self._is_parse_node(child) and child.name == "statement" and first_stmt is None:
+                first_stmt = child
+            elif self._is_parse_node(child) and child.name == "stmt_tail_until_snap":
+                tail_node = child
+
+        if first_stmt and tail_node:
+            first_line = self._get_first_line(first_stmt)
+            # find first statement inside tail
+            for child in tail_node.children:
+                if self._is_parse_node(child) and child.name == "statement":
+                    tail_line = self._get_first_line(child)
+                    if first_line and tail_line and first_line == tail_line:
+                        tok = self._find_first_token(child)
+                        self._error("E_NEWLINE",
+                            f"Statements must be on separate lines (line {tail_line})",
+                            tok)
+                    break
+
+        self._check_same_line_statements(node, stmt_names={"statement"})
+        self._visit_children(node)
+
+    def _visit_stmt_tail_until_snap(self, node):
+        """Recursive statement tail inside a syrup case — enforce newline."""
+        self._check_same_line_statements(node, stmt_names={"statement"})
+        self._visit_children(node)
+
+    def _visit_stmt_tail(self, node):
+        """
+        Recursive statement tail inside loop/if bodies.
+        This is what catches same-line statements inside whilehot, tastetill,
+        pour, and if bodies — they all chain via stmt_tail recursively.
+        """
+        self._check_same_line_statements(node, stmt_names={"statement"})
+        self._visit_children(node)
+
+    
+    # ========================================================================
+    # HELPER METHODS
+    # ========================================================================
+
     def _visit_blend_id_tail(self, node):
         """Visit blend variable declaration"""
         var_name = self._extract_name_from_node(node, depth=0)
@@ -1483,6 +1588,8 @@ class SemanticAnalyzer:
         
         self._visit_children(node)
     
+
+
     def _count_arr_elements_1d(self, arr_cont_1d_node):
         """Count elements in a 1D array initializer (arr_cont_1d node)."""
         count = 0
@@ -1733,9 +1840,6 @@ class SemanticAnalyzer:
         
         return source_type in self.TYPE_COMPAT[target_type]
     
-    # ========================================================================
-    # HELPER METHODS
-    # ========================================================================
 
     def _check_same_line_statements(self, node, stmt_names=None):
         if stmt_names is None:
