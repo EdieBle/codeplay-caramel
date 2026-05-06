@@ -93,6 +93,23 @@ class ParseNode:
                 lines.append("  " * (indent + 1) + f"{child.type}\t{child.value}")
         return "\n".join(lines)
 
+    def debug(self, indent=0):
+        """Print node with explicit children list. More technical than pretty def"""
+        pad = "  " * indent
+        if isinstance(self, ParseNode):
+            child_names = []
+            for c in self.children:
+                if isinstance(c, ParseNode):
+                    child_names.append(c.name)
+                else:
+                    child_names.append(f"{c.type}={c.value}")
+            print(f"{pad}{self.name}  →  children: {child_names}")
+            for child in self.children:
+                if isinstance(child, ParseNode):
+                    child.debug(indent + 1)
+                else:
+                    print(f"{pad}  [{child.type}={child.value}]")
+
 
 class TokenStream:
     """Manages the stream of tokens during parsing."""
@@ -3253,6 +3270,7 @@ class Parser:
             parse_tree = parser.parse()
             self.ast = parse_tree
             print(parse_tree.pretty())
+            # print(parse_tree.debug())
         except (UnexpectedToken, UnexpectedEOF) as e:
             expected = list(dict.fromkeys(getattr(e, "expected", [])))
             if not expected:
