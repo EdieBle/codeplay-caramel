@@ -1256,6 +1256,15 @@ class SemanticAnalyzer:
         self._check_same_line_statements(node)
         self._visit_children(node)
         self.symbol_table.pop_scope()
+
+    def _visit_if_cond_tail(self, node):
+        """
+        Analyze elifroth/elspress branch.
+        The first statement and stmt_tail are direct children here —
+        check them for same-line violations the same way main_body does.
+        """
+        self._check_same_line_statements(node, stmt_names={"statement"})
+        self._visit_children(node)
     
     def _visit_flav_switch(self, node):
         """Visit switch statement: create block scope"""
