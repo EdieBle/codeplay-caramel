@@ -596,7 +596,20 @@ class SemanticAnalyzer:
             dtype = None, return_type = "void", kind = "function" is_initialized = true
             """
         func_name = None
-        self._check_same_line_statements(node)
+
+        # Newline check
+        empty_body_node = next((c for c in node.children if self._is_parse_node(c) and c.name == "empty_body"), None)
+        refill_tok = next((c for c in node.children if not self._is_parse_node(c) and hasattr(c, 'type') and c.type == "REFILL"), None)
+        if empty_body_node and refill_tok:
+            # find last statement line in empty_body
+            last_line = None
+            for child in empty_body_node.children:
+                if self._is_parse_node(child) and child.name == "statement":
+                    last_line = self._get_first_line(child)
+            refill_line = getattr(refill_tok, 'line', None)
+            if last_line and refill_line and last_line == refill_line:
+                self._error("E_NEWLINE", f"refill? must be on its own line (line {refill_line})", refill_tok)
+
         for child in node.children:
             if not self._is_parse_node(child) and hasattr(child, 'type') and child.type == "ID":
                 func_name = child.value
@@ -644,6 +657,18 @@ class SemanticAnalyzer:
             self.symbol_table.pop_scope()
         else:
             self._visit_children(node)
+
+    def _visit_empty_body(self, node):
+        """Purpose? well it checks newlines, wouldnt be necessary but weird."""
+        # print(f"[DEBUG] _visit_empty_body REACHED, children: {[c.name if self._is_parse_node(c) else c.type for c in node.children]}")
+        last_line = None
+        for child in node.children:
+            if self._is_parse_node(child) and child.name == "statement":
+                line = self._get_first_line(child)
+                if line and last_line and line == last_line:
+                    self._error("E_NEWLINE", f"Statements must be on separate lines (line {line})", self._find_first_token(child))
+                last_line = line
+        self._visit_children(node)
 
     # ========================
     #       CLASSES HERE
@@ -1537,16 +1562,30 @@ class SemanticAnalyzer:
     def _visit_recipe_body(self, node):
         """Body of a recipe function — enforce newline between statements."""
         self._check_same_line_statements(node, stmt_names={"statement"})
-        self._visit_children(node)
+        
+        # Also check all direct statement siblings
+        last_line = None
+        for child in node.children:
+            if self._is_parse_node(child) and child.name == "statement":
+                line = self._get_first_line(child)
+                if line and last_line and line == last_line:
+                    self._error("E_NEWLINE", f"Statements must be on separate lines (line {line})", self._find_first_token(child))
+                last_line = line
 
-    def _visit_empty_body(self, node):
-        """Body of an empty (void) function — enforce newline between statements."""
-        self._check_same_line_statements(node, stmt_names={"statement"})
         self._visit_children(node)
 
     def _visit_crema_body(self, node):
         """Body of a crema class — enforce newline between member declarations."""
         self._check_same_line_statements(node, stmt_names={"crema_body_cont"})
+
+        # Also check all direct crema_body_cont siblings
+        last_line = None
+        for child in node.children:
+            if self._is_parse_node(child) and child.name == "crema_body_cont":
+                line = self._get_first_line(child)
+                if line and last_line and line == last_line:
+                    self._error("E_NEWLINE", f"Statements must be on separate lines (line {line})", self._find_first_token(child))
+                last_line = line
         self._visit_children(node)
 
     def _visit_syrup_switch(self, node):
@@ -1922,7 +1961,8 @@ class SemanticAnalyzer:
                     "main_body", "stmt_tail", "global_def",
                     "recipe_body", "empty_body", "crema_body"
                 ):
-                    next_body = child
+                    if next_body is None:
+                        next_body = child
 
             if stmt:
                 line = self._get_first_line(stmt)
